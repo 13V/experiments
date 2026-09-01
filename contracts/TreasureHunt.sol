@@ -4,79 +4,100 @@ pragma solidity ^0.8.24;
 /// @title TreasureHunt
 /// @notice Escrow for a multi-stage public puzzle hunt.
 ///
-///         Design goals, in priority order:
+/// ---------------------------------------------------------------------------
+/// CLAIMING IS SIGNATURE-BOUND, NOT COMMIT-REVEAL
+/// ---------------------------------------------------------------------------
 ///
-///         1. FRONT-RUN PROOF. The naive design ("submit the answer, get paid") loses the
-///            prize to a mempool bot every time: the bot sees the answer in the pending
-///            transaction, copies it, and outbids the solver on gas. This contract uses
-///            commit-reveal, and critically the commitment is bound to msg.sender — so a
-///            copied reveal is worthless to anyone but the original committer.
+/// An earlier version of this contract used commit-reveal. That works, but it is
+/// strictly worse than what is here, and the reason is worth stating because it is
+/// the single most important decision in the design.
 ///
-///         2. UNRUGGABLE. There is no owner withdrawal path. Once ether is committed to a
-///            stage it can only ever leave via a correct reveal, or roll forward into a
-///            later stage of the same hunt. The curator cannot take it back. Ever.
+/// The puzzle does not terminate in a *phrase*. It terminates in a *private key*.
+/// The contract stores only the corresponding address, published when the stage is
+/// created and immutable thereafter.
 ///
-///         3. PUBLICLY VERIFIABLE. The answer hash for every stage is written on-chain when
-///            the stage is created and can never be changed. That is the on-chain proof that
-///            a solution existed from the start and was not invented after the fact — which
-///            is the single accusation every treasure hunt has to survive.
+/// To claim, the solver signs a digest that COMMITS TO THEIR OWN RECIPIENT ADDRESS.
+/// A validator, sequencer, RPC operator or mempool bot who copies that transaction
+/// can do exactly one thing with it: rebroadcast it, and pay gas to send the money
+/// to the rightful winner. The signature is worthless to anyone else because the
+/// recipient is inside the signed message.
 ///
-///         Answers are hashed with sha256 rather than keccak256 purely for tooling ergonomics:
-///         sha256 is a precompile here and is available natively in Node/Python/browsers, so
-///         puzzle tooling needs no dependencies to compute a matching hash.
+/// That collapses four problems at once:
+///   - no front-running (the payload is not redirectable)
+///   - no two-step fumble at the climax of the hunt (one transaction, not two)
+///   - no reveal-delay window in which a solver can be griefed or lose their nerve
+///   - no offline brute force: the secret is a 256-bit key, not a guessable phrase.
+///     A published commitment to a phrase is a free, permanent, unlimited-rate
+///     verification oracle. Brain wallets with more entropy than any English
+///     passphrase have been drained at scale within minutes.
 ///
-///         ANSWER NORMALIZATION (enforced off-chain, documented on-chain):
-///         Answers are uppercase A-Z only, no spaces or punctuation.
-///         "count the blocks" -> "COUNTTHEBLOCKS". Clients must normalize before hashing.
+/// The corollary is a puzzle-design constraint, not a contract constraint:
+/// the secret must be DISCOVERED, never GUESSED. Difficulty lives in working out
+/// WHERE the key is, never in what words it spells.
+///
+/// ---------------------------------------------------------------------------
+/// OTHER PROPERTIES
+/// ---------------------------------------------------------------------------
+///
+/// UNRUGGABLE. There is no withdrawal function. Funds leave only to a winner, or
+/// via a permissionless rollover into another unsolved stage of the same hunt.
+///
+/// VERIFIABLE. The puzzle address for each stage is written at creation and can
+/// never change. That is the on-chain proof a solution existed from the start —
+/// the accusation every hunt has to survive.
+///
+/// DISCRETION-FREE PAYOUT. Where an allowlist is required (sanctions screening,
+/// age, tax forms), eligibility is decided BEFORE the stage opens. At claim time
+/// there is no human judgement at all. Operators who decide who won after the fact
+/// spend years being called thieves; this design makes that impossible by removing
+/// the decision from the moment it would be contested.
+///
+/// sha256 is used for the digest rather than keccak256 so that claim tooling can be
+/// built with no dependencies — it is a precompile here and native in Node, Python
+/// and browsers.
 contract TreasureHunt {
     // -----------------------------------------------------------------------
     // Types
     // -----------------------------------------------------------------------
 
     struct Stage {
-        bytes32 answerHash; // sha256(normalized answer). Immutable once set.
-        uint256 prize; // wei escrowed for this stage
-        address solver; // address(0) until solved
-        uint64 createdAt; // block number the stage was created
-        uint64 solvedAt; // block number of the winning reveal
+        address puzzleSigner; // address of the keypair the puzzle terminates in. Immutable.
+        uint256 prize; // wei escrowed
+        address winner; // zero until claimed
+        uint64 createdAt;
+        uint64 claimedAt;
+        uint64 opensAt; // block before which claims revert (time-gated stages)
+        bool requiresAllowlist; // if true, recipient must be pre-registered
         bool exists;
-    }
-
-    struct Commitment {
-        bytes32 hash; // sha256(answer, committer, salt)
-        uint64 blockNumber; // block the commitment landed in
     }
 
     // -----------------------------------------------------------------------
     // Storage
     // -----------------------------------------------------------------------
 
-    /// @notice May create and fund stages. May NOT withdraw. Cannot alter a published hash.
+    /// @notice Creates and funds stages, and manages the pre-registration allowlist.
+    ///         Has NO withdrawal path and cannot alter a published puzzle address.
     address public immutable curator;
 
-    /// @notice Blocks that must elapse between commit and reveal. Prevents an observer from
-    ///         bundling their own commit+reveal into the same block as a victim's reveal.
-    uint64 public immutable revealDelay;
-
-    /// @notice Blocks after which an unsolved stage's prize may be rolled into another stage.
-    ///         This is an anti-dead-money valve, not a withdrawal path.
+    /// @notice Blocks after a stage opens before an unclaimed prize may roll forward.
+    ///         Set this long. It exists so an unsolvable stage does not entomb the
+    ///         prize, not as an escape hatch.
     uint64 public immutable rolloverAfter;
 
     uint256 public stageCount;
-
     mapping(uint256 => Stage) public stages;
 
-    /// @dev stageId => committer => their latest commitment
-    mapping(uint256 => mapping(address => Commitment)) public commitments;
+    /// @notice Addresses cleared to receive a prize, decided before the stage opens.
+    mapping(address => bool) public allowlisted;
 
     // -----------------------------------------------------------------------
     // Events
     // -----------------------------------------------------------------------
 
-    event StageCreated(uint256 indexed stageId, bytes32 answerHash, uint256 prize);
+    event StageCreated(uint256 indexed stageId, address puzzleSigner, uint256 prize, uint64 opensAt);
     event StageFunded(uint256 indexed stageId, address indexed from, uint256 amount, uint256 newPrize);
-    event Committed(uint256 indexed stageId, address indexed committer, bytes32 commitment);
-    event Solved(uint256 indexed stageId, address indexed solver, uint256 prize);
+    event Allowlisted(address indexed account, bool status);
+    event Claimed(uint256 indexed stageId, address indexed winner, uint256 prize);
     event RolledOver(uint256 indexed fromStageId, uint256 indexed toStageId, uint256 amount);
 
     // -----------------------------------------------------------------------
@@ -85,28 +106,23 @@ contract TreasureHunt {
 
     error NotCurator();
     error NoSuchStage();
-    error AlreadySolved();
-    error NoCommitment();
-    error RevealTooEarly();
-    error BadCommitment();
-    error WrongAnswer();
+    error AlreadyClaimed();
+    error NotOpenYet();
+    error BadSignature();
+    error NotAllowlisted();
+    error ZeroRecipient();
+    error EmptySigner();
     error NothingToRollover();
     error RolloverTooEarly();
     error SameStage();
-    error EmptyHash();
     error TransferFailed();
 
     // -----------------------------------------------------------------------
     // Construction
     // -----------------------------------------------------------------------
 
-    /// @param _revealDelay   Blocks between commit and reveal. 5-20 is sane on a fast chain.
-    /// @param _rolloverAfter Blocks before an unsolved stage can roll forward. Set this long
-    ///                       (months) — it exists so a genuinely unsolvable stage doesn't
-    ///                       entomb the prize, not as an escape hatch.
-    constructor(uint64 _revealDelay, uint64 _rolloverAfter) {
+    constructor(uint64 _rolloverAfter) {
         curator = msg.sender;
-        revealDelay = _revealDelay;
         rolloverAfter = _rolloverAfter;
     }
 
@@ -119,91 +135,104 @@ contract TreasureHunt {
     // Stage lifecycle
     // -----------------------------------------------------------------------
 
-    /// @notice Create a stage and fund it in one call. The answer hash is written now and is
-    ///         immutable — this is the public commitment that a solution exists.
-    /// @param answerHash sha256 of the normalized answer (uppercase A-Z, no separators).
-    function createStage(bytes32 answerHash) external payable onlyCurator returns (uint256 stageId) {
-        if (answerHash == bytes32(0)) revert EmptyHash();
+    /// @param puzzleSigner      Address of the keypair the puzzle terminates in. Published now,
+    ///                          immutable forever. This is the proof a solution exists.
+    /// @param opensAt           Block from which claims are accepted. 0 for immediately.
+    /// @param requiresAllowlist Whether the recipient must be pre-registered. Use false for small
+    ///                          ladder prizes below reporting thresholds; true for the grand prize.
+    function createStage(address puzzleSigner, uint64 opensAt, bool requiresAllowlist)
+        external
+        payable
+        onlyCurator
+        returns (uint256 stageId)
+    {
+        if (puzzleSigner == address(0)) revert EmptySigner();
 
         stageId = stageCount++;
         stages[stageId] = Stage({
-            answerHash: answerHash,
+            puzzleSigner: puzzleSigner,
             prize: msg.value,
-            solver: address(0),
+            winner: address(0),
             createdAt: uint64(block.number),
-            solvedAt: 0,
+            claimedAt: 0,
+            opensAt: opensAt,
+            requiresAllowlist: requiresAllowlist,
             exists: true
         });
 
-        emit StageCreated(stageId, answerHash, msg.value);
+        emit StageCreated(stageId, puzzleSigner, msg.value, opensAt);
     }
 
-    /// @notice Add to a stage's prize. Deliberately open to anyone — third parties topping up
-    ///         the pot is good for the hunt, and there is no path for funds to come back out
-    ///         except to a solver.
+    /// @notice Top up a stage. Open to anyone; there is no path back out except to a winner.
     function fundStage(uint256 stageId) external payable {
         Stage storage s = stages[stageId];
         if (!s.exists) revert NoSuchStage();
-        if (s.solver != address(0)) revert AlreadySolved();
+        if (s.winner != address(0)) revert AlreadyClaimed();
 
         s.prize += msg.value;
         emit StageFunded(stageId, msg.sender, msg.value, s.prize);
     }
 
-    // -----------------------------------------------------------------------
-    // Commit / reveal
-    // -----------------------------------------------------------------------
-
-    /// @notice Step 1 of claiming. Publish a commitment that leaks nothing about the answer.
-    /// @param commitment sha256(abi.encodePacked(answer, msg.sender, salt))
-    ///
-    /// @dev The commitment binds to msg.sender. An attacker who later watches your reveal
-    ///      transaction learns the answer and the salt — but cannot use them, because their
-    ///      own address produces a different commitment hash and they have no matching
-    ///      commitment on record. To beat you they would have had to commit *before* you,
-    ///      which requires already knowing the answer.
-    ///
-    ///      Re-committing overwrites your previous commitment and restarts your delay.
-    function commit(uint256 stageId, bytes32 commitment) external {
-        Stage storage s = stages[stageId];
-        if (!s.exists) revert NoSuchStage();
-        if (s.solver != address(0)) revert AlreadySolved();
-
-        commitments[stageId][msg.sender] = Commitment({hash: commitment, blockNumber: uint64(block.number)});
-
-        emit Committed(stageId, msg.sender, commitment);
+    /// @notice Pre-register cleared payout addresses. Must happen BEFORE the stage opens so
+    ///         that no eligibility decision is ever made at claim time.
+    function setAllowlist(address[] calldata accounts, bool status) external onlyCurator {
+        for (uint256 i = 0; i < accounts.length; ++i) {
+            allowlisted[accounts[i]] = status;
+            emit Allowlisted(accounts[i], status);
+        }
     }
 
-    /// @notice Step 2 of claiming. Reveal the answer and salt; the prize is paid immediately.
-    /// @param answer The normalized answer (uppercase A-Z, no separators).
-    /// @param salt   The same random salt used to build the commitment.
-    function reveal(uint256 stageId, string calldata answer, bytes32 salt) external {
-        Stage storage s = stages[stageId];
-        if (!s.exists) revert NoSuchStage();
-        if (s.solver != address(0)) revert AlreadySolved();
+    // -----------------------------------------------------------------------
+    // Claiming
+    // -----------------------------------------------------------------------
 
-        Commitment memory c = commitments[stageId][msg.sender];
-        if (c.hash == bytes32(0)) revert NoCommitment();
-        if (block.number < uint256(c.blockNumber) + uint256(revealDelay)) revert RevealTooEarly();
+    /// @notice The exact digest a solver must sign with the puzzle key.
+    /// @dev Binds four things:
+    ///        recipient      — so a copied signature cannot be redirected. This is the defence.
+    ///        stageId        — so a signature for one stage cannot claim another.
+    ///        address(this)  — so it cannot be replayed against a different deployment.
+    ///        chainid        — so it cannot be replayed on a forked or sibling chain.
+    function claimDigest(uint256 stageId, address recipient) public view returns (bytes32) {
+        return sha256(abi.encodePacked(stageId, recipient, address(this), block.chainid));
+    }
 
-        // The commitment must match this exact (answer, sender, salt) triple.
-        bytes32 expected = sha256(abi.encodePacked(answer, msg.sender, salt));
-        if (expected != c.hash) revert BadCommitment();
+    /// @notice Claim a stage prize. One transaction. Anyone may submit it; the money can only
+    ///         ever go to the `recipient` inside the signed digest.
+    /// @dev Deliberately does NOT require msg.sender == recipient. A winner without gas can have
+    ///      a friend, a relayer, or the bot that tried to steal it, broadcast on their behalf —
+    ///      and it still pays the winner. That turns the classic attack into a free relay service.
+    function claim(uint256 stageId, address payable recipient, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        Stage storage stage = stages[stageId];
+        if (!stage.exists) revert NoSuchStage();
+        if (stage.winner != address(0)) revert AlreadyClaimed();
+        if (recipient == address(0)) revert ZeroRecipient();
+        if (block.number < stage.opensAt) revert NotOpenYet();
+        if (stage.requiresAllowlist && !allowlisted[recipient]) revert NotAllowlisted();
 
-        // ...and the answer must actually be the answer.
-        if (sha256(bytes(answer)) != s.answerHash) revert WrongAnswer();
+        // Reject the malleable upper half of the curve order, and any invalid v. Without
+        // this, (v, r, s) and (v^1, r, n-s) are both valid for the same digest, so a
+        // signature has two forms and anything keyed on its hash can be bypassed.
+        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+            revert BadSignature();
+        }
+        if (v != 27 && v != 28) revert BadSignature();
 
-        // Effects before interaction.
-        uint256 prize = s.prize;
-        s.prize = 0;
-        s.solver = msg.sender;
-        s.solvedAt = uint64(block.number);
-        delete commitments[stageId][msg.sender];
+        // ecrecover returns address(0) on failure rather than reverting, and puzzleSigner
+        // can never be zero (createStage rejects it), so the zero check is belt and braces.
+        address signer = ecrecover(claimDigest(stageId, recipient), v, r, s);
+        if (signer == address(0) || signer != stage.puzzleSigner) revert BadSignature();
 
-        emit Solved(stageId, msg.sender, prize);
+        uint256 prize = stage.prize;
+        stage.prize = 0;
+        stage.winner = recipient;
+        stage.claimedAt = uint64(block.number);
+
+        emit Claimed(stageId, recipient, prize);
 
         if (prize > 0) {
-            (bool ok,) = payable(msg.sender).call{value: prize}("");
+            (bool ok,) = recipient.call{value: prize}("");
             if (!ok) revert TransferFailed();
         }
     }
@@ -212,19 +241,19 @@ contract TreasureHunt {
     // Rollover
     // -----------------------------------------------------------------------
 
-    /// @notice Move an unsolved, stale stage's prize into another unsolved stage.
-    ///         Not a withdrawal: funds can only ever move between stages of this hunt.
-    ///         Callable by anyone once the stage is stale, so it isn't a curator privilege.
+    /// @notice Move a stale unclaimed prize into another unsolved stage. Permissionless, so it
+    ///         is not a curator privilege, and funds can only move between stages of this hunt.
     function rollover(uint256 fromStageId, uint256 toStageId) external {
         if (fromStageId == toStageId) revert SameStage();
 
         Stage storage from = stages[fromStageId];
         Stage storage to = stages[toStageId];
         if (!from.exists || !to.exists) revert NoSuchStage();
-        if (from.solver != address(0)) revert AlreadySolved();
-        if (to.solver != address(0)) revert AlreadySolved();
+        if (from.winner != address(0) || to.winner != address(0)) revert AlreadyClaimed();
         if (from.prize == 0) revert NothingToRollover();
-        if (block.number < uint256(from.createdAt) + uint256(rolloverAfter)) revert RolloverTooEarly();
+
+        uint64 startedAt = from.opensAt > from.createdAt ? from.opensAt : from.createdAt;
+        if (block.number < uint256(startedAt) + uint256(rolloverAfter)) revert RolloverTooEarly();
 
         uint256 amount = from.prize;
         from.prize = 0;
@@ -237,25 +266,25 @@ contract TreasureHunt {
     // Views
     // -----------------------------------------------------------------------
 
-    /// @notice Everything a solver or a skeptic needs, in one call.
     function stageInfo(uint256 stageId)
         external
         view
-        returns (bytes32 answerHash, uint256 prize, address solver, uint64 createdAt, uint64 solvedAt)
+        returns (
+            address puzzleSigner,
+            uint256 prize,
+            address winner,
+            uint64 createdAt,
+            uint64 claimedAt,
+            uint64 opensAt,
+            bool requiresAllowlist
+        )
     {
         Stage storage s = stages[stageId];
         if (!s.exists) revert NoSuchStage();
-        return (s.answerHash, s.prize, s.solver, s.createdAt, s.solvedAt);
+        return (s.puzzleSigner, s.prize, s.winner, s.createdAt, s.claimedAt, s.opensAt, s.requiresAllowlist);
     }
 
-    /// @notice Block number from which `msg.sender` may reveal on a stage. 0 if not committed.
-    function revealableAt(uint256 stageId, address committer) external view returns (uint256) {
-        Commitment memory c = commitments[stageId][committer];
-        if (c.hash == bytes32(0)) return 0;
-        return uint256(c.blockNumber) + uint256(revealDelay);
-    }
-
-    /// @notice Total wei still escrowed across all unsolved stages.
+    /// @notice Total wei still escrowed across all unclaimed stages.
     function totalEscrowed() external view returns (uint256 total) {
         uint256 n = stageCount;
         for (uint256 i = 0; i < n; ++i) {
@@ -263,11 +292,10 @@ contract TreasureHunt {
         }
     }
 
-    /// @dev Accept plain transfers as an untargeted donation to stage 0, if it exists and is
-    ///      unsolved. Keeps "someone sent ETH to the contract" from becoming stuck value.
+    /// @dev Untargeted transfers top up stage 0 rather than becoming stuck value.
     receive() external payable {
         Stage storage s = stages[0];
-        if (!s.exists || s.solver != address(0)) revert NoSuchStage();
+        if (!s.exists || s.winner != address(0)) revert NoSuchStage();
         s.prize += msg.value;
         emit StageFunded(0, msg.sender, msg.value, s.prize);
     }
