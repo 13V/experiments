@@ -123,6 +123,8 @@ const ART = {
   MockERC20: out.contracts['test/PackMocks.sol'].MockERC20,
   MockAggregator: out.contracts['test/PackMocks.sol'].MockAggregator,
   PackHolder: out.contracts['test/PackMocks.sol'].PackHolder,
+  FreezingERC20: out.contracts['test/PackMocks.sol'].FreezingERC20,
+  RevertingERC20: out.contracts['test/PackMocks.sol'].RevertingERC20,
 };
 
 // ---------------------------------------------------------------------------
@@ -226,13 +228,17 @@ async function main() {
   const chain = odds.deriveChain(SECRET, N);
   const seed = (k) => chain.seeds[k];
 
-  async function buildWorld({ tiers = odds.TIERS, inventory = true, pulls = PULLS, chainRoot = chain.root } = {}) {
-    const usdg = await deploy(ART.MockERC20, ['string', 'string', 'uint8'], ['Global Dollar', 'USDG', 6]);
+  async function buildWorld({ tiers = odds.TIERS, inventory = true, pulls = PULLS, chainRoot = chain.root, freezingPayment = false, reverting = [] } = {}) {
+    const usdg = freezingPayment
+      ? await deploy(ART.FreezingERC20, ['uint8'], [6])
+      : await deploy(ART.MockERC20, ['string', 'string', 'uint8'], ['Global Dollar', 'USDG', 6]);
     const tokens = {};
     const feeds = {};
     const symbols = [...new Set(tiers.flatMap((t) => t.tokens))];
     for (const s of symbols) {
-      tokens[s] = await deploy(ART.MockERC20, ['string', 'string', 'uint8'], [s, s, 18]);
+      tokens[s] = reverting.includes(s)
+        ? await deploy(ART.RevertingERC20)
+        : await deploy(ART.MockERC20, ['string', 'string', 'uint8'], [s, s, 18]);
       feeds[s] = await deploy(ART.MockAggregator, ['int256', 'uint8'], [price8(PRICES[s]), 8]);
     }
     const packs = await deploy(ART.StonkPacks, ['address', 'uint256', 'uint8', 'uint16', 'address', 'bytes32'],
@@ -244,7 +250,7 @@ async function main() {
     }
     for (const s of symbols) {
       await call({ to: packs, data: encode('setFeed(address,address,uint32)', tokens[s], feeds[s], 3600) });
-      if (inventory) await call({ to: tokens[s], data: encode('mint(address,uint256)', packs, 1_000_000n * ETH) });
+      if (inventory && !reverting.includes(s)) await call({ to: tokens[s], data: encode('mint(address,uint256)', packs, 1_000_000n * ETH) });
     }
     await call({ to: usdg, data: encode('mint(address,uint256)', BUYER, 1_000_000_000_000n) });
     await call({ to: usdg, data: encode('mint(address,uint256)', BUYER2, 1_000_000_000_000n) });
@@ -480,6 +486,47 @@ async function main() {
   check('sequencer just restarted: still not ok during grace', toBig((await view(D.packs, 'quote(address,uint64)', D.tokens.NVDA, 5000))[1]) === 0n);
   await call({ to: seq, data: encode('set(int256,uint256)', 0n, ts - 7200n) });
   check('sequencer up past grace: ok', toBig((await view(D.packs, 'quote(address,uint64)', D.tokens.NVDA, 5000))[1]) === 1n);
+
+  // -------------------------------------------------------------------------
+  section('Fee is capped and frozen with the odds');
+  r = await call({ to: packs, data: encode('setFee(uint16,address)', 3000, FEE_TO) });
+  check('fee above the cap is rejected', r.reverted && errorIs(r.ret, 'BadTier()'));
+  r = await call({ to: packs, data: encode('setFee(uint16,address)', 500, FEE_TO) });
+  check('fee cut cannot change after lockOdds', r.reverted && errorIs(r.ret, 'OddsAreLocked()'));
+  r = await call({ to: packs, data: encode('setFee(uint16,address)', 1000, BUYER2) });
+  check('fee recipient can still change', !r.reverted, r.error);
+  await call({ to: packs, data: encode('setFee(uint16,address)', 1000, FEE_TO) });
+
+  section('Hostile recipients cannot freeze the game');
+  const FROZEN = '0x' + 'fe'.repeat(20);
+  const H = await buildWorld({ tiers: oneTier, inventory: false, freezingPayment: true });
+  await call({ to: H.packs, data: encode('lockOdds()') });
+  await call({ to: H.usdg, data: encode('freeze(address,bool)', FROZEN, true) });
+  await call({ from: BUYER, to: H.packs, data: encode('buy(bytes32)', '0x' + 'f1'.repeat(32)) });
+  await call({ from: BUYER, to: H.packs, data: encode('transferFrom(address,address,uint256)', BUYER, FROZEN, 1) });
+  advance(201);
+  r = await call({ from: STRANGER, to: H.packs, data: encode('refundExpired(uint256)', 1) });
+  check('refund to an address the stablecoin refuses still succeeds', !r.reverted, r.error);
+  check('the frozen holder is credited an IOU instead', (await viewBig(H.packs, 'owed(address)', FROZEN)) === PRICE);
+  check('escrow released', (await viewBig(H.packs, 'escrowed()')) === 0n);
+  r = await call({ from: STRANGER, to: H.packs, data: encode('skip(uint256,bytes32)', 1, seed(1)) });
+  check('chain moves on', !r.reverted && (await viewBig(H.packs, 'revealed()')) === 1n, r.error);
+  await call({ from: BUYER, to: H.packs, data: encode('buy(bytes32)', '0x' + 'f2'.repeat(32)) });
+  await call({ from: BUYER, to: H.packs, data: encode('transferFrom(address,address,uint256)', BUYER, FROZEN, 2) });
+  advance(2);
+  r = await call({ from: STRANGER, to: H.packs, data: encode('open(uint256,bytes32)', 2, seed(2)) });
+  check('a pack held by a frozen address still opens', !r.reverted && pullsOf(r.logs).length === 5, r.error);
+  check('every pull became an IOU for the frozen holder', (await viewBig(H.packs, 'owed(address)', FROZEN)) === PRICE + 250_000_000n);
+  check('the game continues past it', (await viewBig(H.packs, 'revealed()')) === 2n);
+
+  section('A paused or hostile stock token degrades to cash');
+  const R = await buildWorld({ tiers: [{ name: 'Only', weight: 1, usd: 2, tokens: ['NVDA'] }], reverting: ['NVDA'] });
+  await call({ to: R.packs, data: encode('lockOdds()') });
+  await call({ from: BUYER, to: R.packs, data: encode('buy(bytes32)', '0x' + 'f3'.repeat(32)) });
+  advance(2);
+  r = await call({ from: STRANGER, to: R.packs, data: encode('open(uint256,bytes32)', 1, seed(1)) });
+  check('open succeeds when the stock token reverts on transfer', !r.reverted, r.error);
+  check('pulls paid in cash', pullsOf(r.logs).every((p) => p.cash && p.amount === 2_000_000n));
 
   // -------------------------------------------------------------------------
   section('Statistics: realised payout tracks the published odds');

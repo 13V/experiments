@@ -44,6 +44,15 @@ pragma solidity ^0.8.24;
 /// the odds; solvency of prizes is the operator's reputation, exactly as with any
 /// pack seller.
 ///
+/// Residual risk, stated plainly: an operator who leaks a future seed to a friend lets that
+/// friend choose a buyer seed with knowledge of two of the three entropy sources; the block
+/// hash is the only defence, and on some L2s it is weak. Chainlink VRF removes the operator
+/// from the picture entirely and is the intended upgrade.
+///
+/// No transfer to a pack holder can ever revert an open or a refund. Regulated stock tokens
+/// and stablecoins can refuse an address; when that happens the holder is credited an IOU
+/// and the game moves on. A holder can therefore never freeze the chain for everyone else.
+///
 /// UNAUDITED. Loot boxes containing securities are a regulated shape in most places.
 contract StonkPacks {
     // -----------------------------------------------------------------------
@@ -191,8 +200,9 @@ contract StonkPacks {
     uint256 public packPrice; // in payment token units
     uint8 public pullsPerPack;
     uint16 public feeBps; // share of each opened pack's price sent to feeRecipient
+    uint16 public constant MAX_FEE_BPS = 2500;
     address public feeRecipient;
-    bool public oddsLocked;
+    bool public oddsLocked; // freezes tiers, pulls per pack and the fee cut
 
     Tier[] private _tiers;
     uint256 public totalWeight;
@@ -236,6 +246,7 @@ contract StonkPacks {
     );
     event Refunded(uint256 indexed packId, address indexed buyer, uint256 amount);
     event Skipped(uint256 indexed packId);
+    event Owed(uint256 indexed packId, address indexed who, uint256 amount);
     event OwedClaimed(address indexed who, uint256 amount);
     event OddsLocked();
     event TierSet(uint8 indexed index, uint32 weight, uint64 usdCents, address[] tokens);
@@ -279,7 +290,7 @@ contract StonkPacks {
         bytes32 _chainRoot
     ) {
         if (_paymentToken == address(0) || _feeRecipient == address(0)) revert ZeroAddress();
-        if (_feeBps > 10_000 || _pulls == 0 || _packPrice > type(uint96).max) revert BadTier();
+        if (_feeBps > MAX_FEE_BPS || _pulls == 0 || _packPrice > type(uint96).max) revert BadTier();
         owner = msg.sender;
         paymentToken = IERC20(_paymentToken);
         paymentDecimals = IERC20(_paymentToken).decimals();
@@ -344,9 +355,11 @@ contract StonkPacks {
         packPrice = price;
     }
 
+    /// @notice The recipient can always change. The cut is capped and frozen by lockOdds().
     function setFee(uint16 bps, address recipient) external onlyOwner {
-        if (bps > 10_000) revert BadTier();
+        if (bps > MAX_FEE_BPS) revert BadTier();
         if (recipient == address(0)) revert ZeroAddress();
+        if (oddsLocked && bps != feeBps) revert OddsAreLocked();
         feeBps = bps;
         feeRecipient = recipient;
     }
@@ -435,8 +448,9 @@ contract StonkPacks {
         bytes32 randomness = _entropy(seed, p, packId, holder);
         emit Opened(packId, holder, randomness);
 
+        // A fee that cannot be delivered simply stays in the treasury as free balance.
         uint256 fee = price * feeBps / 10_000;
-        if (fee > 0) _send(paymentToken, feeRecipient, fee);
+        if (fee > 0) _trySend(paymentToken, feeRecipient, fee);
 
         uint8 n = pullsPerPack;
         for (uint8 i = 0; i < n; ++i) {
@@ -462,20 +476,18 @@ contract StonkPacks {
         address token = t.tokens[uint256(keccak256(abi.encode(rand, "token"))) % t.tokens.length];
 
         (uint256 amount, bool ok) = quote(token, t.usdCents);
-        if (ok && IERC20(token).balanceOf(address(this)) >= amount) {
-            _send(IERC20(token), to, amount);
+        if (ok && _balanceOf(token) >= amount && _trySend(IERC20(token), to, amount)) {
             emit Pull(packId, index, tierIdx, token, amount, t.usdCents, false);
             return;
         }
 
         // Cash fallback in the payment token, never touching escrow or existing IOUs.
+        // If even that cannot be delivered, the holder is credited and the open still succeeds.
         uint256 cash = uint256(t.usdCents) * (10 ** paymentDecimals) / 100;
-        uint256 free = _freeBalance();
-        if (free >= cash) {
-            _send(paymentToken, to, cash);
-        } else {
+        if (!(_freeBalance() >= cash && _trySend(paymentToken, to, cash))) {
             owed[to] += cash;
             totalOwed += cash;
+            emit Owed(packId, to, cash);
         }
         emit Pull(packId, index, tierIdx, address(paymentToken), cash, t.usdCents, true);
     }
@@ -530,7 +542,11 @@ contract StonkPacks {
         p.status = Status.Refunded;
         escrowed -= price;
         _burn(packId);
-        _send(paymentToken, holder, price);
+        if (!_trySend(paymentToken, holder, price)) {
+            owed[holder] += price;
+            totalOwed += price;
+            emit Owed(packId, holder, price);
+        }
         emit Refunded(packId, holder, price);
     }
 
@@ -597,8 +613,28 @@ contract StonkPacks {
     // Internals
     // -----------------------------------------------------------------------
 
+    /// @dev Reverting transfer, for paths where the recipient is the caller or the owner.
     function _send(IERC20 token, address to, uint256 amount) private {
-        if (!token.transfer(to, amount)) revert TransferFailed();
+        if (!_trySend(token, to, amount)) revert TransferFailed();
+    }
+
+    /// @dev A transfer that never reverts the caller. Tolerates tokens that revert, tokens that
+    ///      return nothing, and tokens that refuse the recipient. True only if it actually succeeded.
+    function _trySend(IERC20 token, address to, uint256 amount) private returns (bool) {
+        if (amount == 0) return true;
+        if (address(token).code.length == 0) return false;
+        (bool ok, bytes memory ret) = address(token).call(abi.encodeWithSelector(IERC20.transfer.selector, to, amount));
+        if (!ok) return false;
+        if (ret.length == 0) return true;
+        if (ret.length < 32) return false;
+        return abi.decode(ret, (bool));
+    }
+
+    /// @dev balanceOf that treats a broken token as empty rather than reverting the open.
+    function _balanceOf(address token) private view returns (uint256) {
+        (bool ok, bytes memory ret) = token.staticcall(abi.encodeWithSelector(IERC20.balanceOf.selector, address(this)));
+        if (!ok || ret.length < 32) return 0;
+        return abi.decode(ret, (uint256));
     }
 
     function _toString(uint256 v) private pure returns (string memory) {
