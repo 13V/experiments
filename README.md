@@ -157,3 +157,105 @@ targeting a chain that hasn't forked — the contract itself doesn't care).
   looks: giving token holders any advantage in winning supplies consideration and converts
   a skill contest into a lottery, while giving them a pro-rata share of the pot is about the
   cleanest security fact pattern there is. That needs counsel before launch, not after.
+
+---
+
+# Stonk Packs
+
+Booster packs with real tokenized stocks inside, for Robinhood Chain.
+
+> $20 in USDG. Five pulls. Most are a dollar of Ford. One in two thousand packs holds a whole share of Eli Lilly.
+
+A pack is an ERC-721 you can hold, trade or gift sealed. Opening it burns the pack and pays
+five random pulls straight into the holder's wallet as Robinhood stock tokens, sized by each
+stock's Chainlink feed. Sealed packs sell at 3am on a Sunday because the chain never closes.
+
+```
+contracts/StonkPacks.sol       The pack contract. ERC-721 packs, odds table, seed chain, feeds, escrow, IOUs.
+contracts/test/PackMocks.sol   Test doubles only.
+scripts/packs/odds.js          Odds table, expected value, seed-chain generator, and a byte-exact
+                               mirror of the contract's randomness so anyone can verify any pack.
+scripts/packs/operator.js      The bot that reveals seeds in order, refunds and skips expired packs.
+scripts/packs/test.js          81 integration tests against the compiled contract in a real EVM.
+```
+
+```bash
+node scripts/packs/odds.js rtp          # the table and its return to player
+node scripts/packs/odds.js chain 10000  # operator secret + the root you deploy with
+node scripts/packs/test.js              # 81 passed, 0 failed
+```
+
+## The odds
+
+| Tier | Chance per pull | Value | Paid in |
+|---|---|---|---|
+| Common | 72% | $1 | F, AMC, BB, SOFI, RIVN, SNAP, CCL, HIMS, SOUN, RCAT |
+| Uncommon | 20% | $3 | AAPL, MSFT, GOOGL, AMZN, META, COIN, INTC, AMD, NFLX, RBLX |
+| Rare | 6% | $12 | NVDA, TSLA, PLTR, MSTR, SPCX, GME, GLD, TTWO |
+| Epic | 1.8% | $50 | COST, ASML, NET, AVGO, UNH |
+| Legendary | 0.19% | $200 | CELH, LULU, IREN, WULF, GLXY, RKLB |
+| Mythic | 0.01% | $1,163 | LLY, one whole share |
+
+Expected payout is $17.18 on a $20 pack, an 85.9% return to player, with 10% of each opened
+pack going to `feeRecipient`. Point that at a fee distributor and the pack coin pays its
+holders. The table is a constructor-time choice and can be locked forever with `lockOdds()`.
+
+## Why nobody can cheat
+
+**Buyers.** A pull is `keccak(operatorSeed, buyerSeed, packId, holder, blockhash(purchaseBlock + 1))`.
+The buyer picks their seed before the operator seed is known, the operator seed is fixed before
+the buyer's is known, and the block hash exists after both. The open is a separate transaction
+by a different party, so a contract buyer has nothing to revert.
+
+**The operator.** Seeds form a hash chain, `seed_k = keccak(seed_{k+1})`, whose root is published
+at deployment. Pack k can only be opened with the one seed that hashes to the current head, and
+packs open strictly in order, so the operator cannot pick outcomes, skip a pack they can see the
+result of, or reorder buyers. Once the odds are locked, `odds.js verify` recomputes any pack from
+public inputs and the test suite proves the mirror matches the chain pull for pull.
+
+**Liveness.** An operator who stops revealing freezes the game in public. Any pack unopened for
+200 blocks becomes refundable by anyone, the refund goes to the holder in full with no fee,
+and the pack's seed is then consumed by `skip` so the chain moves on. Stalling costs the sale
+and is visible on-chain.
+
+Chainlink lists VRF v2.5 for Robinhood Chain. Moving to it is a two-step open, a request in
+`open` and the payout in the fulfil callback, and it removes the operator entirely. The hash
+chain ships first because every property above is testable end to end today without a network.
+
+## Degraded modes, all tested
+
+- Treasury is out of a stock: the pull pays the same USD in the payment token.
+- Treasury is out of cash too: the pull becomes an IOU, claimable the moment funds arrive,
+  and the owner can never withdraw below escrow plus IOUs.
+- A stock's feed is stale, or paused around a corporate action: cash instead of a stale price.
+- The L2 sequencer is down or just restarted: cash, per the Chainlink sequencer-feed pattern.
+- The owner changes the pack price: sealed packs keep the price they paid for fee, escrow and refund.
+
+## Deploying on Robinhood Chain
+
+Chain id 4663, gas in ETH. Payment token is USDG at `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`,
+6 decimals. Stock tokens are 18 decimals and the canonical list, with addresses, comes from
+`https://api.robinhood.com/rhj/assets`; `node scripts/packs/odds.js tiers` prints the `setTier`
+calls for the default table with live addresses. Feed proxy addresses and heartbeats are on
+Chainlink's Robinhood Chain price feeds page. Read them from there; do not hardcode.
+
+1. `node scripts/packs/odds.js chain 10000`. Keep the secret offline. Deploy with the root.
+2. `setTier` for each tier, `setFeed` for every token with its heartbeat, `setSequencerFeed`,
+   then `lockOdds()`. Publish the root and the locked table.
+3. Buy inventory on the DEX or via RFQ and transfer it to the contract. Thin-float stocks in the
+   Legendary tier are the ones nobody can buy on-chain, which is the point.
+4. Run the operator: `RPC_URL=... PACKS_ADDRESS=... OPERATOR_KEY=... PACK_SECRET=... node scripts/packs/operator.js`.
+   Opening is permissionless; the key just pays gas.
+
+Stock token amounts are raw units. The feed already includes the corporate-action multiplier,
+so `usd / feedPrice` is the right number of tokens without touching `uiMultiplier()`.
+
+## Caveats
+
+- **Unaudited.** The suite is thorough about the properties it tests. It is not an audit.
+- Provable fairness covers the odds. Prize solvency is the operator's inventory and reputation,
+  the same as any pack seller. Cash and IOU fallbacks exist so an open never fails.
+- On Arbitrum-style chains `block.number` tracks the parent chain and `blockhash` is a
+  chain-provided pseudo-random value. It is one of three entropy sources here, not the only one.
+- Loot boxes containing securities are a regulated shape in most jurisdictions. That is out of
+  scope of this repo and was parked deliberately.
