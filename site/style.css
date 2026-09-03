@@ -363,3 +363,12 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 @media (prefers-reduced-motion: reduce) {
   .feed-row.feed-in { animation: none; }
 }
+
+/* stat strips on phones: a 2x2 grid instead of a stagger */
+@media (max-width: 520px) {
+  .ledger { grid-template-columns: 1fr 1fr; }
+  .ledger .stat { border-right: 0; padding: 10px 8px 10px 0; }
+  .ledger .stat + .stat { padding-left: 0; }
+  .ledger .stat:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--rule); }
+  .ledger .stat:nth-child(-n+2):nth-last-child(n+3) { border-bottom: 1px solid var(--rule); }
+}
