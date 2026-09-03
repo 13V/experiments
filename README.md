@@ -190,7 +190,7 @@ python3 -m http.server 8787 --directory site   # then open http://localhost:8787
 
 ## The site
 
-`site/` is the whole storefront: `index.html`, `style.css`, `app.js`, `fx.js`, `lib.js` and `config.js`.
+`site/` is the whole storefront: `index.html`, `style.css`, `app.js`, `fx.js`, `share.js`, `feed.js`, `lib.js` and `config.js`.
 Host it anywhere that serves files. It reads the chain through the public RPC and writes
 through whatever wallet the browser injects (MetaMask, Rabby, a wallet's in-app browser),
 switching or adding Robinhood Chain as needed.
@@ -215,6 +215,23 @@ switching or adding Robinhood Chain as needed.
   and has a switch in the masthead that remembers itself. Tap the stage to skip. Reduced-motion
   users get plain flips. `?demo=Mythic` re-rolls a demo pack until that rarity shows up, for
   watching the show, and touches nothing on the chain path.
+- **Share card and link previews.** The result panel renders a 1200×630 PNG of the pull on a
+  canvas (`share.js`): the five cards, the total, the pack number and the URL. Phones get the
+  native share sheet with the image attached; desktops get a download plus the text on the
+  clipboard, and a preview appears under the result. `og.html` is a self-contained template
+  that `scripts/make-og.js` renders to `og.png` for X, Discord and iMessage previews; the head
+  carries the Open Graph and Twitter card tags.
+- **Live pulls.** `feed.js` puts a stats strip (packs ripped, paid out, top pull, Mythics found)
+  and a "Latest pulls" list under the stage. With a contract it reads `revealed()` and scans
+  `Opened`/`Pull` events backwards in 50,000-block chunks, refreshing every 20 seconds, and takes
+  over the ticker tape with real pulls. Without one it shows this browser's demo pulls, stamped
+  "demo".
+- **Pre-launch state.** Until `contract` is set (or `launch.live` is true) the demo button is
+  primary, the buy button is an inert block with a "launching soon" sticker, and any of
+  `social.x`, `social.telegram`, `social.discord` that are filled in appear as follow chips under
+  the hero and in the footer.
+- **Type.** Bricolage Grotesque (display) and Newsreader (body), self-hosted under
+  `site/fonts/` with their SIL Open Font Licence files, 112 KB of woff2 in total.
 - **Logos.** `site/logos/<TICKER>.png`, one per stock in the table, shown on the cards and in
   the pull-rate table. The page measures each mark once and puts white-on-transparent logos
   on ink so nothing vanishes on paper. Robinhood's registry has a `logoUrl` per token, but
