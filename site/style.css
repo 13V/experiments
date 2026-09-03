@@ -1,4 +1,45 @@
 /* Stonk Packs. Print, not pixels: paper, ink, one green, foil for the top tier. */
+
+/* Self-hosted type, latin subsets only. Both faces are SIL Open Font License 1.1;
+   the licences ship next to the files in fonts/.
+   Bricolage Grotesque (Atelier Triay) does the shouting: wordmark, headlines, tickers, stamps.
+   Newsreader (Production Type) sets the reading copy. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("fonts/bricolage-grotesque-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 103%;
+  src: url("fonts/newsreader-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 103%;
+  src: url("fonts/newsreader-latin-400-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  size-adjust: 103%;
+  src: url("fonts/newsreader-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   --paper: #f4efe4;
   --paper-2: #ebe4d3;
@@ -16,8 +57,8 @@
   --r-3: #6f3fa3; /* epic: purple ink */
   --r-4: #c25a12; /* legendary: orange ink */
   --r-5: #b8891b; /* mythic: gold */
-  --display: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --display: "Bricolage Grotesque", "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+  --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
   --mono: "Courier New", Courier, "Liberation Mono", monospace;
 }
 * { box-sizing: border-box; }
@@ -44,14 +85,14 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--paper-2); 
 
 /* masthead */
 .masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 22px 28px 14px; border-bottom: 3px double var(--ink); max-width: 1120px; margin: 0 auto; }
-.brand { font-family: var(--display); font-weight: 800; font-size: 28px; letter-spacing: -0.03em; text-transform: uppercase; color: var(--ink); text-decoration: none; line-height: 1; display: flex; flex-direction: column; gap: 4px; }
+.brand { font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: -0.025em; text-transform: uppercase; color: var(--ink); text-decoration: none; line-height: 1; display: flex; flex-direction: column; gap: 4px; }
 .brand-sub { font-family: var(--mono); font-weight: 400; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
 .menu { display: flex; align-items: center; gap: 22px; font-family: var(--display); font-size: 14px; letter-spacing: 0.02em; }
 .menu a { color: var(--ink); text-decoration: none; border-bottom: 2px solid transparent; padding-bottom: 2px; }
 .menu a:hover { border-color: var(--ink); }
 
 /* buttons */
-.btn { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.01em; padding: 11px 18px; border-radius: 3px; cursor: pointer; border: 2px solid var(--ink); background: transparent; color: var(--ink); transition: background 0.12s ease, color 0.12s ease, transform 0.06s ease; }
+.btn { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0; padding: 11px 18px; border-radius: 3px; cursor: pointer; border: 2px solid var(--ink); background: transparent; color: var(--ink); transition: background 0.12s ease, color 0.12s ease, transform 0.06s ease; }
 .btn:hover { background: var(--ink); color: var(--paper); }
 .btn:active { transform: translate(1px, 1px); }
 .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
@@ -64,8 +105,8 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--paper-2); 
 /* layout */
 main { max-width: 1120px; margin: 0 auto; padding: 0 28px 60px; }
 .hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center; padding: 56px 0 44px; border-bottom: 1px solid var(--rule); }
-h1 { font-family: var(--display); font-weight: 800; font-size: clamp(38px, 5.4vw, 64px); line-height: 0.98; letter-spacing: -0.04em; margin: 0 0 22px; text-wrap: balance; }
-.lede { font-size: 20px; line-height: 1.45; margin: 0 0 28px; max-width: 34em; color: var(--ink-2); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(38px, 5.4vw, 66px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 22px; text-wrap: balance; }
+.lede { font-size: 20.5px; line-height: 1.5; margin: 0 0 28px; max-width: 34em; color: var(--ink-2); }
 .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .note { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); margin: 16px 0 0; line-height: 1.5; }
 .sub { color: var(--ink-2); margin: 8px 0 0; }
@@ -85,7 +126,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .wrapper-body { background: var(--ink); color: var(--paper); padding: 22px 20px 18px; position: relative; overflow: hidden;
   background-image: radial-gradient(rgba(244, 239, 228, 0.16) 1.2px, transparent 1.3px); background-size: 9px 9px; }
 .wrapper-top-line { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #cfc7b4; border-bottom: 1px solid rgba(244, 239, 228, 0.35); padding-bottom: 8px; }
-.wrapper-title { font-family: var(--display); font-weight: 800; font-size: 54px; line-height: 0.88; letter-spacing: -0.05em; margin: 18px 0 8px; color: var(--paper); }
+.wrapper-title { font-family: var(--display); font-weight: 800; font-size: 52px; line-height: 0.92; letter-spacing: -0.045em; margin: 18px 0 8px; color: var(--paper); }
 .wrapper-chart { color: #8ee3a8; height: 96px; margin: 6px -4px 10px; }
 .wrapper-chart svg { width: 100%; height: 100%; }
 .wrapper-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #cfc7b4; border-top: 1px solid rgba(244, 239, 228, 0.35); padding-top: 8px; }
@@ -102,7 +143,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
 .stage-pack { display: flex; justify-content: center; padding: 14px 0 8px; }
 .stage-pack .wrapper { width: 190px; transform: none; filter: drop-shadow(8px 10px 0 rgba(20, 19, 17, 0.18)); }
-.stage-pack .wrapper-title { font-size: 40px; }
+.stage-pack .wrapper-title { font-size: 43px; }
 .stage-pack .wrapper-chart { height: 70px; }
 .stage-pack.wobble .wrapper { animation: wobble 1.7s ease-in-out infinite; }
 .stage-pack.rumble .wrapper { animation: rumble 0.07s linear infinite; }
@@ -133,7 +174,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .logo { width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; object-fit: contain; padding: 5px; box-shadow: 2px 2px 0 var(--r); }
 .logo-cash { display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 26px; color: var(--green-ink); }
 .logo.on-dark { background: var(--ink); }
-.sym { font-family: var(--display); font-weight: 800; font-size: clamp(22px, 3.6vw, 36px); letter-spacing: -0.05em; line-height: 1; color: var(--ink); }
+.sym { font-family: var(--display); font-weight: 800; font-size: clamp(23px, 3.8vw, 38px); letter-spacing: -0.04em; line-height: 1; color: var(--ink); max-width: 100%; }
 .sym small { display: block; font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 12px; letter-spacing: 0; color: var(--ink-2); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .card-foot { border: 1.5px solid var(--r); border-radius: 0 0 4px 4px; padding: 6px 7px; display: flex; flex-direction: column; gap: 4px; }
 .usd { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
@@ -143,7 +184,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .card[data-tier="5"].flipped .face.back { animation: foil 2.4s ease-in-out infinite; }
 @keyframes foil { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.08) saturate(1.2); } }
 .card[data-tier="4"] .face.back { background: linear-gradient(180deg, #fbe9d6, var(--paper) 60%); }
-.big-stamp { position: absolute; left: 50%; top: 45%; z-index: 7; pointer-events: none; transform: translate(-50%, -50%) rotate(-8deg); font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6.5vw, 78px); letter-spacing: -0.04em; text-transform: uppercase; white-space: nowrap; color: var(--stamp, var(--ink)); border: 6px solid var(--stamp, var(--ink)); padding: 4px 18px; background: rgba(244, 239, 228, 0.93); box-shadow: 8px 8px 0 rgba(20, 19, 17, 0.22); animation: slam 0.5s cubic-bezier(0.2, 1.5, 0.3, 1) both; }
+.big-stamp { position: absolute; left: 50%; top: 45%; z-index: 7; pointer-events: none; transform: translate(-50%, -50%) rotate(-8deg); font-family: var(--display); font-weight: 800; font-size: clamp(32px, 6.8vw, 82px); letter-spacing: -0.035em; text-transform: uppercase; white-space: nowrap; color: var(--stamp, var(--ink)); border: 6px solid var(--stamp, var(--ink)); padding: 4px 18px; background: rgba(244, 239, 228, 0.93); box-shadow: 8px 8px 0 rgba(20, 19, 17, 0.22); animation: slam 0.5s cubic-bezier(0.2, 1.5, 0.3, 1) both; }
 @keyframes slam { 0% { transform: translate(-50%, -50%) rotate(-8deg) scale(3.4); opacity: 0; } 55% { opacity: 1; } 100% { transform: translate(-50%, -50%) rotate(-8deg) scale(1); opacity: 1; } }
 .big-stamp.out { animation: stamp-out 0.35s ease-in both; }
 @keyframes stamp-out { to { transform: translate(-50%, -50%) rotate(-8deg) scale(0.7); opacity: 0; } }
@@ -167,7 +208,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 @keyframes float { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-4deg) translateY(-9px); } }
 .hero-art #hero-wrapper.tilting { animation: none; }
 .result-total { font-size: 24px; margin: 0; }
-.result-total strong { font-family: var(--display); font-weight: 800; letter-spacing: -0.03em; font-size: 34px; color: var(--green-ink); }
+.result-total strong { font-family: var(--display); font-weight: 800; letter-spacing: -0.02em; font-size: 36px; color: var(--green-ink); }
 .refund { margin-top: 22px; padding: 16px 18px; border: 2px dashed var(--red); color: var(--ink); }
 .refund p { margin: 0 0 12px; }
 
@@ -176,7 +217,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .tiers { border-top: 2px solid var(--ink); }
 .tier { display: grid; grid-template-columns: 290px 1fr; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--rule); align-items: center; }
 .tier-meta { border-left: 7px solid var(--r); padding-left: 14px; }
-.tier-name { font-family: var(--display); font-weight: 800; font-size: 24px; letter-spacing: -0.03em; color: var(--r); line-height: 1; }
+.tier-name { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: -0.02em; color: var(--r); line-height: 1; }
 .tier-nums { display: flex; gap: 18px; margin-top: 8px; }
 .tier-nums b { display: block; font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
 .tier-nums span { display: block; white-space: nowrap; font-family: var(--display); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
@@ -187,7 +228,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .mini-band { width: 100%; height: 7px; background: var(--r); }
 .mini-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: contain; padding: 3px; margin: 8px 0 4px; border: 1px solid var(--rule); background: #fff; }
 .mini-logo.on-dark { background: var(--ink); }
-.mini-sym { font-family: var(--display); font-weight: 800; font-size: 11.5px; letter-spacing: -0.02em; }
+.mini-sym { font-family: var(--display); font-weight: 800; font-size: 12.5px; letter-spacing: -0.03em; }
 .tier[data-tier="5"] .mini { background: linear-gradient(135deg, #f7e7b0, #fff7dc 30%, #e9c96a 55%, #fff2c8 80%, #dcb95a); }
 .tier[data-tier="5"] .tier-name { text-shadow: 0 1px 0 #fff2c8; }
 .tier[data-tier="4"] .mini { background: linear-gradient(180deg, #fbe9d6, #fff 70%); }
@@ -231,7 +272,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 34px; padding-top: 34px; }
   .wrapper { width: 220px; }
-  .wrapper-title { font-size: 46px; }
+  .wrapper-title { font-size: 44px; }
   .cards { grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .tier { grid-template-columns: 1fr; gap: 12px; }
   .tier-set { gap: 6px; }
