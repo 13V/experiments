@@ -397,3 +397,38 @@ p.note.note-serif { font-family: var(--serif); font-size: 17px; line-height: 1.5
 .btn-soon { position: relative; overflow: visible; }
 .btn-soon .stamp { position: absolute; top: -13px; right: -12px; transform: rotate(-6deg); background: var(--paper); color: var(--red); border-color: var(--red); font-size: 10px; padding: 3px 7px; }
 .cta-row .btn-soon { order: 2; }
+
+/* how it works: four numbered steps, one row, wraps on phones */
+.steps { margin-top: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule); }
+.step { padding: 20px 20px 22px 0; border-right: 1px solid var(--rule); }
+.step:last-child { border-right: 0; }
+.step + .step { padding-left: 20px; }
+.step-n { display: block; font-family: var(--mono); font-weight: 700; font-size: 32px; letter-spacing: -0.02em; line-height: 1; color: var(--ink-3); margin: 0 0 10px; }
+.step-title { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; margin: 0 0 8px; }
+.step p { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+
+/* questions: styled details/summary, no JS */
+.qa { border-top: 2px solid var(--ink); max-width: 56em; }
+.q { border-bottom: 1px solid var(--rule); }
+.q:last-child { border-bottom: 0; }
+.q summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; color: var(--ink); cursor: pointer; list-style: none; }
+.q summary::-webkit-details-marker { display: none; }
+.q summary::after { content: "+"; flex: none; width: 1em; text-align: center; font-family: var(--mono); font-weight: 700; font-size: 19px; color: var(--ink-3); }
+.q[open] summary { border-bottom: 1px solid var(--rule); }
+.q[open] summary::after { content: "\2212"; color: var(--ink); }
+.q p { margin: 0 0 18px; max-width: 46em; color: var(--ink-2); font-size: 15.5px; line-height: 1.55; }
+
+@media (max-width: 860px) {
+  .steps { grid-template-columns: 1fr 1fr; }
+  .step:nth-child(2) { border-right: 0; }
+  .step:nth-child(3) { padding-left: 0; }
+  .step:nth-child(1), .step:nth-child(2) { border-bottom: 1px solid var(--rule); }
+
+  .q summary { min-height: 44px; }
+}
+@media (max-width: 520px) {
+  .steps { grid-template-columns: 1fr; }
+  .step { border-right: 0; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+  .step:last-child { border-bottom: 0; }
+  .step + .step { padding-left: 0; }
+}
