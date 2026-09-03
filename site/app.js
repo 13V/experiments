@@ -513,7 +513,16 @@
     }
   }
 
+  // Current block on the contract's own clock. Robinhood Chain (Arbitrum Nitro) reports the
+  // Ethereum L1 block number as `l1BlockNumber` on eth_getBlockByNumber; a plain Ethereum-style
+  // chain has no such field, so `number` is the clock there instead.
+  async function chainBlockNumber() {
+    const blk = await rpc('eth_getBlockByNumber', ['latest', false]);
+    return Number(BigInt(blk.l1BlockNumber || blk.number));
+  }
+
   async function watchPack(pack) {
+    let purchaseBlock = null; // fetched once from packs(uint256); the clock (chainBlockNumber) is re-read every poll
     for (;;) {
       if (state.current !== pack) return;
       let st;
@@ -527,9 +536,19 @@
       if (expired) { setStatus('expired', false); $('stage-sub').textContent = ''; $('stage-refund').hidden = false; return; }
       if (openable) {
         setStatus('opening', true);
-        $('stage-sub').textContent = age > 120 ? 'The operator is late. Any pack not opened within 40 minutes becomes refundable, and still pays its prizes.' : 'The chain is ready. Waiting for the operator to reveal the seed…';
+        $('stage-sub').textContent = age > 120 ? 'The operator is late. Any pack not opened within 40 minutes becomes refundable, and still pays its prizes.' : 'Ready. Waiting for the operator\'s seed…';
       } else {
-        $('stage-sub').textContent = `Sealed. Opens in about ${Math.max(3, Math.round(24 - age))} seconds.`;
+        let shown = false;
+        try {
+          if (purchaseBlock === null) purchaseBlock = Number(SP.toBig((await view(state.contract, 'packs(uint256)', pack.id))[1]));
+          const current = await chainBlockNumber();
+          const opensAt = purchaseBlock + 2;
+          const t1 = current >= purchaseBlock + 1 ? '▪' : '▫';
+          const t2 = current >= opensAt ? '▪' : '▫';
+          $('stage-sub').innerHTML = `Ethereum block ${current.toLocaleString('en-US')} · opens at ${opensAt.toLocaleString('en-US')} <span class="blocks">${t1}${t2}</span>`;
+          shown = true;
+        } catch (e) { /* RPC hiccup: fall back to the wall-clock guess below */ }
+        if (!shown) $('stage-sub').textContent = `Sealed. Opens in about ${Math.max(3, Math.round(24 - age))} seconds.`;
       }
       await sleep(3000);
     }

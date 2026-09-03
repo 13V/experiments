@@ -432,3 +432,5 @@ p.note.note-serif { font-family: var(--serif); font-size: 17px; line-height: 1.5
   .step:last-child { border-bottom: 0; }
   .step + .step { padding-left: 0; }
 }
+/* watchPack's real block countdown: two ticks that fill in as confirmations land */
+.blocks { font-family: var(--mono); color: var(--ink); font-size: 0.95em; letter-spacing: 1px; margin-left: 2px; }
