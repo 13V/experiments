@@ -363,6 +363,7 @@
       $('btn-again').classList.add('pulse');
     }
     setStatus(pack.late ? 'settled late' : 'opened', false);
+    window.dispatchEvent(new CustomEvent('stonk:opened', { detail: pack }));
   }
 
   // ---------------------------------------------------------------------------

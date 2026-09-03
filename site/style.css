@@ -341,3 +341,25 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 
 /* the rendered share card, sitting under the result like a contact sheet */
 .share-preview { display: block; max-width: 100%; width: 520px; height: auto; border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--paper-2); background: var(--paper); }
+/* live feed (feed.js): stats strip reuses .ledger/.stat; this is the pulls list + tag */
+.feed-heading { font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; margin: 20px 0 4px; }
+.feed-list { display: grid; gap: 0; border-top: 2px solid var(--ink); margin: 4px 0 22px; }
+.feed-empty { padding: 14px 0; color: var(--ink-3); font-style: italic; }
+.feed-row { display: flex; align-items: center; gap: 12px; padding: 10px 0 10px 12px; border-left: 5px solid var(--r, var(--ink-3)); border-bottom: 1px solid var(--rule); }
+.feed-row.feed-in { animation: feed-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.1) both; }
+@keyframes feed-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.feed-logo { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--ink); background: #fff; object-fit: contain; padding: 3px; flex: none; }
+.feed-logo.cash { display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; color: var(--green-ink); font-size: 14px; }
+.feed-main { flex: 1 1 auto; min-width: 0; }
+.feed-sym { font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: -0.02em; color: var(--ink); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.feed-usd { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--green-ink); }
+.feed-tier { font-family: var(--display); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--r, var(--ink-3)); margin-top: 2px; }
+.feed-who { flex: none; text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); line-height: 1.5; max-width: 40vw; overflow-wrap: anywhere; }
+.feed-addr { color: var(--ink-2); }
+@media (max-width: 520px) {
+  .feed-row { flex-wrap: wrap; padding-left: 10px; }
+  .feed-who { max-width: none; text-align: left; flex: 1 1 100%; display: flex; gap: 10px; padding-left: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-row.feed-in { animation: none; }
+}

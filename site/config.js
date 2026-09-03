@@ -323,4 +323,15 @@ window.STONK_CONFIG = {
 
   // Approximate USD prices used only to size demo pulls; the contract uses Chainlink.
   demoPrices: {"F":60.86,"AMC":2.59,"BB":7.95,"SOFI":17.73,"RIVN":19.99,"SNAP":22.72,"CCL":36.7,"HIMS":29.27,"SOUN":6.94,"RCAT":14.69,"AAPL":325.81,"MSFT":502.29,"GOOGL":336.22,"AMZN":256.41,"META":580.79,"COIN":177.09,"INTC":89.62,"AMD":454.45,"NFLX":80.42,"RBLX":40.95,"NVDA":218.07,"TSLA":355.99,"PLTR":180.62,"MSTR":126.95,"SPCX":142.09,"GME":18.78,"GLD":398.61,"TTWO":218.21,"COST":944.33,"ASML":1658.72,"NET":284.07,"AVGO":373.39,"UNH":399.8,"CELH":42.58,"LULU":143.63,"IREN":37.26,"WULF":14.93,"GLXY":23.35,"RKLB":62.94,"LLY":1162.57},
+
+  // feed.js: the live-pulls strip. Log scans page backwards in logChunkBlocks chunks,
+  // capped at maxScanBlocks total, and re-poll every refreshMs for new blocks only.
+  feed: {
+    logChunkBlocks: 50000,
+    maxScanBlocks: 3000000,
+    refreshMs: 20000,
+    maxRows: 12,
+    demoStorageKey: 'stonkpacks:demo-feed',
+    demoMaxRows: 50,
+  },
 };

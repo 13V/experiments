@@ -64,6 +64,13 @@
     </div>
   </section>
 
+  <section id="live" class="sheet">
+    <div class="sheet-head"><h2>Live pulls</h2><span id="live-tag" class="stamp">&hellip;</span></div>
+    <div id="live-stats" class="ledger"></div>
+    <h3 class="feed-heading">Latest pulls</h3>
+    <div id="live-list" class="feed-list" aria-live="polite"></div>
+  </section>
+
   <section id="stage" class="stage" hidden aria-live="polite">
     <div class="stage-head">
       <h2 id="stage-title">Pack #1</h2>
@@ -145,6 +152,7 @@
 <script src="lib.js"></script>
 <script src="fx.js"></script>
 <script src="share.js"></script>
+<script src="feed.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
