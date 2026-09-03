@@ -371,6 +371,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
   .ledger .stat + .stat { padding-left: 0; }
   .ledger .stat:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--rule); }
   .ledger .stat:nth-child(-n+2):nth-last-child(n+3) { border-bottom: 1px solid var(--rule); }
+}
 /* pre-launch hero: the buy button as an inert stamped block, plus the launch's social chips */
 .btn-soon { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; padding-left: 16px; padding-right: 16px; background: transparent; color: var(--ink); box-shadow: none; cursor: default; }
 .btn-soon:hover, .btn-soon:active { background: transparent; color: var(--ink); transform: none; }
@@ -390,3 +391,9 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 @media (max-width: 520px) {
   .chip { min-height: 44px; padding: 0 16px; }
 }
+
+/* pre-launch buy block: the "launching soon" tag sits on the corner like a sticker */
+p.note.note-serif { font-family: var(--serif); font-size: 17px; line-height: 1.5; letter-spacing: 0; color: var(--ink-2); max-width: 34em; }
+.btn-soon { position: relative; overflow: visible; }
+.btn-soon .stamp { position: absolute; top: -13px; right: -12px; transform: rotate(-6deg); background: var(--paper); color: var(--red); border-color: var(--red); font-size: 10px; padding: 3px 7px; }
+.cta-row .btn-soon { order: 2; }
