@@ -71,7 +71,12 @@ contract MockAggregator {
         startedAt = at;
     }
 
+    /// @dev Simulates a deprecated or paused feed that reverts instead of going stale.
+    function setBroken(bool b) external { broken = b; }
+    bool public broken;
+
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        require(!broken, "feed down");
         return (1, answer, startedAt, updatedAt, 1);
     }
 }
@@ -127,4 +132,42 @@ contract RevertingERC20 {
     function balanceOf(address) external pure returns (uint256) { return type(uint256).max; }
     function transfer(address, uint256) external pure returns (bool) { revert("paused"); }
     function transferFrom(address, address, uint256) external pure returns (bool) { revert("paused"); }
+}
+
+/// @dev A token that answers every call with 8 KB of return data whose first word is the real
+///      answer, or, in mode 1, answers transfer() with uint256(2) instead of a boolean.
+contract BombERC20 {
+    uint8 public constant decimals = 18;
+    uint8 public mode;
+    mapping(address => uint256) private _bal;
+
+    function setMode(uint8 m) external { mode = m; }
+    function mint(address to, uint256 amount) external { _bal[to] += amount; }
+
+    function balanceOf(address who) external view returns (uint256 b) {
+        b = _bal[who];
+        assembly {
+            let p := mload(0x40)
+            mstore(p, b)
+            return(p, 8192)
+        }
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool ok) {
+        require(_bal[msg.sender] >= amount, "balance");
+        _bal[msg.sender] -= amount;
+        _bal[to] += amount;
+        ok = true;
+        if (mode == 1) {
+            assembly {
+                mstore(0, 2)
+                return(0, 32)
+            }
+        }
+        assembly {
+            let p := mload(0x40)
+            mstore(p, 1)
+            return(p, 8192)
+        }
+    }
 }

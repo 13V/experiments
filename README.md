@@ -175,14 +175,14 @@ contracts/StonkPacks.sol       The pack contract. ERC-721 packs, odds table, see
 contracts/test/PackMocks.sol   Test doubles only.
 scripts/packs/odds.js          Odds table, expected value, seed-chain generator, and a byte-exact
                                mirror of the contract's randomness so anyone can verify any pack.
-scripts/packs/operator.js      The bot that reveals seeds in order, refunds and skips expired packs.
-scripts/packs/test.js          81 integration tests against the compiled contract in a real EVM.
+scripts/packs/operator.js      The bot that reveals seeds in order and settles anything that expired.
+scripts/packs/test.js          126 integration tests against the compiled contract in a real EVM.
 ```
 
 ```bash
 node scripts/packs/odds.js rtp          # the table and its return to player
 node scripts/packs/odds.js chain 10000  # operator secret + the root you deploy with
-node scripts/packs/test.js              # 81 passed, 0 failed
+node scripts/packs/test.js              # 126 passed, 0 failed
 ```
 
 ## The odds
@@ -198,64 +198,110 @@ node scripts/packs/test.js              # 81 passed, 0 failed
 
 Expected payout is $17.18 on a $20 pack, an 85.9% return to player, with 10% of each opened
 pack going to `feeRecipient`. Point that at a fee distributor and the pack coin pays its
-holders. The table is a constructor-time choice and can be locked forever with `lockOdds()`.
+holders. Nothing sells until `lockOdds()` has frozen the table, the values, the token lists,
+the pulls per pack, the fee cut and the price feeds, so what a buyer sees is what they get.
 
 ## Why nobody can cheat
 
-**Buyers.** A pull is `keccak(operatorSeed, buyerSeed, packId, holder, blockhash(purchaseBlock + 1))`.
+**Buyers.** A pack's outcome is `keccak(operatorSeed, buyerSeed, packId, blockhash(purchaseBlock + 1))`.
 The buyer picks their seed before the operator seed is known, the operator seed is fixed before
-the buyer's is known, and the block hash exists after both. The open is a separate transaction
-by a different party, so a contract buyer has nothing to revert.
+the buyer's is known, and the block hash exists after both. Nothing that can change after
+purchase is an input: the holder in particular is not, so a sealed pack can be traded and the
+prize follows it, but its outcome was fixed one block after it was bought. The open is a
+separate transaction, so a contract buyer has nothing to revert.
 
 **The operator.** Seeds form a hash chain, `seed_k = keccak(seed_{k+1})`, whose root is published
-at deployment. Pack k can only be opened with the one seed that hashes to the current head, and
-packs open strictly in order, so the operator cannot pick outcomes, skip a pack they can see the
-result of, or reorder buyers. Once the odds are locked, `odds.js verify` recomputes any pack from
-public inputs and the test suite proves the mirror matches the chain pull for pull.
+at deployment. Pack k can only be settled with the one seed that hashes to the current head, and
+packs settle strictly in order, so the operator cannot pick outcomes or reorder buyers. After the
+lock a feed can only be switched off, which makes that stock pay the same USD in cash; it can
+never be pointed at a friendlier price. `odds.js verify` recomputes any pack from public inputs
+and the test suite proves the mirror matches the chain pull for pull.
 
-**Liveness.** An operator who stops revealing freezes the game in public. Any pack unopened for
-200 blocks becomes refundable by anyone, the refund goes to the holder in full with no fee,
-and the pack's seed is then consumed by `skip` so the chain moves on. Stalling costs the sale
-and is visible on-chain.
+**Withholding a win does not work.** The operator sees a pack's outcome one block after
+purchase, before opening it. If a pack is not opened within 200 blocks, anyone can refund the
+holder in full. When the operator finally reveals that seed (they must, or the chain never moves
+again), `openLate` pays the pack every prize it rolled, using the hash recorded at refund time.
+Being late costs the operator the price *and* the prizes. It never saves a prize. What is left is
+walking away entirely, which freezes the game in public and refunds every later pack.
+
+**Liveness.** Every purchase records the block hashes of pending packs, and `checkpoint` lets
+anyone do the same, so a settlement can never be argued with even 256 blocks later. No transfer
+to a holder, no price feed and no stock token can revert an open: hostile recipients become
+IOUs, broken feeds become cash, and return data is read without being copied.
 
 Chainlink lists VRF v2.5 for Robinhood Chain. Moving to it is a two-step open, a request in
-`open` and the payout in the fulfil callback, and it removes the operator entirely. The hash
-chain ships first because every property above is testable end to end today without a network.
+`open` and the payout in the fulfil callback, and it removes the operator's seed entirely. The
+hash chain ships first because every property above is testable end to end today without a
+network, and the only party it still asks you to trust for randomness is the chain's own
+sequencer, which would additionally need the operator's secret.
 
 ## Degraded modes, all tested
 
 - Treasury is out of a stock: the pull pays the same USD in the payment token.
 - Treasury is out of cash too: the pull becomes an IOU, claimable the moment funds arrive,
   and the owner can never withdraw below escrow plus IOUs.
-- A stock's feed is stale, or paused around a corporate action: cash instead of a stale price.
+- A stock's feed is stale, paused around a corporate action, reverting, or switched off: cash
+  instead of a stale or missing price.
 - The L2 sequencer is down or just restarted: cash, per the Chainlink sequencer-feed pattern.
+- A stock token reverts, returns megabytes, or answers with something other than `true`:
+  cash. A holder the stablecoin refuses: IOU. The chain moves on in every case.
 - The owner changes the pack price: sealed packs keep the price they paid for fee, escrow and refund.
+- The seed chain runs out: sales stop with `ChainExhausted` and `extendChain` commits a new
+  root once nothing is pending. Planned downtime: `setPaused(true)` stops sales, touches nothing sold.
+
+## Robinhood Chain specifics
+
+Chain id 4663, gas in ETH, an Arbitrum Nitro chain. Two things follow from Nitro that the
+code is built around:
+
+- `block.number` inside the EVM is the **Ethereum** block number, which ticks every ~12
+  seconds, while the chain itself produces about ten blocks a second and the RPC's
+  `eth_blockNumber` counts those. A pack becomes openable 15-25 seconds after purchase and
+  the 200-block open window is about 40 minutes. The operator bot never does block
+  arithmetic off-chain; it asks `packState(packId)`, which answers on the contract's clock.
+- `blockhash(n)` is Nitro's per-parent-block pseudo-random value, produced by the sequencer.
+  Fine as one of three entropy sources, and the reason the operator seed stays secret.
+
+The public RPCs (`rpc.mainnet.chain.robinhood.com`, `robinhood-rpc.publicnode.com`) sit behind
+Cloudflare and reject script user agents; the bot sends a browser-like one. At the base fee
+seen while writing this, an open costs about 275k gas, roughly half a dollar, which the 10%
+fee covers.
 
 ## Deploying on Robinhood Chain
 
-Chain id 4663, gas in ETH. Payment token is USDG at `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`,
-6 decimals. Stock tokens are 18 decimals and the canonical list, with addresses, comes from
+Payment token is USDG at `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, 6 decimals. Stock
+tokens are 18 decimals and the canonical list, with addresses, comes from
 `https://api.robinhood.com/rhj/assets`; `node scripts/packs/odds.js tiers` prints the `setTier`
 calls for the default table with live addresses. Feed proxy addresses and heartbeats are on
 Chainlink's Robinhood Chain price feeds page. Read them from there; do not hardcode.
 
-1. `node scripts/packs/odds.js chain 10000`. Keep the secret offline. Deploy with the root.
-2. `setTier` for each tier, `setFeed` for every token with its heartbeat, `setSequencerFeed`,
-   then `lockOdds()`. Publish the root and the locked table.
+1. `node scripts/packs/odds.js chain 10000`. Keep the secret offline. Deploy with the root and
+   the chain length as the last two constructor arguments.
+2. `setTier` for each tier, `setFeed` for every token with its heartbeat (each feed is exercised
+   once, a dead address is rejected), `setSequencerFeed`, then `lockOdds()`. Publish the root and
+   the locked table. Buyers can check every `feeds(token)` against Chainlink's list; after the
+   lock those addresses can only ever be cleared.
 3. Buy inventory on the DEX or via RFQ and transfer it to the contract. Thin-float stocks in the
    Legendary tier are the ones nobody can buy on-chain, which is the point.
 4. Run the operator: `RPC_URL=... PACKS_ADDRESS=... OPERATOR_KEY=... PACK_SECRET=... node scripts/packs/operator.js`.
-   Opening is permissionless; the key just pays gas.
+   Opening is permissionless; the key just pays gas. Run two copies with the same secret.
+   Every pack that expires while the bot is down costs its refund plus its prizes, so downtime
+   during a sale is the one operational risk; `setPaused(true)` first if you plan one.
 
 Stock token amounts are raw units. The feed already includes the corporate-action multiplier,
 so `usd / feedPrice` is the right number of tokens without touching `uiMultiplier()`.
 
 ## Caveats
 
-- **Unaudited.** The suite is thorough about the properties it tests. It is not an audit.
+- **Unaudited.** An adversarial review pass of four independent finders and paired refuters
+  ran over the contract; everything it confirmed is fixed and tested, and its two design
+  findings (the holder as an entropy input, and the operator letting winners expire) are what
+  shaped the current protocol. That is not an audit either.
 - Provable fairness covers the odds. Prize solvency is the operator's inventory and reputation,
   the same as any pack seller. Cash and IOU fallbacks exist so an open never fails.
-- On Arbitrum-style chains `block.number` tracks the parent chain and `blockhash` is a
-  chain-provided pseudo-random value. It is one of three entropy sources here, not the only one.
+- A pack refunded later than 256 blocks after purchase has no block hash left to record and
+  settles with a zero hash, an outcome the operator could have known in advance. Every purchase
+  and any `checkpoint` call records pending hashes, and anyone can refund the moment the window
+  closes, so this needs a game nobody is touching.
 - Loot boxes containing securities are a regulated shape in most jurisdictions. That is out of
   scope of this repo and was parked deliberately.

@@ -4,8 +4,13 @@
 /**
  * Stonk Packs operator bot. Zero dependencies.
  *
- * Reveals operator seeds in order so packs open within seconds of purchase, refunds and
- * skips anything that expired, and never reveals a seed out of sequence.
+ * Reveals operator seeds in order so packs open as soon as the contract allows (about 15-25 s
+ * after purchase on Robinhood Chain, whose `block.number` is the Ethereum block number). Anything
+ * that expired is refunded and then settled late, which pays its prizes on top of the refund, so
+ * keep this running: every minute of downtime during sales costs real money.
+ *
+ * All timing questions are asked of the contract (`packState`), never computed from the RPC's
+ * block height: on Arbitrum-family chains the two are different clocks.
  *
  *   RPC_URL=https://...  PACKS_ADDRESS=0x...  OPERATOR_KEY=0x...  PACK_SECRET=0x...  PACK_CHAIN_N=10000 \
  *   node scripts/packs/operator.js [--dry-run] [--once]
@@ -26,7 +31,6 @@ const KEY = process.env.OPERATOR_KEY;
 const SECRET = process.env.PACK_SECRET;
 const N = Number(process.env.PACK_CHAIN_N || 10000);
 const CHAIN_ID = Number(process.env.CHAIN_ID || 4663); // Robinhood Chain
-const OPEN_WINDOW = 200n;
 const DRY = process.argv.includes('--dry-run');
 const ONCE = process.argv.includes('--once');
 
@@ -42,7 +46,8 @@ if (!RPC || !PACKS || !SECRET || (!DRY && !KEY)) {
 let rpcId = 1;
 async function rpc(method, params = []) {
   const res = await fetch(RPC, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
+    // The public Robinhood Chain RPCs sit behind Cloudflare, which rejects script user agents.
+    method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) stonkpacks-operator' },
     body: JSON.stringify({ jsonrpc: '2.0', id: rpcId++, method, params }),
   });
   const j = await res.json();
@@ -136,29 +141,29 @@ const STATUS = ['None', 'Sealed', 'Opened', 'Refunded'];
 async function tick() {
   const [count] = await callView('packCount()');
   const [revealed] = await callView('revealed()');
-  const blockNo = big(await rpc('eth_blockNumber'));
   const next = big('0x' + revealed.toString('hex')) + 1n;
   const total = big('0x' + count.toString('hex'));
   if (next > total) return false;
 
   const k = next;
-  const p = await callView('packs(uint256)', k); // buyer, purchaseBlock, status, price, buyerSeed
-  const purchaseBlock = big('0x' + p[1].toString('hex'));
-  const status = STATUS[Number(big('0x' + p[2].toString('hex')))];
+  const [st, openableW, expiredW] = await callView('packState(uint256)', k);
+  const status = STATUS[Number(big('0x' + st.toString('hex')))];
+  const openable = big('0x' + openableW.toString('hex')) === 1n;
+  const expired = big('0x' + expiredW.toString('hex')) === 1n;
   const seed = odds.seedAt(SECRET, N, Number(k));
-  const age = blockNo - purchaseBlock;
 
-  console.log(`pack ${k}/${total}: ${status}, age ${age} blocks`);
+  console.log(`pack ${k}/${total}: ${status}${openable ? ', openable' : ''}${expired ? ', expired' : ''}`);
   if (status === 'Sealed') {
-    if (age <= 1n) return true; // wait for purchaseBlock + 1 to exist
-    if (age <= OPEN_WINDOW) {
+    if (expired) {
+      await act(`refundExpired(${k})`, encode('refundExpired(uint256)', k));
+      await act(`openLate(${k})`, encode('openLate(uint256,bytes32)', k, seed));
+    } else if (openable) {
       await act(`open(${k})`, encode('open(uint256,bytes32)', k, seed));
     } else {
-      await act(`refundExpired(${k})`, encode('refundExpired(uint256)', k));
-      await act(`skip(${k})`, encode('skip(uint256,bytes32)', k, seed));
+      return true; // the contract's clock has not reached purchaseBlock + 2 yet
     }
   } else if (status === 'Refunded') {
-    await act(`skip(${k})`, encode('skip(uint256,bytes32)', k, seed));
+    await act(`openLate(${k})`, encode('openLate(uint256,bytes32)', k, seed));
   } else {
     throw new Error(`pack ${k} is ${status} but revealed is ${next - 1n}; chain state is inconsistent`);
   }

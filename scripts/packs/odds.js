@@ -9,8 +9,11 @@
  *   node scripts/packs/odds.js seed <secret> <k>   derive seed_k for opening pack k
  *   node scripts/packs/odds.js tiers               fetch canonical Robinhood stock token addresses
  *                                                  and print the setTier calls for the default table
- *   node scripts/packs/odds.js verify <seed_k> <buyerSeed> <packId> <holder> <blockhash>
+ *   node scripts/packs/odds.js verify <seed_k> <buyerSeed> <packId> <blockhash>
  *                                                  recompute a pack's pulls from public inputs
+ *                                                  (seed_k from the open or openLate calldata,
+ *                                                  buyerSeed from the Bought event, blockhash
+ *                                                  of purchaseBlock + 1)
  *
  * The contract's randomness and tier selection are mirrored here byte for byte, so
  * anyone can re-derive every pull of every pack from on-chain data.
@@ -75,9 +78,10 @@ const word = (v) => {
   return Buffer.concat([Buffer.alloc(32 - b.length), b]);
 };
 
-/** keccak256(abi.encode(seed, buyerSeed, packId, holder, blockhash)) */
-function packRandomness(seed, buyerSeed, packId, holder, blockhash) {
-  return keccak256(Buffer.concat([word(seed), word(buyerSeed), word(packId), word(holder), word(blockhash)]));
+/** keccak256(abi.encode(seed, buyerSeed, packId, blockhash)). No address is an input: the
+ *  holder can change after everything else is fixed, so it must not steer the outcome. */
+function packRandomness(seed, buyerSeed, packId, blockhash) {
+  return keccak256(Buffer.concat([word(seed), word(buyerSeed), word(packId), word(blockhash)]));
 }
 
 function pickTier(rand, tiers = TIERS) {
@@ -165,8 +169,8 @@ if (require.main === module) {
       });
       if (missing.length) console.log('\nnot in the canonical registry:', missing.join(' '));
     } else if (cmd === 'verify') {
-      const [seed, buyerSeed, packId, holder, bh] = rest;
-      const r = packRandomness(seed, buyerSeed, BigInt(packId), holder, bh || '0x' + '00'.repeat(32));
+      const [seed, buyerSeed, packId, bh] = rest;
+      const r = packRandomness(seed, buyerSeed, BigInt(packId), bh || '0x' + '00'.repeat(32));
       console.log('randomness', hex(r));
       for (const p of pulls(r)) console.log(`  pull ${p.index}: ${p.tier.padEnd(9)} $${String(p.usd).padStart(4)} of ${p.token}`);
     } else {

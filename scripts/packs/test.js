@@ -11,7 +11,8 @@
  *   1. The on-chain pulls are exactly what scripts/packs/odds.js recomputes from public
  *      inputs, so anyone can verify any pack.
  *   2. Opens are strictly ordered on the seed chain, a wrong seed is rejected, and a
- *      stalled pack becomes refundable by anyone, then skippable, and the game continues.
+ *      stalled pack becomes refundable by anyone, then is settled late with the same
+ *      prizes a timely open would have paid, and the game continues.
  *   3. Every pull pays either the stock at the feed price or the same USD in cash;
  *      empty inventory, stale feeds and a downed sequencer all degrade to cash or an IOU.
  *   4. Escrow and IOUs can never be withdrawn by the owner.
@@ -125,6 +126,7 @@ const ART = {
   PackHolder: out.contracts['test/PackMocks.sol'].PackHolder,
   FreezingERC20: out.contracts['test/PackMocks.sol'].FreezingERC20,
   RevertingERC20: out.contracts['test/PackMocks.sol'].RevertingERC20,
+  BombERC20: out.contracts['test/PackMocks.sol'].BombERC20,
 };
 
 // ---------------------------------------------------------------------------
@@ -206,10 +208,9 @@ async function main() {
 
   const EV = {
     Bought: bytesToHex(keccak256(Buffer.from('Bought(uint256,address,bytes32,uint256)'))),
-    Opened: bytesToHex(keccak256(Buffer.from('Opened(uint256,address,bytes32)'))),
+    Opened: bytesToHex(keccak256(Buffer.from('Opened(uint256,address,bytes32,bool)'))),
     Pull: bytesToHex(keccak256(Buffer.from('Pull(uint256,uint8,uint8,address,uint256,uint64,bool)'))),
     Refunded: bytesToHex(keccak256(Buffer.from('Refunded(uint256,address,uint256)'))),
-    Skipped: bytesToHex(keccak256(Buffer.from('Skipped(uint256)'))),
   };
   const pullsOf = (logs) => logs.filter((l) => l.topics[0] === EV.Pull).map((l) => {
     const w = words(l.data);
@@ -217,7 +218,11 @@ async function main() {
       token: toAddr(w[2]), amount: toBig(w[3]), usdCents: toBig(w[4]), cash: toBig(w[5]) === 1n };
   });
   const openedOf = (logs) => logs.filter((l) => l.topics[0] === EV.Opened).map((l) => ({
-    packId: toBig(Buffer.from(strip(l.topics[1]), 'hex')), holder: '0x' + strip(l.topics[2]).slice(24), randomness: '0x' + l.data.toString('hex') }));
+    packId: toBig(Buffer.from(strip(l.topics[1]), 'hex')), holder: '0x' + strip(l.topics[2]).slice(24),
+    randomness: '0x' + l.data.subarray(0, 32).toString('hex'), late: toBig(l.data.subarray(32, 64)) === 1n }));
+  const hashOf = async (packsAddr, id) => bytesToHex((await view(packsAddr, 'packs(uint256)', id))[5]);
+  const expectRand = (k, buyerSeed, purchaseBlock) =>
+    '0x' + odds.packRandomness(seed(k), buyerSeed, BigInt(k), '0x' + fakeHash(purchaseBlock + 1n).toString('hex')).toString('hex');
 
   // -------------------------------------------------------------------------
   // World builder
@@ -228,7 +233,7 @@ async function main() {
   const chain = odds.deriveChain(SECRET, N);
   const seed = (k) => chain.seeds[k];
 
-  async function buildWorld({ tiers = odds.TIERS, inventory = true, pulls = PULLS, chainRoot = chain.root, freezingPayment = false, reverting = [] } = {}) {
+  async function buildWorld({ tiers = odds.TIERS, inventory = true, pulls = PULLS, chainRoot = chain.root, chainLen = N, freezingPayment = false, reverting = [], bomb = [] } = {}) {
     const usdg = freezingPayment
       ? await deploy(ART.FreezingERC20, ['uint8'], [6])
       : await deploy(ART.MockERC20, ['string', 'string', 'uint8'], ['Global Dollar', 'USDG', 6]);
@@ -238,11 +243,13 @@ async function main() {
     for (const s of symbols) {
       tokens[s] = reverting.includes(s)
         ? await deploy(ART.RevertingERC20)
-        : await deploy(ART.MockERC20, ['string', 'string', 'uint8'], [s, s, 18]);
+        : bomb.includes(s)
+          ? await deploy(ART.BombERC20)
+          : await deploy(ART.MockERC20, ['string', 'string', 'uint8'], [s, s, 18]);
       feeds[s] = await deploy(ART.MockAggregator, ['int256', 'uint8'], [price8(PRICES[s]), 8]);
     }
-    const packs = await deploy(ART.StonkPacks, ['address', 'uint256', 'uint8', 'uint16', 'address', 'bytes32'],
-      [usdg, PRICE, pulls, FEE_BPS, FEE_TO, chainRoot]);
+    const packs = await deploy(ART.StonkPacks, ['address', 'uint256', 'uint8', 'uint16', 'address', 'bytes32', 'uint256'],
+      [usdg, PRICE, pulls, FEE_BPS, FEE_TO, chainRoot, chainLen]);
     for (let i = 0; i < tiers.length; i++) {
       const t = tiers[i];
       const r = await call({ to: packs, data: encode('setTier(uint8,uint32,uint64,address[])', i, t.weight, t.usd * 100, t.tokens.map((s) => tokens[s])) });
@@ -269,8 +276,14 @@ async function main() {
   const bal = async (token, who) => viewBig(token, 'balanceOf(address)', who);
   check('six tiers configured', (await viewBig(packs, 'tierCount()')) === 6n);
   check('expectedValueCents matches the odds table (1718 = $17.18 per $20 pack)', (await viewBig(packs, 'expectedValueCents()')) === 1718n);
+  const early = await call({ from: BUYER, to: packs, data: encode('buy(bytes32)', '0x' + '01'.repeat(32)) });
+  check('nothing sells before the odds are locked', early.reverted && errorIs(early.ret, 'NotLocked()'));
   const lockR = await call({ to: packs, data: encode('lockOdds()') });
   check('owner locks the odds', !lockR.reverted, lockR.error);
+  const refeed = await call({ to: packs, data: encode('setFeed(address,address,uint32)', tokens.F, feeds.AMC, 3600) });
+  check('feeds cannot be repointed after lock', refeed.reverted && errorIs(refeed.ret, 'OddsAreLocked()'));
+  const reseq = await call({ to: packs, data: encode('setSequencerFeed(address)', feeds.AMC) });
+  check('sequencer feed cannot be set after lock', reseq.reverted && errorIs(reseq.ret, 'OddsAreLocked()'));
   const relock = await call({ to: packs, data: encode('setTier(uint8,uint32,uint64,address[])', 0, 1, 100, [tokens.F]) });
   check('odds cannot change after lock', relock.reverted && errorIs(relock.ret, 'OddsAreLocked()'));
   const pullsChange = await call({ to: packs, data: encode('setPullsPerPack(uint8)', 9) });
@@ -334,9 +347,8 @@ async function main() {
   console.log('       pulls: ' + pulls1.map((p) => `${odds.TIERS[p.tier].name}:$${Number(p.usdCents) / 100} ${symOf[p.token.toLowerCase()]}`).join(' | '));
 
   section('THE CRITICAL CHECK: odds.js recomputes the pack from public inputs');
-  const bh1 = '0x' + fakeHash(purchaseBlock1 + 1n).toString('hex');
-  const jsRand = '0x' + odds.packRandomness(seed(1), buyerSeed1, 1n, BUYER, bh1).toString('hex');
-  check('randomness matches keccak(seed, buyerSeed, packId, holder, blockhash)', jsRand === opened1.randomness, `${jsRand} vs ${opened1.randomness}`);
+  const jsRand = expectRand(1, buyerSeed1, purchaseBlock1);
+  check('randomness matches keccak(seed, buyerSeed, packId, blockhash)', jsRand === opened1.randomness, `${jsRand} vs ${opened1.randomness}`);
   const jsPulls = odds.pulls(Buffer.from(strip(jsRand), 'hex'));
   const same = jsPulls.every((jp, i) => jp.tier === odds.TIERS[pulls1[i].tier].name && tokens[jp.token].toLowerCase() === pulls1[i].token.toLowerCase());
   check('tiers and tokens match the on-chain pulls, pull for pull', same);
@@ -353,8 +365,9 @@ async function main() {
   r = await call({ from: STRANGER, to: packs, data: encode('open(uint256,bytes32)', 3, seed(3)) });
   check('then pack 3 opens', !r.reverted, r.error);
 
-  section('Sealed packs are transferable; the prize follows the pack');
+  section('Sealed packs are transferable; the prize follows the pack, the outcome does not');
   await call({ from: BUYER, to: packs, data: encode('buy(bytes32)', '0x' + '44'.repeat(32)) });
+  const purchaseBlock4 = blockNo;
   const tx = await call({ from: BUYER, to: packs, data: encode('transferFrom(address,address,uint256)', BUYER, BUYER2, 4) });
   check('buyer transfers sealed pack 4 to buyer2', !tx.reverted && toAddr((await view(packs, 'ownerOf(uint256)', 4))[0]) === BUYER2);
   const stranger = await call({ from: STRANGER, to: packs, data: encode('transferFrom(address,address,uint256)', BUYER2, STRANGER, 4) });
@@ -363,9 +376,11 @@ async function main() {
   const open4 = await call({ from: STRANGER, to: packs, data: encode('open(uint256,bytes32)', 4, seed(4)) });
   check('pack 4 opens', !open4.reverted, open4.error);
   check('prize went to buyer2, the holder at open time', openedOf(open4.logs)[0].holder === BUYER2);
+  check('the outcome was fixed at purchase; changing hands did not change it', openedOf(open4.logs)[0].randomness === expectRand(4, '0x' + '44'.repeat(32), purchaseBlock4));
 
-  section('Liveness: window, refund by anyone, skip');
+  section('Liveness: window, refund by anyone, late settlement still pays the prizes');
   await call({ from: BUYER, to: packs, data: encode('buy(bytes32)', '0x' + '55'.repeat(32)) });
+  const purchaseBlock5 = blockNo;
   r = await call({ from: STRANGER, to: packs, data: encode('refundExpired(uint256)', 5) });
   check('cannot refund inside the window', r.reverted && errorIs(r.ret, 'WindowOpen()'));
   advance(201);
@@ -376,12 +391,18 @@ async function main() {
   check('a stranger can trigger the refund', !r.reverted, r.error);
   check('the full price went back to the holder, no fee taken', (await bal(usdg, BUYER)) === buyerBefore + PRICE);
   check('refunded pack is burned', (await view(packs, 'ownerOf(uint256)', 5)) === null);
+  check('the refund recorded blockhash(purchaseBlock + 1)', (await hashOf(packs, 5)) === '0x' + fakeHash(purchaseBlock5 + 1n).toString('hex'));
   r = await call({ from: STRANGER, to: packs, data: encode('open(uint256,bytes32)', 6, seed(5)) });
-  check('chain is stuck until the refunded pack is skipped', r.reverted);
-  r = await call({ from: STRANGER, to: packs, data: encode('skip(uint256,bytes32)', 5, seed(5)) });
-  check('skip consumes seed 5', !r.reverted && (await viewBig(packs, 'revealed()')) === 5n, r.error);
-  r = await call({ from: STRANGER, to: packs, data: encode('skip(uint256,bytes32)', 5, seed(6)) });
-  check('cannot skip twice', r.reverted && errorIs(r.ret, 'OutOfOrder()'));
+  check('chain is stuck until the refunded pack is settled', r.reverted);
+  const feeBefore5 = await bal(usdg, FEE_TO);
+  const late5 = await call({ from: STRANGER, to: packs, data: encode('openLate(uint256,bytes32)', 5, seed(5)) });
+  check('openLate consumes seed 5', !late5.reverted && (await viewBig(packs, 'revealed()')) === 5n, late5.error);
+  const lateEv = openedOf(late5.logs)[0];
+  check('the refunded holder is still paid all 5 pulls', lateEv && lateEv.late && lateEv.holder === BUYER && pullsOf(late5.logs).length === PULLS);
+  check('the late outcome is exactly what a timely open would have rolled', lateEv && lateEv.randomness === expectRand(5, '0x' + '55'.repeat(32), purchaseBlock5));
+  check('no fee on a late pack', (await bal(usdg, FEE_TO)) === feeBefore5);
+  r = await call({ from: STRANGER, to: packs, data: encode('openLate(uint256,bytes32)', 5, seed(6)) });
+  check('cannot settle twice', r.reverted && errorIs(r.ret, 'NotRefunded()'));
   await call({ from: BUYER, to: packs, data: encode('buy(bytes32)', '0x' + '66'.repeat(32)) });
   advance(2);
   r = await call({ from: STRANGER, to: packs, data: encode('open(uint256,bytes32)', 6, seed(6)) });
@@ -404,7 +425,7 @@ async function main() {
   await call({ from: STRANGER, to: packs, data: encode('refundExpired(uint256)', 8) });
   check('refund pays what was paid, 30', (await bal(usdg, BUYER2)) === b2Before + 30_000_000n);
   check('escrow back to zero', (await viewBig(packs, 'escrowed()')) === 0n);
-  await call({ from: STRANGER, to: packs, data: encode('skip(uint256,bytes32)', 8, seed(8)) });
+  await call({ from: STRANGER, to: packs, data: encode('openLate(uint256,bytes32)', 8, seed(8)) });
   await call({ to: packs, data: encode('setPrice(uint256)', PRICE) });
 
   section('Contract buyers cannot interfere');
@@ -435,6 +456,9 @@ async function main() {
   section('Degraded modes: empty inventory, stale feed, sequencer down');
   const oneTier = [{ name: 'Only', weight: 1, usd: 50, tokens: ['NVDA'] }];
   const D = await buildWorld({ tiers: oneTier, inventory: false, pulls: 5 });
+  const seq = await deploy(ART.MockAggregator, ['int256', 'uint8'], [0n, 0]); // sequencer feed: 0 == up
+  await call({ to: seq, data: encode('set(int256,uint256)', 0n, ts - 7200n) }); // up for two hours
+  await call({ to: D.packs, data: encode('setSequencerFeed(address)', seq) }); // feeds must be set before lock
   await call({ to: D.packs, data: encode('lockOdds()') });
   await call({ from: BUYER, to: D.packs, data: encode('buy(bytes32)', '0x' + '99'.repeat(32)) });
   advance(2);
@@ -479,8 +503,7 @@ async function main() {
   check('fresh feed and inventory: pulls pay in stock again', !o.reverted && pullsOf(o.logs).every((p) => !p.cash), o.error);
 
   // Sequencer down.
-  const seq = await deploy(ART.MockAggregator, ['int256', 'uint8'], [1n, 0]); // 1 == down
-  await call({ to: D.packs, data: encode('setSequencerFeed(address)', seq) });
+  await call({ to: seq, data: encode('set(int256,uint256)', 1n, ts) }); // 1 == down
   check('sequencer down: quote not ok', toBig((await view(D.packs, 'quote(address,uint64)', D.tokens.NVDA, 5000))[1]) === 0n);
   await call({ to: seq, data: encode('set(int256,uint256)', 0n, ts) }); // just came back up
   check('sequencer just restarted: still not ok during grace', toBig((await view(D.packs, 'quote(address,uint64)', D.tokens.NVDA, 5000))[1]) === 0n);
@@ -509,14 +532,15 @@ async function main() {
   check('refund to an address the stablecoin refuses still succeeds', !r.reverted, r.error);
   check('the frozen holder is credited an IOU instead', (await viewBig(H.packs, 'owed(address)', FROZEN)) === PRICE);
   check('escrow released', (await viewBig(H.packs, 'escrowed()')) === 0n);
-  r = await call({ from: STRANGER, to: H.packs, data: encode('skip(uint256,bytes32)', 1, seed(1)) });
+  r = await call({ from: STRANGER, to: H.packs, data: encode('openLate(uint256,bytes32)', 1, seed(1)) });
   check('chain moves on', !r.reverted && (await viewBig(H.packs, 'revealed()')) === 1n, r.error);
+  check('the late prizes of the frozen holder became IOUs too', (await viewBig(H.packs, 'owed(address)', FROZEN)) === PRICE + 250_000_000n);
   await call({ from: BUYER, to: H.packs, data: encode('buy(bytes32)', '0x' + 'f2'.repeat(32)) });
   await call({ from: BUYER, to: H.packs, data: encode('transferFrom(address,address,uint256)', BUYER, FROZEN, 2) });
   advance(2);
   r = await call({ from: STRANGER, to: H.packs, data: encode('open(uint256,bytes32)', 2, seed(2)) });
   check('a pack held by a frozen address still opens', !r.reverted && pullsOf(r.logs).length === 5, r.error);
-  check('every pull became an IOU for the frozen holder', (await viewBig(H.packs, 'owed(address)', FROZEN)) === PRICE + 250_000_000n);
+  check('every pull became an IOU for the frozen holder', (await viewBig(H.packs, 'owed(address)', FROZEN)) === PRICE + 500_000_000n);
   check('the game continues past it', (await viewBig(H.packs, 'revealed()')) === 2n);
 
   section('A paused or hostile stock token degrades to cash');
@@ -527,6 +551,94 @@ async function main() {
   r = await call({ from: STRANGER, to: R.packs, data: encode('open(uint256,bytes32)', 1, seed(1)) });
   check('open succeeds when the stock token reverts on transfer', !r.reverted, r.error);
   check('pulls paid in cash', pullsOf(r.logs).every((p) => p.cash && p.amount === 2_000_000n));
+
+  section('Sales gate, pause and chain extension');
+  const chain2 = odds.deriveChain('0x' + '7a'.repeat(32), 3);
+  const G = await buildWorld({ tiers: oneTier, chainLen: 2 });
+  r = await call({ to: G.packs, data: encode('setFeed(address,address,uint32)', G.tokens.NVDA, STRANGER, 3600) });
+  check('a feed address without code is rejected', r.reverted && errorIs(r.ret, 'BadFeed()'));
+  await call({ to: G.packs, data: encode('lockOdds()') });
+  await call({ to: G.packs, data: encode('setPaused(bool)', true) });
+  r = await call({ from: BUYER, to: G.packs, data: encode('buy(bytes32)', '0x' + 'd1'.repeat(32)) });
+  check('paused: nothing sells', r.reverted && errorIs(r.ret, 'Paused()'));
+  await call({ to: G.packs, data: encode('setPaused(bool)', false) });
+  await call({ from: BUYER, to: G.packs, data: encode('buy(bytes32)', '0x' + 'd1'.repeat(32)) });
+  await call({ from: BUYER, to: G.packs, data: encode('buy(bytes32)', '0x' + 'd2'.repeat(32)) });
+  r = await call({ from: BUYER, to: G.packs, data: encode('buy(bytes32)', '0x' + 'd3'.repeat(32)) });
+  check('a chain of 2 seeds sells exactly 2 packs', r.reverted && errorIs(r.ret, 'ChainExhausted()'));
+  r = await call({ to: G.packs, data: encode('extendChain(bytes32,uint256)', chain2.root, 3) });
+  check('the chain cannot be replaced while packs are pending', r.reverted && errorIs(r.ret, 'PacksPending()'));
+  advance(2);
+  await call({ from: STRANGER, to: G.packs, data: encode('open(uint256,bytes32)', 1, seed(1)) });
+  await call({ from: STRANGER, to: G.packs, data: encode('open(uint256,bytes32)', 2, seed(2)) });
+  r = await call({ to: G.packs, data: encode('extendChain(bytes32,uint256)', chain2.root, 3) });
+  check('owner commits a new chain once everything is settled', !r.reverted && (await viewBig(G.packs, 'chainEnd()')) === 5n, r.error);
+  await call({ from: BUYER, to: G.packs, data: encode('buy(bytes32)', '0x' + 'd3'.repeat(32)) });
+  advance(2);
+  r = await call({ from: STRANGER, to: G.packs, data: encode('open(uint256,bytes32)', 3, seed(3)) });
+  check('seeds of the old chain no longer open anything', r.reverted && errorIs(r.ret, 'BadSeed()'));
+  r = await call({ from: STRANGER, to: G.packs, data: encode('open(uint256,bytes32)', 3, chain2.seeds[1]) });
+  check('pack 3 opens with seed 1 of the new chain', !r.reverted, r.error);
+
+  section('Checkpoints keep the hash alive past the 256-block horizon');
+  const C = await buildWorld({ tiers: oneTier });
+  await call({ to: C.packs, data: encode('lockOdds()') });
+  await call({ from: BUYER, to: C.packs, data: encode('buy(bytes32)', '0x' + 'c1'.repeat(32)) });
+  const pbC1 = blockNo;
+  advance(2);
+  check('hash is not recorded at purchase', toBig((await view(C.packs, 'packs(uint256)', 1))[5]) === 0n);
+  await call({ from: BUYER2, to: C.packs, data: encode('buy(bytes32)', '0x' + 'c2'.repeat(32) ) });
+  check('the next purchase records the pending pack\'s hash', (await hashOf(C.packs, 1)) === '0x' + fakeHash(pbC1 + 1n).toString('hex'));
+  advance(300);
+  await call({ from: STRANGER, to: C.packs, data: encode('refundExpired(uint256)', 1) });
+  r = await call({ from: STRANGER, to: C.packs, data: encode('openLate(uint256,bytes32)', 1, seed(1)) });
+  check('settled 300 blocks later with the real hash', !r.reverted && openedOf(r.logs)[0].randomness === expectRand(1, '0x' + 'c1'.repeat(32), pbC1), r.error);
+  r = await call({ from: STRANGER, to: C.packs, data: encode('checkpoint(uint256)', 2) });
+  check('a checkpoint after 256 blocks records nothing', !r.reverted && toBig((await view(C.packs, 'packs(uint256)', 2))[5]) === 0n);
+  await call({ from: STRANGER, to: C.packs, data: encode('refundExpired(uint256)', 2) });
+  r = await call({ from: STRANGER, to: C.packs, data: encode('openLate(uint256,bytes32)', 2, seed(2)) });
+  check('a pack nobody touched still settles, with a zero hash, instead of blocking the chain', !r.reverted && (await viewBig(C.packs, 'revealed()')) === 2n, r.error);
+
+  section('Broken feeds and cleared feeds degrade to cash');
+  const F = await buildWorld({ tiers: [{ name: 'Only', weight: 1, usd: 2, tokens: ['NVDA'] }] });
+  const seq2 = await deploy(ART.MockAggregator, ['int256', 'uint8'], [0n, 0]);
+  await call({ to: seq2, data: encode('set(int256,uint256)', 0n, ts - 7200n) });
+  r = await call({ to: F.packs, data: encode('setSequencerFeed(address)', seq2) });
+  check('a live sequencer feed is accepted before lock', !r.reverted, r.error);
+  await call({ to: F.packs, data: encode('lockOdds()') });
+  check('quote ok with everything healthy', toBig((await view(F.packs, 'quote(address,uint64)', F.tokens.NVDA, 200))[1]) === 1n);
+  await call({ to: F.feeds.NVDA, data: encode('setBroken(bool)', true) });
+  check('quote reports not ok on a feed that reverts', toBig((await view(F.packs, 'quote(address,uint64)', F.tokens.NVDA, 200))[1]) === 0n);
+  await call({ from: BUYER, to: F.packs, data: encode('buy(bytes32)', '0x' + 'e7'.repeat(32)) });
+  advance(2);
+  r = await call({ from: STRANGER, to: F.packs, data: encode('open(uint256,bytes32)', 1, seed(1)) });
+  check('open succeeds and pays cash', !r.reverted && pullsOf(r.logs).every((p) => p.cash && p.amount === 2_000_000n), r.error);
+  await call({ to: F.feeds.NVDA, data: encode('setBroken(bool)', false) });
+  await call({ to: seq2, data: encode('setBroken(bool)', true) });
+  check('a reverting sequencer feed counts as down', toBig((await view(F.packs, 'quote(address,uint64)', F.tokens.NVDA, 200))[1]) === 0n);
+  r = await call({ to: F.packs, data: encode('setSequencerFeed(address)', '0x' + '00'.repeat(20)) });
+  check('owner may clear the sequencer feed after lock', !r.reverted, r.error);
+  check('quote ok again', toBig((await view(F.packs, 'quote(address,uint64)', F.tokens.NVDA, 200))[1]) === 1n);
+  r = await call({ to: F.packs, data: encode('setFeed(address,address,uint32)', F.tokens.NVDA, '0x' + '00'.repeat(20), 0) });
+  check('owner may clear a price feed after lock', !r.reverted, r.error);
+  await call({ from: BUYER, to: F.packs, data: encode('buy(bytes32)', '0x' + 'e8'.repeat(32)) });
+  advance(2);
+  r = await call({ from: STRANGER, to: F.packs, data: encode('open(uint256,bytes32)', 2, seed(2)) });
+  check('a cleared feed pays the full USD value in cash', !r.reverted && pullsOf(r.logs).every((p) => p.cash && p.amount === 2_000_000n), r.error);
+
+  section('Return-bombing and odd-status tokens cannot stall an open');
+  const B = await buildWorld({ tiers: [{ name: 'Only', weight: 1, usd: 2, tokens: ['NVDA'] }], bomb: ['NVDA'] });
+  await call({ to: B.packs, data: encode('lockOdds()') });
+  await call({ from: BUYER, to: B.packs, data: encode('buy(bytes32)', '0x' + 'e5'.repeat(32)) });
+  advance(2);
+  r = await call({ from: STRANGER, to: B.packs, data: encode('open(uint256,bytes32)', 1, seed(1)) });
+  check('open succeeds against a token that answers with 8 KB', !r.reverted, r.error);
+  check('its true first word counts as delivered, so the pulls are stock', pullsOf(r.logs).every((p) => !p.cash));
+  await call({ to: B.tokens.NVDA, data: encode('setMode(uint8)', 1) });
+  await call({ from: BUYER, to: B.packs, data: encode('buy(bytes32)', '0x' + 'e6'.repeat(32)) });
+  advance(2);
+  r = await call({ from: STRANGER, to: B.packs, data: encode('open(uint256,bytes32)', 2, seed(2)) });
+  check('a token answering 2 instead of true counts as not delivered: cash', !r.reverted && pullsOf(r.logs).every((p) => p.cash), r.error);
 
   // -------------------------------------------------------------------------
   section('Statistics: realised payout tracks the published odds');
