@@ -9,6 +9,8 @@
   here, so re-rendering never depends on index.html or style.css.
 -->
 <style>
+  @font-face { font-family: "Bricolage Grotesque"; font-style: normal; font-weight: 200 800; font-display: block; src: url("fonts/bricolage-grotesque-latin-wght-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Newsreader"; font-style: normal; font-weight: 400; font-display: block; src: url("fonts/newsreader-latin-400-normal.woff2") format("woff2"); }
   :root {
     --paper: #f4efe4;
     --paper-2: #ebe4d3;
@@ -18,8 +20,8 @@
     --rule: #cfc7b4;
     --green: #0f7a3d;
     --gold: #c9a227;
-    --display: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --display: "Bricolage Grotesque", "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+    --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
     --mono: "Courier New", Courier, "Liberation Mono", monospace;
   }
   * { box-sizing: border-box; }
@@ -57,7 +59,7 @@
   .wrapper-body { background: var(--ink); color: var(--paper); padding: 24px 22px 20px; position: relative; overflow: hidden;
     background-image: radial-gradient(rgba(244, 239, 228, 0.16) 1.2px, transparent 1.3px); background-size: 9px 9px; }
   .wrapper-top-line { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #cfc7b4; border-bottom: 1px solid rgba(244, 239, 228, 0.35); padding-bottom: 9px; }
-  .wrapper-title { font-family: var(--display); font-weight: 800; font-size: 62px; line-height: 0.88; letter-spacing: -0.05em; margin: 20px 0 8px; color: var(--paper); }
+  .wrapper-title { font-family: var(--display); font-weight: 800; font-size: 56px; line-height: 0.88; letter-spacing: -0.05em; margin: 20px 0 8px; color: var(--paper); }
   .wrapper-chart { color: #8ee3a8; height: 110px; margin: 6px -4px 12px; }
   .wrapper-chart svg { width: 100%; height: 100%; }
   .wrapper-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; white-space: nowrap; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: #cfc7b4; border-top: 1px solid rgba(244, 239, 228, 0.35); padding-top: 9px; }
