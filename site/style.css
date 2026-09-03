@@ -45,7 +45,7 @@
   --paper-2: #ebe4d3;
   --ink: #141311;
   --ink-2: #4a4640;
-  --ink-3: #8a847a;
+  --ink-3: #6d685f;
   --rule: #cfc7b4;
   --green: #0f7a3d;
   --green-ink: #0a5a2c;
@@ -100,6 +100,16 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--paper-2); 
 .btn-solid:hover { background: var(--green-ink); border-color: var(--green-ink); box-shadow: 4px 4px 0 var(--ink); }
 .btn-big { font-size: 18px; padding: 15px 22px; }
 .btn-small { font-size: 13px; padding: 7px 12px; }
+
+/* keyboard focus: a visible ink ring, die-cut offset from whatever it rings */
+.btn:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible, .chip:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+/* .btn-solid is ink-on-ink at the offset ring's usual spot (page paper outside, or its own
+   green drop-shadow) so its ring sits inset instead, paper-on-ink where it actually shows up. */
+.btn-solid:focus-visible { outline-color: var(--paper); outline-offset: -4px; }
+
 .price { font-family: var(--mono); font-weight: 400; margin-left: 10px; padding-left: 12px; border-left: 1px solid rgba(255, 255, 255, 0.35); }
 
 /* layout */
@@ -111,7 +121,15 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(38px, 5.4vw
 .note { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); margin: 16px 0 0; line-height: 1.5; }
 .sub { color: var(--ink-2); margin: 8px 0 0; }
 h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: -0.03em; margin: 0; line-height: 1.1; }
-.sheet { padding: 34px 0 8px; border-bottom: 1px solid var(--rule); }
+.sheet { padding: 34px 0 8px; position: relative; }
+.sheet::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 10px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 9px, transparent 9px 18px);
+  opacity: 0.4;
+  pointer-events: none;
+}
 .sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
 .stamp { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; padding: 4px 8px; border: 1.5px solid var(--ink-3); color: var(--ink-3); border-radius: 2px; transform: rotate(-2deg); }
 .stamp.ok { color: var(--green-ink); border-color: var(--green-ink); }
@@ -166,7 +184,18 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .card { position: relative; aspect-ratio: 5 / 7; transform-style: preserve-3d; transition: transform 0.75s cubic-bezier(0.2, 0.7, 0.2, 1); --r: var(--r-0); }
 .card.flipped { transform: rotateY(180deg); }
 .face { position: absolute; inset: 0; backface-visibility: hidden; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); overflow: hidden; }
-.face.front { background: var(--ink); background-image: radial-gradient(rgba(244, 239, 228, 0.18) 1.2px, transparent 1.3px); background-size: 8px 8px; display: flex; align-items: center; justify-content: center; }
+.face.front {
+  background: var(--ink);
+  background-image:
+    radial-gradient(rgba(244, 239, 228, 0.18) 1.2px, transparent 1.3px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 100'%3E%3Cpolyline points='0,80 30,64 50,72 80,44 105,54 130,26 155,40 185,14 220,20' fill='none' stroke='%23f4efe4' stroke-opacity='0.16' stroke-width='7' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 8px 8px, 100% auto;
+  background-position: 0 0, center 65%;
+  background-repeat: repeat, no-repeat;
+  outline: 1px solid var(--paper);
+  outline-offset: -6px;
+  display: flex; align-items: center; justify-content: center;
+}
 .face.front span { font-family: var(--display); font-weight: 800; color: var(--paper); font-size: 15px; letter-spacing: -0.02em; text-transform: uppercase; transform: rotate(-90deg); white-space: nowrap; }
 .face.back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 8px; }
 .card-band { white-space: nowrap; display: flex; justify-content: space-between; align-items: center; gap: 6px; background: var(--r); color: var(--paper); font-family: var(--display); font-weight: 800; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 7px; border-radius: 4px 4px 0 0; }
@@ -289,6 +318,35 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
   .menu { gap: 14px; font-size: 13px; }
   .stage { padding: 18px; }
   .lede { font-size: 18px; }
+
+  /* pull rates: the rarity strip scrolls sideways with a snap, instead of wrapping into rows.
+     .tier-note (the Mythic sentence) is a child of .tier-set in the markup, but it escapes the
+     strip's own scroll/clip by using .tier -- not .tier-set -- as its containing block, so it
+     reads as a caption under the strip rather than one more item riding inside it. */
+  .tier { position: relative; }
+  .tier-set {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 3px 28px 6px 3px;
+  }
+  .tier-set::-webkit-scrollbar { display: none; }
+  .mini { scroll-snap-align: start; flex: 0 0 auto; }
+  .tier::after {
+    content: "";
+    grid-row: 2; grid-column: 1;
+    position: absolute; top: 0; right: 0; bottom: 0; width: 28px;
+    background: linear-gradient(to right, transparent, var(--paper) 70%);
+    pointer-events: none;
+  }
+  .tier-note {
+    grid-row: 2; grid-column: 1;
+    position: absolute; left: 0; right: 0; top: 100%;
+    margin: 10px 0 0;
+  }
 }
 /* phones: the headline, the promise and both buttons on the first screen; the pack shot rides below them.
    Tap targets get a 44px floor. These come after the blocks above on purpose. */
