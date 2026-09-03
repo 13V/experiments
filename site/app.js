@@ -40,7 +40,7 @@
   const symbolOf = (addr) => C.symbols[addr.toLowerCase()] || SP.shortAddr(addr);
   const nameOf = (addr) => { for (const t of C.tiers) for (const x of t.tokens) if (x.address && x.address.toLowerCase() === addr.toLowerCase()) return x.name; return ''; };
   const fmtUsdg = (raw) => SP.fmtAmount(raw, C.usgdDecimals || C.usdgDecimals, 2);
-  const fmtPct = (p) => (p * 100).toFixed(p * 100 >= 1 ? 1 : 2) + '%';
+  const fmtPct = (p) => { const x = p * 100; return (Number.isInteger(x) ? String(x) : x.toFixed(x >= 1 ? 1 : 2)) + '%'; };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const logoImg = (symbol, cls) => /^[A-Z0-9.]{1,8}$/.test(symbol) ? `<img class="${cls}" src="${C.logoPath || 'logos/'}${esc(symbol)}.png" alt="" loading="lazy" onerror="this.remove()">` : '';
 
@@ -67,7 +67,7 @@
     };
     if (img.complete && img.naturalWidth) measure(); else img.addEventListener('load', measure, { once: true });
   }
-  const tuneLogosIn = (root) => root.querySelectorAll('img.logo, img.tok-logo').forEach(tuneLogo);
+  const tuneLogosIn = (root) => root.querySelectorAll('img.logo, img.mini-logo').forEach(tuneLogo);
 
   let toastTimer;
   function toast(msg, err) {
@@ -138,23 +138,46 @@
 
   function renderOdds() {
     const tiers = state.tiers;
-    const total = tiers.reduce((s, t) => s + t.weight, 0);
-    const tbody = $('odds-table').querySelector('tbody');
-    tbody.innerHTML = '';
+    const total = tiers.reduce((sum, t) => sum + t.weight, 0);
+    const wrap = $('tiers');
+    wrap.innerHTML = '';
     let evCents = 0;
     tiers.forEach((t, i) => {
       const p = t.weight / total;
       evCents += p * t.usdCents;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="tier-name" style="--r:var(--r-${Math.min(i, 5)})">${esc(t.name)}</td><td class="num">${fmtPct(p)}</td><td class="num">${SP.fmtUsd(t.usdCents)}</td><td class="tokens">${t.tokens.map((x) => `<span class="tok">${logoImg(x.symbol, 'tok-logo')}${esc(x.symbol)}</span>`).join('')}</td>`;
-      tbody.appendChild(tr);
+      const oneIn = Math.round(total / t.weight);
+      const r = Math.min(i, 5);
+      const el = document.createElement('div');
+      el.className = 'tier';
+      el.style.setProperty('--r', `var(--r-${r})`);
+      el.dataset.tier = String(r);
+      const worth = t.usdCents % 100 === 0 ? '$' + (t.usdCents / 100).toLocaleString('en-US') : SP.fmtUsd(t.usdCents);
+      el.innerHTML =
+        `<div class="tier-meta">` +
+          `<div class="tier-name">${esc(t.name)}</div>` +
+          `<div class="tier-nums">` +
+            `<div class="tier-odds"><b>${fmtPct(p)}</b><span>${oneIn >= 5 ? `1 in ${oneIn.toLocaleString('en-US')} pulls` : 'of all pulls'}</span></div>` +
+            `<div class="tier-worth"><b>${worth}</b><span>${t.usdCents >= 100000 ? 'one whole share' : 'of stock per pull'}</span></div>` +
+          `</div>` +
+        `</div>` +
+        `<div class="tier-set">` +
+          t.tokens.map((x) => `<div class="mini" title="${esc(x.name || x.symbol)}"><div class="mini-band"></div>${logoImg(x.symbol, 'mini-logo')}<div class="mini-sym">${esc(x.symbol)}</div></div>`).join('') +
+          (i === tiers.length - 1 && t.tokens.length === 1 ? `<p class="tier-note">A whole share of ${esc(t.tokens[0].name || t.tokens[0].symbol)}, worth about ${worth} today. Every pack has five shots at it; one pack in ${Math.round(1 / (1 - Math.pow(1 - p, state.pulls))).toLocaleString('en-US')} lands one.</p>` : '') +
+        `</div>`;
+      wrap.appendChild(el);
     });
-    tuneLogosIn(tbody);
+    tuneLogosIn(wrap);
     const evPack = (evCents * state.pulls) / 100;
     const priceUsd = Number(state.price) / 10 ** C.usdgDecimals;
     const top = tiers[tiers.length - 1];
     const mythicOdds = Math.round(1 / (1 - Math.pow(1 - top.weight / total, state.pulls)));
-    $('odds-ev').textContent = `Expected payout ${SP.fmtUsd(Math.round(evPack * 100))} on a ${SP.fmtUsd(Math.round(priceUsd * 100))} pack, a ${((100 * evPack) / priceUsd).toFixed(1)}% return to player. One pack in ${mythicOdds.toLocaleString('en-US')} holds a ${esc(top.name)}.`;
+    const stats = [
+      ['Expected value', `${SP.fmtUsd(Math.round(evPack * 100))} per ${SP.fmtUsd(Math.round(priceUsd * 100))} pack`],
+      ['Return to player', `${((100 * evPack) / priceUsd).toFixed(1)}%`],
+      [`${esc(top.name)} odds`, `1 pack in ${mythicOdds.toLocaleString('en-US')}`],
+      ['Pulls per pack', String(state.pulls)],
+    ];
+    $('odds-ev').innerHTML = stats.map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v v-big">${v}</div></div>`).join('');
     $('odds-lock').textContent = state.contract ? (state.locked ? 'Locked on-chain' : 'Not locked yet') : 'Published table';
     $('odds-lock').classList.toggle('ok', !!state.locked);
   }
