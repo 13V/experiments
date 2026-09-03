@@ -161,7 +161,11 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 @keyframes pulse-btn { 50% { transform: scale(1.04); box-shadow: 6px 6px 0 var(--green); } }
 .hero-art { perspective: 900px; }
 #hero-wrapper { transition: transform 0.15s ease; }
-#hero-wrapper.tilting { animation: none; }
+/* the pack only breathes while a pointer is on it; the tape is the page's one perpetual motion */
+@media (hover: hover) { .hero-art:hover #hero-wrapper { animation: float 3.4s ease-in-out infinite; } }
+.hero-art:active #hero-wrapper { animation: float 3.4s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(-4deg) translateY(-9px); } }
+.hero-art #hero-wrapper.tilting { animation: none; }
 .result-total { font-size: 24px; margin: 0; }
 .result-total strong { font-family: var(--display); font-weight: 800; letter-spacing: -0.03em; font-size: 34px; color: var(--green-ink); }
 .refund { margin-top: 22px; padding: 16px 18px; border: 2px dashed var(--red); color: var(--ink); }
@@ -226,7 +230,6 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 34px; padding-top: 34px; }
-  .hero-art { order: -1; }
   .wrapper { width: 220px; }
   .wrapper-title { font-size: 46px; }
   .cards { grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -246,8 +249,51 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
   .stage { padding: 18px; }
   .lede { font-size: 18px; }
 }
+/* phones: the headline, the promise and both buttons on the first screen; the pack shot rides below them.
+   Tap targets get a 44px floor. These come after the blocks above on purpose. */
+@media (max-width: 860px) {
+  .masthead { align-items: center; padding: 12px 18px 8px; row-gap: 2px; }
+  .brand { min-height: 44px; justify-content: center; }
+  .menu { flex-wrap: wrap; gap: 2px 12px; }
+  .menu a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1px; }
+  .btn { min-height: 44px; }
+  .colophon a { display: inline-flex; align-items: center; min-height: 44px; }
+
+  .hero { gap: 26px; padding: 22px 0 34px; }
+  .hero-art { order: 0; }
+  .hero-art .wrapper { width: 198px; }
+  .hero-art .wrapper-body { padding: 18px 15px 14px; }
+  .hero-art .wrapper-title { font-size: 41px; margin: 14px 0 7px; }
+  .hero-art .wrapper-chart { height: 76px; }
+  .hero-art .sticker { font-size: 21px; padding: 5px 10px; top: 34px; right: -16px; }
+  .hero-art .sticker-round { top: auto; bottom: 80px; right: -22px; width: 62px; height: 62px; font-size: 22px; }
+  .hero-art .sticker-round small { font-size: 9px; }
+}
+@media (max-width: 520px) {
+  .menu { width: 100%; justify-content: space-between; gap: 2px 6px; }
+  .menu .btn { padding-left: 12px; padding-right: 12px; }
+
+  .hero { gap: 16px; padding: 16px 0 28px; }
+  .hero h1 { font-size: 36px; margin-bottom: 16px; }
+  .hero .lede { font-size: 17px; line-height: 1.4; margin-bottom: 20px; }
+  .cta-row { gap: 10px; }
+  .btn-big { font-size: 17px; padding: 14px 18px; }
+  .note { margin-top: 12px; }
+
+  .hero-art .wrapper { width: 152px; }
+  .hero-art .wrapper-body { padding: 12px 10px 10px; }
+  .hero-art .wrapper-top-line { font-size: 8.5px; letter-spacing: 0.08em; padding-bottom: 6px; }
+  .hero-art .wrapper-title { font-size: 32px; margin: 10px 0 4px; }
+  .hero-art .wrapper-chart { height: 52px; margin: 4px -3px 8px; }
+  .hero-art .wrapper-foot { font-size: 8px; letter-spacing: 0.04em; gap: 5px; padding-top: 6px; }
+  .hero-art .wrapper-code { padding: 1px 4px; }
+  .hero-art .crimp { height: 11px; }
+  .hero-art .sticker { font-size: 17px; padding: 3px 7px; top: 22px; right: -12px; box-shadow: 2px 2px 0 var(--ink); }
+  .hero-art .sticker-round { top: auto; bottom: 44px; right: -15px; width: 48px; height: 48px; font-size: 17px; }
+  .hero-art .sticker-round small { font-size: 7.5px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .tape-track, .stamp.live, .card[data-tier="5"].flipped .face.back, .stage-pack.wobble .wrapper, .stage-pack.rumble .wrapper, .slot.tease, .slot.tease-hard, .slot.pop, .big-stamp, .btn.pulse, .result.show { animation: none; }
+  .tape-track, .stamp.live, .hero-art:hover #hero-wrapper, .hero-art:active #hero-wrapper, .card[data-tier="5"].flipped .face.back, .stage-pack.wobble .wrapper, .stage-pack.rumble .wrapper, .slot.tease, .slot.tease-hard, .slot.pop, .big-stamp, .btn.pulse, .result.show { animation: none; }
   .card, .slot, .stage-pack .crimp, .stage-pack .wrapper-body { transition: none; }
   .slot { opacity: 1; transform: none; }
 }
