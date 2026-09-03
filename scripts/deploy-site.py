@@ -31,12 +31,17 @@ def api(method, path, body=None):
     req = urllib.request.Request('https://api.vercel.com' + path + q, method=method,
                                  data=json.dumps(body).encode() if body is not None else None,
                                  headers={'Authorization': f'Bearer {TOKEN}', 'Content-Type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            return json.loads(r.read() or b'{}')
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors='replace')[:600]
-        sys.exit(f'{method} {path}: HTTP {e.code} {detail}')
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.loads(r.read() or b'{}')
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode(errors='replace')[:600]
+            sys.exit(f'{method} {path}: HTTP {e.code} {detail}')
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            if method != 'GET' or attempt == 3:
+                sys.exit(f'{method} {path}: {e}')
+            time.sleep(2 * (attempt + 1))  # transient network hiccup while polling; try again
 
 
 files = []
