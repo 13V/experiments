@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stonk Packs</title>
+<meta name="description" content="Booster packs, except the cards are shares. Five random pulls of real tokenized stocks on Robinhood Chain for 20 USDG.">
+<meta property="og:title" content="Stonk Packs">
+<meta property="og:description" content="Booster packs, except the cards are shares. One pack in two thousand holds a whole share of Eli Lilly.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23f4efe4'/%3E%3Crect x='8' y='8' width='48' height='48' fill='none' stroke='%23141311' stroke-width='5'/%3E%3Cpath d='M16 42 L28 28 L36 34 L48 20' stroke='%23141311' stroke-width='5' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="tape" aria-hidden="true"><div class="tape-track" id="tape"></div></div>
+
+<header class="masthead">
+  <a class="brand" href="#top">Stonk Packs<span class="brand-sub">Series 1 &middot; Robinhood Chain</span></a>
+  <nav class="menu">
+    <a href="#odds">Odds</a>
+    <a href="#rules">Rules</a>
+    <a href="#mine" id="menu-mine" hidden>Your packs</a>
+    <button id="btn-connect" class="btn btn-line">Connect wallet</button>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Booster packs, except the cards are shares.</h1>
+      <p class="lede">Five random pulls per pack, paid to your wallet as real Robinhood stock tokens. Most pulls are a dollar of Ford. Some are fifty dollars of Costco. One pack in two thousand has a whole share of Eli Lilly in it.</p>
+      <div class="cta-row">
+        <button id="btn-buy" class="btn btn-solid btn-big">Buy a pack <span class="price" id="price-label">20 USDG</span></button>
+        <button id="btn-demo" class="btn btn-line btn-big">Rip a demo pack</button>
+      </div>
+      <p class="note" id="mode-line"></p>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="wrapper">
+        <div class="crimp top"></div>
+        <div class="wrapper-body">
+          <div class="wrapper-top-line">Series 1 &nbsp;&middot;&nbsp; 5 cards</div>
+          <div class="wrapper-title">STONK<br>PACKS</div>
+          <div class="wrapper-chart"><svg viewBox="0 0 220 100" preserveAspectRatio="none"><polyline points="0,80 30,64 50,72 80,44 105,54 130,26 155,40 185,14 220,20" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+          <div class="wrapper-foot"><span>1 in 2,000: a share of LLY</span><span class="wrapper-code">RH-4663</span></div>
+        </div>
+        <div class="crimp bottom"></div>
+        <div class="sticker">$20</div>
+        <div class="sticker sticker-round">5<br><small>cards</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stage" class="stage" hidden aria-live="polite">
+    <div class="stage-head">
+      <h2 id="stage-title">Pack #1</h2>
+      <span id="stage-status" class="stamp">sealed</span>
+    </div>
+    <p id="stage-sub" class="sub"></p>
+    <div id="cards" class="cards"></div>
+    <div id="stage-result" class="result" hidden>
+      <p class="result-total">Pulled <strong id="result-usd">$0.00</strong> in stocks.</p>
+      <div class="cta-row">
+        <button id="btn-again" class="btn btn-solid">Rip another</button>
+        <button id="btn-share" class="btn btn-line">Copy the flex</button>
+      </div>
+      <p id="result-note" class="note"></p>
+    </div>
+    <div id="stage-refund" class="refund" hidden>
+      <p>The operator missed the window on this pack. Take your USDG back now. The pack still pays every prize it rolled the moment its seed surfaces.</p>
+      <button id="btn-refund" class="btn btn-solid">Refund this pack</button>
+    </div>
+  </section>
+
+  <section id="odds" class="sheet">
+    <div class="sheet-head"><h2>Pull rates</h2><span id="odds-lock" class="stamp"></span></div>
+    <div class="table-wrap">
+      <table id="odds-table">
+        <thead><tr><th>Rarity</th><th class="num">Per pull</th><th class="num">Worth</th><th>Stocks in the tier</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="odds-ev" class="sub"></p>
+  </section>
+
+  <section id="rules" class="sheet rules">
+    <div class="sheet-head"><h2>Official rules, or why nobody can rig this</h2></div>
+    <ol class="clauses">
+      <li><span class="clause-n">1.</span> Your pack's result is <code>keccak(operator seed, your seed, pack number, next block hash)</code>. You choose your seed when you buy. The operator's seed for your pack was committed before you bought. The block hash does not exist yet. Nobody holds more than one of the three.</li>
+      <li><span class="clause-n">2.</span> Operator seeds are a hash chain with its root published at deployment. Every seed must hash to the one before it, and packs settle strictly in order. There is no second seed to try.</li>
+      <li><span class="clause-n">3.</span> If your pack is not opened within 40 minutes, anyone can refund you. When the seed finally surfaces, you are still paid every prize the pack rolled. Withholding a win costs the operator the refund and the win.</li>
+      <li><span class="clause-n">4.</span> Nothing you can change after buying is an input. Trade or gift a sealed pack; its result was fixed one block after purchase.</li>
+      <li><span class="clause-n">5.</span> Pulls pay in the stock. If the treasury is out of that stock, or its price feed is off, the same dollar amount is paid in USDG instead. A pack never fails to open.</li>
+    </ol>
+    <div class="ledger" id="fair-state"></div>
+    <div class="verify">
+      <label for="verify-id">Check a pack against the chain</label>
+      <div class="verify-row">
+        <input id="verify-id" type="number" min="1" placeholder="pack no." inputmode="numeric">
+        <button id="btn-verify" class="btn btn-line">Recompute</button>
+      </div>
+      <pre id="verify-out" class="verify-out" hidden></pre>
+    </div>
+  </section>
+
+  <section id="mine" class="sheet" hidden>
+    <div class="sheet-head"><h2>Your packs</h2><button id="btn-refresh" class="btn btn-line btn-small">Refresh</button></div>
+    <div id="owed-line" class="owed" hidden></div>
+    <div id="mine-list" class="mine-list"></div>
+  </section>
+</main>
+
+<footer class="colophon">
+  <p><span id="foot-contract">Not deployed yet.</span> <a id="foot-github" href="#" target="_blank" rel="noopener">Contract source and 126 tests.</a></p>
+  <p class="tiny">Unaudited. Prizes come from the operator's inventory; the odds are enforced by the contract, not by us. Packs containing securities are a regulated product almost everywhere. Sort that out before selling one. Chain id 4663. USDG is issued by Paxos. Robinhood is a trademark of its owner and has nothing to do with this.</p>
+</footer>
+
+<script src="config.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

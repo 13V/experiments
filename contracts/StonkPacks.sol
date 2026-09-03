@@ -253,7 +253,7 @@ contract StonkPacks {
     // -----------------------------------------------------------------------
 
     event Bought(uint256 indexed packId, address indexed buyer, bytes32 buyerSeed, uint256 price);
-    event Opened(uint256 indexed packId, address indexed to, bytes32 randomness, bool late);
+    event Opened(uint256 indexed packId, address indexed to, bytes32 randomness, bytes32 blockHash, bool late);
     event Pull(
         uint256 indexed packId,
         uint8 index,
@@ -517,7 +517,7 @@ contract StonkPacks {
         bytes32 bh = p.entropyHash;
         if (bh == bytes32(0)) bh = blockhash(uint256(p.purchaseBlock) + 1); // always available inside the window
         bytes32 randomness = _entropy(seed, p.buyerSeed, packId, bh);
-        emit Opened(packId, holder, randomness, false);
+        emit Opened(packId, holder, randomness, bh, false);
 
         // A fee that cannot be delivered simply stays in the treasury as free balance.
         uint256 fee = price * feeBps / 10_000;
@@ -660,7 +660,7 @@ contract StonkPacks {
         p.status = Status.Opened;
         address to = p.payee;
         bytes32 randomness = _entropy(seed, p.buyerSeed, packId, p.entropyHash);
-        emit Opened(packId, to, randomness, true);
+        emit Opened(packId, to, randomness, p.entropyHash, true);
         _payout(to, packId, randomness);
     }
 

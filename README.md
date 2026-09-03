@@ -176,14 +176,39 @@ contracts/test/PackMocks.sol   Test doubles only.
 scripts/packs/odds.js          Odds table, expected value, seed-chain generator, and a byte-exact
                                mirror of the contract's randomness so anyone can verify any pack.
 scripts/packs/operator.js      The bot that reveals seeds in order and settles anything that expired.
-scripts/packs/test.js          126 integration tests against the compiled contract in a real EVM.
+scripts/packs/test.js          127 integration tests against the compiled contract in a real EVM.
+site/                          The storefront. Static, no build step, no dependencies.
 ```
 
 ```bash
 node scripts/packs/odds.js rtp          # the table and its return to player
 node scripts/packs/odds.js chain 10000  # operator secret + the root you deploy with
-node scripts/packs/test.js              # 126 passed, 0 failed
+node scripts/packs/test.js              # 127 passed, 0 failed
+python3 -m http.server 8787 --directory site   # then open http://localhost:8787
 ```
+
+## The site
+
+`site/` is the whole storefront: `index.html`, `style.css`, `app.js`, `lib.js` and `config.js`.
+Host it anywhere that serves files. It reads the chain through the public RPC and writes
+through whatever wallet the browser injects (MetaMask, Rabby, a wallet's in-app browser),
+switching or adding Robinhood Chain as needed.
+
+- **Buy and open.** Approve USDG once, buy, then watch the pack: the page asks `packState`
+  for where the pack sits on the contract's clock, reveals the five cards from the `Pull`
+  events when the operator opens it, and offers the refund if the operator misses the window.
+- **Demo mode.** With `contract` empty in `config.js` the page opens packs locally with
+  `lib.js`, which mirrors the contract's randomness and tier selection byte for byte (the
+  node tests prove the mirror against the EVM). Same table, same odds, no chain.
+- **Verifier.** Type a pack number and the page recomputes it from its own transactions:
+  the seed from the open calldata, the buyer seed from the `Bought` event, the block hash from
+  the `Opened` event, the link to the previous seed, and every pull against the emitted ones.
+- **Your packs.** Purchases made in that browser, with refund and IOU-claim buttons. This is
+  local storage, not an indexer; add one before the pack count gets interesting.
+
+To go live: deploy, then set `contract`, `deployBlock` and `chainRoot` in `config.js`.
+Nothing else changes. The look is deliberate: paper, ink, a ticker tape and cards that read
+as cards, not a dark dashboard with glowing pills.
 
 ## The odds
 

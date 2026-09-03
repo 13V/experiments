@@ -208,7 +208,7 @@ async function main() {
 
   const EV = {
     Bought: bytesToHex(keccak256(Buffer.from('Bought(uint256,address,bytes32,uint256)'))),
-    Opened: bytesToHex(keccak256(Buffer.from('Opened(uint256,address,bytes32,bool)'))),
+    Opened: bytesToHex(keccak256(Buffer.from('Opened(uint256,address,bytes32,bytes32,bool)'))),
     Pull: bytesToHex(keccak256(Buffer.from('Pull(uint256,uint8,uint8,address,uint256,uint64,bool)'))),
     Refunded: bytesToHex(keccak256(Buffer.from('Refunded(uint256,address,uint256)'))),
   };
@@ -219,7 +219,7 @@ async function main() {
   });
   const openedOf = (logs) => logs.filter((l) => l.topics[0] === EV.Opened).map((l) => ({
     packId: toBig(Buffer.from(strip(l.topics[1]), 'hex')), holder: '0x' + strip(l.topics[2]).slice(24),
-    randomness: '0x' + l.data.subarray(0, 32).toString('hex'), late: toBig(l.data.subarray(32, 64)) === 1n }));
+    randomness: '0x' + l.data.subarray(0, 32).toString('hex'), blockHash: '0x' + l.data.subarray(32, 64).toString('hex'), late: toBig(l.data.subarray(64, 96)) === 1n }));
   const hashOf = async (packsAddr, id) => bytesToHex((await view(packsAddr, 'packs(uint256)', id))[5]);
   const expectRand = (k, buyerSeed, purchaseBlock) =>
     '0x' + odds.packRandomness(seed(k), buyerSeed, BigInt(k), '0x' + fakeHash(purchaseBlock + 1n).toString('hex')).toString('hex');
@@ -400,6 +400,7 @@ async function main() {
   const lateEv = openedOf(late5.logs)[0];
   check('the refunded holder is still paid all 5 pulls', lateEv && lateEv.late && lateEv.holder === BUYER && pullsOf(late5.logs).length === PULLS);
   check('the late outcome is exactly what a timely open would have rolled', lateEv && lateEv.randomness === expectRand(5, '0x' + '55'.repeat(32), purchaseBlock5));
+  check('the event carries the block hash it used', lateEv && lateEv.blockHash === '0x' + fakeHash(purchaseBlock5 + 1n).toString('hex'));
   check('no fee on a late pack', (await bal(usdg, FEE_TO)) === feeBefore5);
   r = await call({ from: STRANGER, to: packs, data: encode('openLate(uint256,bytes32)', 5, seed(6)) });
   check('cannot settle twice', r.reverted && errorIs(r.ret, 'NotRefunded()'));
