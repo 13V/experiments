@@ -273,6 +273,9 @@ window.STONK_CONFIG = {
   // Company logos, one PNG per ticker symbol.
   logoPath: 'logos/',
 
+  // Where this is served. Printed on the share card and in the link preview.
+  siteUrl: 'stonk-packs.vercel.app',
+
   // Token address -> symbol, for decoding Pull events.
   symbols: {
     "0x25c288e6d899b9bc30160965ad9644c67e73be0c": "F",

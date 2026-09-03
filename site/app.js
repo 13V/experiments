@@ -207,6 +207,8 @@
   const PAPER2 = '#ebe4d3';
   const INK = '#141311';
   const GOLD = ['#c9a227', '#fff2c8', '#e9c96a', '#b8891b'];
+  const SITE_URL = C.siteUrl || 'stonk-packs.vercel.app';
+  let sharePreview = null;
   let skipRequested = false;
   const wait = (ms) => sleep(skipRequested ? Math.min(ms, 40) : ms);
 
@@ -219,6 +221,7 @@
     $('stage-sub').textContent = pack.sub || '';
     $('stage-result').hidden = true;
     $('stage-result').classList.remove('show');
+    hideSharePreview();
     $('stage-refund').hidden = true;
     $('big-stamp').hidden = true;
     $('skip-hint').hidden = true;
@@ -655,6 +658,89 @@
     return `I ripped a Stonk Pack on ${C.chainName} and pulled ${SP.fmtUsd(p.totalCents || 0)} in stocks: ${syms}. ${location.href.split('#')[0]}`;
   }
 
+  // The pack, drawn as a 1200x630 card you can post. Native share sheet where there is
+  // one, a download plus the words on the clipboard where there is not.
+  function hideSharePreview() {
+    if (!sharePreview) return;
+    sharePreview.hidden = true;
+    sharePreview.removeAttribute('src');
+    if (sharePreview.dataset.url) { URL.revokeObjectURL(sharePreview.dataset.url); delete sharePreview.dataset.url; }
+  }
+
+  function showSharePreview(blob) {
+    if (!sharePreview) {
+      sharePreview = document.createElement('img');
+      sharePreview.className = 'share-preview';
+      sharePreview.alt = 'The pack as a card, ready to post';
+      sharePreview.hidden = true;
+      $('stage-result').appendChild(sharePreview);
+    } else if (sharePreview.dataset.url) {
+      URL.revokeObjectURL(sharePreview.dataset.url);
+    }
+    const url = URL.createObjectURL(blob);
+    sharePreview.dataset.url = url;
+    sharePreview.src = url;
+    sharePreview.hidden = false;
+  }
+
+  function download(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 20000);
+  }
+
+  async function shareCard() {
+    const pack = state.current;
+    const btn = $('btn-share');
+    if (!pack || !pack.pulls || !pack.pulls.length || $('stage-result').hidden) { toast('Open a pack first.'); return; }
+    if (!window.SHARE) { copyShareText(); return; }
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Drawing the card…';
+    try {
+      const blob = await SHARE.renderCard(pack, { tiers: state.tiers, tierColors: TIER_COLORS, siteUrl: SITE_URL });
+      showSharePreview(blob);
+      const name = `stonk-pack-${pack.id}${pack.demo ? '-demo' : ''}.png`;
+      const text = shareText();
+      let file = null;
+      try { file = new File([blob], name, { type: 'image/png' }); } catch { /* no File constructor: download it */ }
+      if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text });
+          toast('Shared.');
+        } catch (e) {
+          if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) return; // they closed the sheet
+          throw e;
+        }
+      } else {
+        download(blob, name);
+        let copied = false;
+        try { await navigator.clipboard.writeText(text); copied = true; } catch { /* no clipboard permission */ }
+        toast(copied ? 'Card saved to your downloads, words copied. Go post it.' : 'Card saved to your downloads. Go post it.');
+      }
+    } catch (e) {
+      console.warn('share card failed', e);
+      let copied = false;
+      try { await navigator.clipboard.writeText(shareText()); copied = true; } catch { /* nothing left to try */ }
+      toast(copied ? 'Could not draw the card; copied the words instead.' : 'Could not draw the card.', true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
+  async function copyShareText() {
+    const text = shareText();
+    if (!text) return;
+    try { await navigator.clipboard.writeText(text); toast('Copied. Go post it.'); } catch { toast(text); }
+  }
+
   async function init() {
     $('foot-github').href = C.github;
     loadLocal();
@@ -682,7 +768,7 @@
       heroWrapper.style.transform = `rotate(-4deg) rotateY(${(x * 22).toFixed(1)}deg) rotateX(${(-y * 16).toFixed(1)}deg)`;
     });
     heroArt.addEventListener('mouseleave', () => { heroWrapper.classList.remove('tilting'); heroWrapper.style.transform = ''; });
-    $('btn-share').onclick = async () => { try { await navigator.clipboard.writeText(shareText()); toast('Copied. Go post it.'); } catch { toast(shareText()); } };
+    $('btn-share').onclick = () => shareCard();
     $('btn-refund').onclick = refundCurrent;
     $('btn-connect').onclick = () => connect().catch((e) => toast(e.message || String(e), true));
     $('btn-verify').onclick = () => { const id = Number($('verify-id').value); if (!state.contract || id >= 1) verify(id); };

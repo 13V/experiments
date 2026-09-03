@@ -297,3 +297,6 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
   .card, .slot, .stage-pack .crimp, .stage-pack .wrapper-body { transition: none; }
   .slot { opacity: 1; transform: none; }
 }
+
+/* the rendered share card, sitting under the result like a contact sheet */
+.share-preview { display: block; max-width: 100%; width: 520px; height: auto; border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--paper-2); background: var(--paper); }

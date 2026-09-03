@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stonk Packs — link preview</title>
+<!--
+  The 1200x630 link preview, rendered to og.png by scripts/make-og.js.
+  Self-contained on purpose: the wrapper markup and every rule it needs are inlined
+  here, so re-rendering never depends on index.html or style.css.
+-->
+<style>
+  :root {
+    --paper: #f4efe4;
+    --paper-2: #ebe4d3;
+    --ink: #141311;
+    --ink-2: #4a4640;
+    --ink-3: #8a847a;
+    --rule: #cfc7b4;
+    --green: #0f7a3d;
+    --gold: #c9a227;
+    --display: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --mono: "Courier New", Courier, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden; position: relative;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--serif); font-size: 17px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5; opacity: 0.35; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.18 0 0 0 0 0.15 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ticker tape, frozen */
+  .tape { background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 14px; letter-spacing: 0.04em; overflow: hidden; white-space: nowrap; height: 36px; display: flex; align-items: center; }
+  .tape span { display: inline-block; padding: 0 22px; }
+  .tape b { color: #8ee3a8; font-weight: 700; }
+
+  .sheet { display: flex; align-items: center; gap: 26px; padding: 38px 62px 40px; height: 594px; }
+  .copy { flex: 1 1 auto; min-width: 0; }
+  .brand { font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: -0.03em; text-transform: uppercase; line-height: 1; }
+  .brand-sub { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 7px; }
+  .rules { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); height: 5px; margin: 16px 0 24px; }
+  h1 { font-family: var(--display); font-weight: 800; font-size: 62px; line-height: 0.96; letter-spacing: -0.045em; margin: 0; max-width: 560px; }
+  .lede { font-size: 19px; line-height: 1.4; color: var(--ink-2); margin: 18px 0 0; max-width: 27em; }
+  .url { display: inline-block; margin-top: 26px; background: var(--ink); color: var(--paper); font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; padding: 10px 16px; box-shadow: 5px 5px 0 var(--green); }
+
+  /* the wrapper, lifted from the hero */
+  .art { flex: 0 0 380px; display: flex; justify-content: center; align-items: center; height: 100%; padding-bottom: 34px; }
+  .wrapper { position: relative; width: 300px; transform: rotate(-4deg); filter: drop-shadow(12px 16px 0 rgba(20, 19, 17, 0.18)); }
+  .crimp { height: 16px; background: repeating-linear-gradient(90deg, var(--ink) 0 10px, transparent 10px 20px); }
+  .crimp.top { clip-path: polygon(0 100%, 100% 100%, 100% 0, 0 0); }
+  .wrapper-body { background: var(--ink); color: var(--paper); padding: 24px 22px 20px; position: relative; overflow: hidden;
+    background-image: radial-gradient(rgba(244, 239, 228, 0.16) 1.2px, transparent 1.3px); background-size: 9px 9px; }
+  .wrapper-top-line { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #cfc7b4; border-bottom: 1px solid rgba(244, 239, 228, 0.35); padding-bottom: 9px; }
+  .wrapper-title { font-family: var(--display); font-weight: 800; font-size: 62px; line-height: 0.88; letter-spacing: -0.05em; margin: 20px 0 8px; color: var(--paper); }
+  .wrapper-chart { color: #8ee3a8; height: 110px; margin: 6px -4px 12px; }
+  .wrapper-chart svg { width: 100%; height: 100%; }
+  .wrapper-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; white-space: nowrap; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: #cfc7b4; border-top: 1px solid rgba(244, 239, 228, 0.35); padding-top: 9px; }
+  .wrapper-code { color: var(--ink); background: var(--paper); padding: 1px 6px; }
+  .sticker { position: absolute; top: 50px; right: -26px; background: var(--gold); color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: -0.04em; padding: 7px 13px; transform: rotate(9deg); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+  .sticker-round { top: auto; bottom: 116px; left: auto; right: -34px; width: 86px; height: 86px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 0.9; font-size: 32px; background: var(--paper); transform: rotate(-12deg); text-align: center; padding: 0; }
+  .sticker-round small { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="tape">
+  <span>F <b>$1.00</b> common</span><span>GME <b>$5.00</b> uncommon</span><span>NVDA <b>$12.00</b> rare</span><span>COST <b>$50.00</b> epic</span><span>AAPL <b>$250.00</b> legendary</span><span>LLY <b>one whole share</b></span><span>ONE PACK IN 2,000 <b>HOLDS A SHARE OF LLY</b></span>
+</div>
+
+<div class="sheet">
+  <div class="copy">
+    <div class="brand">Stonk Packs</div>
+    <div class="brand-sub">Series 1 &middot; Robinhood Chain</div>
+    <div class="rules"></div>
+    <h1>Booster packs, except the cards are shares.</h1>
+    <p class="lede">Five random pulls of real tokenized stock. 20 USDG a pack.</p>
+    <div class="url">stonk-packs.vercel.app</div>
+  </div>
+
+  <div class="art">
+    <div class="wrapper">
+      <div class="crimp top"></div>
+      <div class="wrapper-body">
+        <div class="wrapper-top-line">Series 1 &nbsp;&middot;&nbsp; 5 cards</div>
+        <div class="wrapper-title">STONK<br>PACKS</div>
+        <div class="wrapper-chart"><svg viewBox="0 0 220 100" preserveAspectRatio="none"><polyline points="0,80 30,64 50,72 80,44 105,54 130,26 155,40 185,14 220,20" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+        <div class="wrapper-foot"><span>1 in 2,000: a share of LLY</span><span class="wrapper-code">RH-4663</span></div>
+      </div>
+      <div class="crimp bottom"></div>
+      <div class="sticker">$20</div>
+      <div class="sticker sticker-round">5<br><small>cards</small></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
