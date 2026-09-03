@@ -42,6 +42,32 @@
   const fmtUsdg = (raw) => SP.fmtAmount(raw, C.usgdDecimals || C.usdgDecimals, 2);
   const fmtPct = (p) => (p * 100).toFixed(p * 100 >= 1 ? 1 : 2) + '%';
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const logoImg = (symbol, cls) => /^[A-Z0-9.]{1,8}$/.test(symbol) ? `<img class="${cls}" src="${C.logoPath || 'logos/'}${esc(symbol)}.png" alt="" loading="lazy" onerror="this.remove()">` : '';
+
+  // Some marks are white on transparent and vanish on paper. Measure each logo once and put
+  // the light ones on ink. Same-origin images, so the canvas stays readable.
+  const logoTone = new Map();
+  function tuneLogo(img) {
+    const apply = (dark) => { if (dark) img.classList.add('on-dark'); };
+    const key = img.getAttribute('src');
+    if (logoTone.has(key)) return apply(logoTone.get(key));
+    const measure = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 24;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, 24, 24);
+        const d = ctx.getImageData(0, 0, 24, 24).data;
+        let sum = 0, n = 0;
+        for (let i = 0; i < d.length; i += 4) { if (d[i + 3] > 40) { sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; } }
+        const dark = n > 0 && sum / n > 190;
+        logoTone.set(key, dark);
+        apply(dark);
+      } catch { /* leave as is */ }
+    };
+    if (img.complete && img.naturalWidth) measure(); else img.addEventListener('load', measure, { once: true });
+  }
+  const tuneLogosIn = (root) => root.querySelectorAll('img.logo, img.tok-logo').forEach(tuneLogo);
 
   let toastTimer;
   function toast(msg, err) {
@@ -120,9 +146,10 @@
       const p = t.weight / total;
       evCents += p * t.usdCents;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="tier-name" style="--r:var(--r-${Math.min(i, 5)})">${esc(t.name)}</td><td class="num">${fmtPct(p)}</td><td class="num">${SP.fmtUsd(t.usdCents)}</td><td class="tokens">${t.tokens.map((x) => esc(x.symbol)).join('  ')}</td>`;
+      tr.innerHTML = `<td class="tier-name" style="--r:var(--r-${Math.min(i, 5)})">${esc(t.name)}</td><td class="num">${fmtPct(p)}</td><td class="num">${SP.fmtUsd(t.usdCents)}</td><td class="tokens">${t.tokens.map((x) => `<span class="tok">${logoImg(x.symbol, 'tok-logo')}${esc(x.symbol)}</span>`).join('')}</td>`;
       tbody.appendChild(tr);
     });
+    tuneLogosIn(tbody);
     const evPack = (evCents * state.pulls) / 100;
     const priceUsd = Number(state.price) / 10 ** C.usdgDecimals;
     const top = tiers[tiers.length - 1];
@@ -182,8 +209,9 @@
       card.style.setProperty('--r', `var(--r-${tierIdx})`);
       card.querySelector('.face.back').innerHTML =
         `<div class="card-band"><span>${esc(state.tiers[p.tier]?.name || TIER_NAMES[tierIdx])}</span><span>No. ${pack.id}-${i + 1}</span></div>` +
-        `<div class="card-body"><div class="sym">${esc(p.symbol)}<small>${esc(p.name || '')}</small></div></div>` +
+        `<div class="card-body">${p.symbol === 'USDG' ? '<div class="logo logo-cash">$</div>' : logoImg(p.symbol, 'logo')}<div class="sym">${esc(p.symbol)}<small>${esc(p.name || '')}</small></div></div>` +
         `<div class="card-foot"><div class="usd">${SP.fmtUsd(p.usdCents)}</div><div class="amt">${esc(p.amountText || '')}</div><div class="barcode"></div></div>`;
+      tuneLogosIn(card);
       await sleep(i === 0 ? 350 : 700);
       card.classList.add('flipped');
       total += p.usdCents;

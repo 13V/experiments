@@ -177,7 +177,8 @@ scripts/packs/odds.js          Odds table, expected value, seed-chain generator,
                                mirror of the contract's randomness so anyone can verify any pack.
 scripts/packs/operator.js      The bot that reveals seeds in order and settles anything that expired.
 scripts/packs/test.js          127 integration tests against the compiled contract in a real EVM.
-site/                          The storefront. Static, no build step, no dependencies.
+site/                          The storefront. Static, no build step, no dependencies. Live at stonk-packs.vercel.app.
+scripts/deploy-site.py         Pushes site/ to Vercel with plain Python.
 ```
 
 ```bash
@@ -205,10 +206,23 @@ switching or adding Robinhood Chain as needed.
   the `Opened` event, the link to the previous seed, and every pull against the emitted ones.
 - **Your packs.** Purchases made in that browser, with refund and IOU-claim buttons. This is
   local storage, not an indexer; add one before the pack count gets interesting.
+- **Logos.** `site/logos/<TICKER>.png`, one per stock in the table, shown on the cards and in
+  the pull-rate table. The page measures each mark once and puts white-on-transparent logos
+  on ink so nothing vanishes on paper. Robinhood's registry has a `logoUrl` per token, but
+  today it serves the same feather placeholder for every one; these came from Financial
+  Modeling Prep's symbol images instead. Company marks belong to their owners.
 
-To go live: deploy, then set `contract`, `deployBlock` and `chainRoot` in `config.js`.
-Nothing else changes. The look is deliberate: paper, ink, a ticker tape and cards that read
-as cards, not a dark dashboard with glowing pills.
+It is live at https://stonk-packs.vercel.app in demo mode. `scripts/deploy-site.py` pushes
+`site/` to Vercel through the deployments API with nothing but Python:
+
+```bash
+VERCEL_TOKEN=... VERCEL_TEAM_ID=team_... python3 scripts/deploy-site.py   # production
+VERCEL_TOKEN=... python3 scripts/deploy-site.py --preview                  # a preview URL
+```
+
+To go live for real: deploy the contract, set `contract`, `deployBlock` and `chainRoot` in
+`config.js`, run the script again. The look is deliberate: paper, ink, a ticker tape and
+cards that read as cards, not a dark dashboard with glowing pills.
 
 ## The odds
 

@@ -270,6 +270,9 @@ window.STONK_CONFIG = {
     }
   ],
 
+  // Company logos, one PNG per ticker symbol.
+  logoPath: 'logos/',
+
   // Token address -> symbol, for decoding Pull events.
   symbols: {
     "0x25c288e6d899b9bc30160965ad9644c67e73be0c": "F",

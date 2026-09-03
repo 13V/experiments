@@ -106,7 +106,12 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .face.front span { font-family: var(--display); font-weight: 800; color: var(--paper); font-size: 15px; letter-spacing: -0.02em; text-transform: uppercase; transform: rotate(-90deg); white-space: nowrap; }
 .face.back { transform: rotateY(180deg); display: flex; flex-direction: column; padding: 8px; }
 .card-band { white-space: nowrap; display: flex; justify-content: space-between; align-items: center; gap: 6px; background: var(--r); color: var(--paper); font-family: var(--display); font-weight: 800; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 7px; border-radius: 4px 4px 0 0; }
-.card-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 1.5px solid var(--r); border-top: 0; border-bottom: 0; padding: 8px 6px; }
+.card-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 1.5px solid var(--r); border-top: 0; border-bottom: 0; padding: 8px 6px; gap: 8px; }
+.logo { width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; object-fit: contain; padding: 5px; box-shadow: 2px 2px 0 var(--r); }
+.logo-cash { display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 800; font-size: 26px; color: var(--green-ink); }
+.tok { display: inline-flex; align-items: center; gap: 5px; margin: 0 12px 4px 0; white-space: nowrap; }
+.tok-logo { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--rule); background: #fff; object-fit: contain; padding: 1px; }
+.logo.on-dark, .tok-logo.on-dark { background: var(--ink); }
 .sym { font-family: var(--display); font-weight: 800; font-size: clamp(22px, 3.6vw, 36px); letter-spacing: -0.05em; line-height: 1; color: var(--ink); }
 .sym small { display: block; font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 12px; letter-spacing: 0; color: var(--ink-2); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .card-foot { border: 1.5px solid var(--r); border-radius: 0 0 4px 4px; padding: 6px 7px; display: flex; flex-direction: column; gap: 4px; }
@@ -179,6 +184,7 @@ td.tokens { font-family: var(--mono); font-size: 13.5px; color: var(--ink-2); }
 @media (max-width: 520px) {
   .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .card { aspect-ratio: 5 / 6.4; }
+  .logo { width: 44px; height: 44px; }
   .card-band span:last-child { display: none; }
   .menu { gap: 14px; font-size: 13px; }
   .stage { padding: 18px; }
