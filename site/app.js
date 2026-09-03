@@ -202,51 +202,164 @@
     s.classList.toggle('live', !!live);
   }
 
+  const TIER_COLORS = ['#6b665e', '#2f7d4f', '#2b5fa8', '#6f3fa3', '#c25a12', '#b8891b'];
+  const PAPER = '#f4efe4';
+  const PAPER2 = '#ebe4d3';
+  const INK = '#141311';
+  const GOLD = ['#c9a227', '#fff2c8', '#e9c96a', '#b8891b'];
+  let skipRequested = false;
+  const wait = (ms) => sleep(skipRequested ? Math.min(ms, 40) : ms);
+
   function showStage(pack) {
     state.current = pack;
+    skipRequested = false;
     $('stage').hidden = false;
     $('stage-title').textContent = `Pack #${pack.id}${pack.demo ? ' · demo' : ''}`;
     setStatus(pack.statusText || 'sealed', pack.live);
     $('stage-sub').textContent = pack.sub || '';
     $('stage-result').hidden = true;
+    $('stage-result').classList.remove('show');
     $('stage-refund').hidden = true;
+    $('big-stamp').hidden = true;
+    $('skip-hint').hidden = true;
+    $('btn-again').classList.remove('pulse');
+    FX.clear();
+    const packEl = $('stage-pack');
+    packEl.hidden = false;
+    packEl.classList.remove('torn', 'rumble');
+    packEl.classList.add('wobble');
     const c = $('cards');
     c.innerHTML = '';
+    const mid = (state.pulls - 1) / 2;
     for (let i = 0; i < state.pulls; i++) {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<div class="face front"><span>STONK PACKS</span></div><div class="face back"></div>';
-      c.appendChild(card);
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.style.setProperty('--dx', `calc(${mid - i} * 108%)`);
+      slot.style.setProperty('--dy', '-150px');
+      slot.style.setProperty('--rot', `${Math.round((i - mid) * 9)}deg`);
+      slot.innerHTML = '<div class="card"><div class="face front"><span>STONK PACKS</span></div><div class="face back"></div></div>';
+      c.appendChild(slot);
     }
     $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async function reveal(pack) {
-    const cards = [...$('cards').children];
-    let total = 0;
-    for (let i = 0; i < pack.pulls.length && i < cards.length; i++) {
-      const p = pack.pulls[i];
-      const card = cards[i];
-      const tierIdx = Math.min(p.tier, 5);
-      card.dataset.tier = String(tierIdx);
-      card.style.setProperty('--r', `var(--r-${tierIdx})`);
-      card.querySelector('.face.back').innerHTML =
-        `<div class="card-band"><span>${esc(state.tiers[p.tier]?.name || TIER_NAMES[tierIdx])}</span><span>No. ${pack.id}-${i + 1}</span></div>` +
-        `<div class="card-body">${p.symbol === 'USDG' ? '<div class="logo logo-cash">$</div>' : logoImg(p.symbol, 'logo')}<div class="sym">${esc(p.symbol)}<small>${esc(p.name || '')}</small></div></div>` +
-        `<div class="card-foot"><div class="usd">${SP.fmtUsd(p.usdCents)}</div><div class="amt">${esc(p.amountText || '')}</div><div class="barcode"></div></div>`;
-      tuneLogosIn(card);
-      await sleep(i === 0 ? 350 : 700);
-      card.classList.add('flipped');
-      total += p.usdCents;
+  function stamp(text, color, ms) {
+    const el = $('big-stamp');
+    el.textContent = text;
+    el.style.setProperty('--stamp', color);
+    el.classList.remove('out');
+    el.hidden = false;
+    void el.offsetWidth;
+    clearTimeout(stamp.timer);
+    stamp.timer = setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.hidden = true; }, 360); }, ms);
+  }
+
+  function fillCard(card, p, pack, i) {
+    const tierIdx = Math.min(p.tier, 5);
+    card.dataset.tier = String(tierIdx);
+    card.style.setProperty('--r', `var(--r-${tierIdx})`);
+    card.parentElement.style.setProperty('--r', `var(--r-${tierIdx})`);
+    card.querySelector('.face.back').innerHTML =
+      `<div class="card-band"><span>${esc(state.tiers[p.tier]?.name || TIER_NAMES[tierIdx])}</span><span>No. ${pack.id}-${i + 1}</span></div>` +
+      `<div class="card-body">${p.symbol === 'USDG' ? '<div class="logo logo-cash">$</div>' : logoImg(p.symbol, 'logo')}<div class="sym">${esc(p.symbol)}<small>${esc(p.name || '')}</small></div></div>` +
+      `<div class="card-foot"><div class="usd">$0.00</div><div class="amt">${esc(p.amountText || '')}</div><div class="barcode"></div></div>`;
+    tuneLogosIn(card);
+    return card.querySelector('.usd');
+  }
+
+  // The whole show: rumble, tear, deal, then five flips with suspense that grows with rarity.
+  async function playOpening(pack) {
+    const stage = $('stage');
+    const packEl = $('stage-pack');
+    const slots = [...$('cards').children];
+    skipRequested = false;
+    FX.prepare($('fx'));
+    setStatus('opening', true);
+    $('stage-sub').textContent = pack.demo ? 'Demo pack. Same formula, same table, no chain.' : 'Seed revealed. Opening.';
+    $('skip-hint').hidden = false;
+
+    packEl.classList.remove('wobble');
+    packEl.classList.add('rumble');
+    FX.sound('rumble', 0.75);
+    await wait(700);
+    packEl.classList.remove('rumble');
+    packEl.classList.add('torn');
+    FX.sound('tear');
+    FX.shake(stage, 1, 350);
+    FX.burst(packEl, { n: 40, colors: [PAPER, PAPER2, INK, '#8ee3a8'], speed: [3, 10], size: [4, 11], life: [40, 75], gravity: 0.28 });
+    await wait(430);
+    packEl.hidden = true;
+    FX.resize(); // the arena just lost the wrapper; keep the particle canvas inside it
+
+    for (const slot of slots) {
+      slot.classList.add('dealt');
+      FX.sound('deal');
+      await wait(110);
     }
-    await sleep(600);
+    await wait(450);
+    FX.resize();
+
+    let total = 0;
+    for (let i = 0; i < pack.pulls.length && i < slots.length; i++) {
+      const p = pack.pulls[i];
+      const slot = slots[i];
+      const card = slot.querySelector('.card');
+      const tier = Math.min(p.tier, 5);
+      const usdEl = fillCard(card, p, pack, i);
+      slot.classList.add('arm');
+      FX.sound('tick');
+      const suspense = [0, 250, 750, 1150, 1600, 2300][tier];
+      if (suspense && !skipRequested) {
+        slot.classList.add(tier >= 4 ? 'tease-hard' : 'tease');
+        FX.sound('riser', suspense / 1000);
+        await wait(suspense);
+        slot.classList.remove('tease', 'tease-hard');
+      }
+      await wait(140);
+      card.classList.add('flipped');
+      FX.sound('flip');
+      await wait(380);
+      slot.classList.remove('arm');
+      slot.classList.add('pop');
+      FX.sound('hit', tier);
+      FX.ring(slot, { color: TIER_COLORS[tier], speed: 8 + tier * 2.5, width: 3 + tier * 1.5, life: 24 + tier * 4 });
+      FX.burst(slot, {
+        n: [12, 20, 34, 55, 90, 150][tier],
+        colors: tier === 5 ? GOLD : [TIER_COLORS[tier], INK, PAPER2, TIER_COLORS[tier]],
+        speed: [2, 5 + tier * 1.6], size: [3, 6 + tier], life: [40, 70 + tier * 10], gravity: 0.24,
+        shapes: tier >= 3 ? ['rect', 'dot'] : ['rect'], foil: tier === 5,
+      });
+      if (tier >= 3) FX.shake(stage, tier - 2, 320 + tier * 110);
+      if (tier >= 3) stamp(state.tiers[p.tier]?.name || TIER_NAMES[tier], TIER_COLORS[tier], tier === 5 ? 1700 : 950);
+      if (tier === 5) FX.rain({ duration: 3800, rate: 7, colors: GOLD, foil: true });
+      await FX.countUp(usdEl, p.usdCents, 280 + tier * 130, SP.fmtUsd, false);
+      total += p.usdCents;
+      await wait([380, 480, 650, 900, 1150, 1700][tier]);
+      slot.classList.remove('pop');
+    }
+
+    $('skip-hint').hidden = true;
     pack.totalCents = total;
-    $('result-usd').textContent = SP.fmtUsd(total);
+    const priceCents = pack.demo ? C.packPriceUsd * 100 : Math.round((Number(state.price) / 10 ** C.usdgDecimals) * 100);
+    $('result-usd').textContent = '$0.00';
     $('result-note').textContent = pack.demo
       ? `Demo. randomness = keccak(operator seed, your seed, pack id, block hash) = ${pack.randomness.slice(0, 18)}… Amounts use approximate prices; the contract sizes them by Chainlink at open time.`
       : `${pack.late ? 'Settled late: the price was refunded and the prizes were paid anyway. ' : ''}Recompute this pack any time under the rules (pack #${pack.id}).`;
     $('btn-again').textContent = pack.demo ? 'Rip another demo' : 'Rip another';
     $('stage-result').hidden = false;
+    $('stage-result').classList.add('show');
+    await FX.countUp($('result-usd'), total, Math.max(500, Math.min(1400, 400 + total / 4)), SP.fmtUsd, true);
+    if (total >= priceCents) {
+      FX.sound('cash');
+      const gain = total - priceCents;
+      stamp(gain > 0 ? `+${gain % 100 === 0 ? '$' + (gain / 100).toLocaleString('en-US') : SP.fmtUsd(gain)} profit` : 'Broke even', '#0a5a2c', 1500);
+      FX.burst($('cards'), { n: 90, colors: ['#0f7a3d', '#8ee3a8', ...GOLD], speed: [3, 10], size: [4, 9], life: [45, 85], spread: Math.PI * 1.4 });
+      FX.shake(stage, 1, 300);
+    } else {
+      FX.sound('sad');
+      $('btn-again').classList.add('pulse');
+    }
+    setStatus(pack.late ? 'settled late' : 'opened', false);
   }
 
   // ---------------------------------------------------------------------------
@@ -254,11 +367,20 @@
   // ---------------------------------------------------------------------------
   function openDemo() {
     const id = ++state.demoCount;
-    const seed = SP.randomBytes32();
+    let seed = SP.randomBytes32();
     const buyerSeed = SP.randomBytes32();
     const bh = SP.randomBytes32();
-    const randomness = SP.packRandomness(seed, buyerSeed, id, bh);
-    const pulls = SP.pullsFrom(randomness, state.pulls, state.tiers).map((r) => {
+    let randomness = SP.packRandomness(seed, buyerSeed, id, bh);
+    let raw = SP.pullsFrom(randomness, state.pulls, state.tiers);
+    // ?demo=Mythic (or any tier name) re-rolls the demo until that rarity appears: for looking at the show, not for the odds.
+    const wantName = new URLSearchParams(location.search).get('demo');
+    const want = wantName ? state.tiers.findIndex((t) => t.name.toLowerCase() === wantName.toLowerCase()) : -1;
+    for (let tries = 0; want >= 0 && !raw.some((r) => r.tier === want) && tries < 8000; tries++) {
+      seed = SP.randomBytes32();
+      randomness = SP.packRandomness(seed, buyerSeed, id, bh);
+      raw = SP.pullsFrom(randomness, state.pulls, state.tiers);
+    }
+    const pulls = raw.map((r) => {
       const t = state.tiers[r.tier];
       const tok = t.tokens[r.tokenIndex];
       const px = C.demoPrices[tok.symbol];
@@ -266,12 +388,7 @@
     });
     const pack = { id, demo: true, pulls, seed, buyerSeed, bh, randomness: SP.bytesToHex(randomness), statusText: 'sealed', live: true, sub: 'Demo pack. Same formula, same table, no chain.' };
     showStage(pack);
-    setTimeout(async () => {
-      if (state.current !== pack) return;
-      setStatus('opening', true);
-      await reveal(pack);
-      setStatus('opened', false);
-    }, 900);
+    setTimeout(() => { if (state.current === pack) playOpening(pack); }, 800);
   }
 
   // ---------------------------------------------------------------------------
@@ -386,9 +503,7 @@
     }));
     pack.randomness = opened ? opened.randomness : null;
     pack.late = opened ? opened.late : false;
-    setStatus('opening', true);
-    await reveal(pack);
-    setStatus(pack.late ? 'settled late' : 'opened', false);
+    await playOpening(pack);
   }
 
   async function refundCurrent() {
@@ -548,9 +663,25 @@
     renderOdds();
     renderFair();
 
-    $('btn-demo').onclick = openDemo;
-    $('btn-buy').onclick = () => { if (state.contract) buyReal(); else { toast('Demo mode: opening a demo pack instead.'); openDemo(); } };
-    $('btn-again').onclick = () => { if (state.current && !state.current.demo) buyReal(); else openDemo(); };
+    $('btn-demo').onclick = () => { FX.unlock(); openDemo(); };
+    $('btn-buy').onclick = () => { FX.unlock(); if (state.contract) buyReal(); else { toast('Demo mode: opening a demo pack instead.'); openDemo(); } };
+    $('btn-again').onclick = () => { FX.unlock(); if (state.current && !state.current.demo) buyReal(); else openDemo(); };
+    const soundBtn = $('btn-sound');
+    const syncSound = () => { soundBtn.textContent = FX.isMuted() ? 'Sound off' : 'Sound on'; soundBtn.setAttribute('aria-pressed', String(!FX.isMuted())); };
+    syncSound();
+    soundBtn.onclick = () => { FX.setMuted(!FX.isMuted()); FX.unlock(); syncSound(); if (!FX.isMuted()) FX.sound('hit', 1); };
+    $('arena').addEventListener('click', () => { skipRequested = true; });
+    window.addEventListener('resize', () => FX.resize());
+    const heroWrapper = $('hero-wrapper');
+    const heroArt = heroWrapper.parentElement;
+    heroArt.addEventListener('mousemove', (e) => {
+      const r = heroArt.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      heroWrapper.classList.add('tilting');
+      heroWrapper.style.transform = `rotate(-4deg) rotateY(${(x * 22).toFixed(1)}deg) rotateX(${(-y * 16).toFixed(1)}deg)`;
+    });
+    heroArt.addEventListener('mouseleave', () => { heroWrapper.classList.remove('tilting'); heroWrapper.style.transform = ''; });
     $('btn-share').onclick = async () => { try { await navigator.clipboard.writeText(shareText()); toast('Copied. Go post it.'); } catch { toast(shareText()); } };
     $('btn-refund').onclick = refundCurrent;
     $('btn-connect').onclick = () => connect().catch((e) => toast(e.message || String(e), true));

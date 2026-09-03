@@ -19,6 +19,7 @@
     <a href="#odds">Odds</a>
     <a href="#rules">Rules</a>
     <a href="#mine" id="menu-mine" hidden>Your packs</a>
+    <button id="btn-sound" class="btn btn-line btn-small" aria-pressed="true" title="Toggle sound">Sound on</button>
     <button id="btn-connect" class="btn btn-line">Connect wallet</button>
   </nav>
 </header>
@@ -35,7 +36,7 @@
       <p class="note" id="mode-line"></p>
     </div>
     <div class="hero-art" aria-hidden="true">
-      <div class="wrapper">
+      <div class="wrapper" id="hero-wrapper">
         <div class="crimp top"></div>
         <div class="wrapper-body">
           <div class="wrapper-top-line">Series 1 &nbsp;&middot;&nbsp; 5 cards</div>
@@ -56,7 +57,24 @@
       <span id="stage-status" class="stamp">sealed</span>
     </div>
     <p id="stage-sub" class="sub"></p>
-    <div id="cards" class="cards"></div>
+    <div id="arena" class="arena">
+      <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+      <div id="stage-pack" class="stage-pack wobble" aria-hidden="true">
+        <div class="wrapper">
+          <div class="crimp top"></div>
+          <div class="wrapper-body">
+            <div class="wrapper-top-line">Series 1 &nbsp;&middot;&nbsp; 5 cards</div>
+            <div class="wrapper-title">STONK<br>PACKS</div>
+            <div class="wrapper-chart"><svg viewBox="0 0 220 100" preserveAspectRatio="none"><polyline points="0,80 30,64 50,72 80,44 105,54 130,26 155,40 185,14 220,20" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+            <div class="wrapper-foot"><span>1 in 2,000: a share of LLY</span><span class="wrapper-code">RH-4663</span></div>
+          </div>
+          <div class="crimp bottom"></div>
+        </div>
+      </div>
+      <div id="cards" class="cards"></div>
+      <div id="big-stamp" class="big-stamp" hidden></div>
+      <p id="skip-hint" class="skip-hint" hidden>tap to skip</p>
+    </div>
     <div id="stage-result" class="result" hidden>
       <p class="result-total">Pulled <strong id="result-usd">$0.00</strong> in stocks.</p>
       <div class="cta-row">
@@ -112,6 +130,7 @@
 
 <script src="config.js"></script>
 <script src="lib.js"></script>
+<script src="fx.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -190,7 +190,7 @@ python3 -m http.server 8787 --directory site   # then open http://localhost:8787
 
 ## The site
 
-`site/` is the whole storefront: `index.html`, `style.css`, `app.js`, `lib.js` and `config.js`.
+`site/` is the whole storefront: `index.html`, `style.css`, `app.js`, `fx.js`, `lib.js` and `config.js`.
 Host it anywhere that serves files. It reads the chain through the public RPC and writes
 through whatever wallet the browser injects (MetaMask, Rabby, a wallet's in-app browser),
 switching or adding Robinhood Chain as needed.
@@ -206,6 +206,15 @@ switching or adding Robinhood Chain as needed.
   the `Opened` event, the link to the previous seed, and every pull against the emitted ones.
 - **Your packs.** Purchases made in that browser, with refund and IOU-claim buttons. This is
   local storage, not an indexer; add one before the pack count gets interesting.
+- **The show.** Buying puts a wobbling wrapper on stage. When the open lands it rumbles, tears,
+  deals five face-down cards, and flips them one at a time with suspense that grows with the
+  rarity: a jitter and a rising tick for Rare and up, tier-colored bursts and a shockwave on
+  every flip, screen shake, a stamp that slams in for Epic and above, gold foil rain for a
+  Mythic, a rolling total and a cash hit with a profit stamp when the pack beat its price.
+  Sound is synthesized in `fx.js` with the Web Audio API (no files), starts only after a click,
+  and has a switch in the masthead that remembers itself. Tap the stage to skip. Reduced-motion
+  users get plain flips. `?demo=Mythic` re-rolls a demo pack until that rarity shows up, for
+  watching the show, and touches nothing on the chain path.
 - **Logos.** `site/logos/<TICKER>.png`, one per stock in the table, shown on the cards and in
   the pull-rate table. The page measures each mark once and puts white-on-transparent logos
   on ink so nothing vanishes on paper. Robinhood's registry has a `logoUrl` per token, but

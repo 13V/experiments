@@ -98,7 +98,30 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .stage, .sheet { scroll-margin-top: 20px; }
 .stage { margin-top: 34px; padding: 26px; border: 2px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 var(--paper-2); }
 .stage-head { display: flex; align-items: center; gap: 14px; }
-.cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 22px; perspective: 1400px; }
+.arena { position: relative; margin-top: 12px; }
+.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
+.stage-pack { display: flex; justify-content: center; padding: 14px 0 8px; }
+.stage-pack .wrapper { width: 190px; transform: none; filter: drop-shadow(8px 10px 0 rgba(20, 19, 17, 0.18)); }
+.stage-pack .wrapper-title { font-size: 40px; }
+.stage-pack .wrapper-chart { height: 70px; }
+.stage-pack.wobble .wrapper { animation: wobble 1.7s ease-in-out infinite; }
+.stage-pack.rumble .wrapper { animation: rumble 0.07s linear infinite; }
+@keyframes wobble { 0%, 100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-7px); } }
+@keyframes rumble { 0% { transform: translate(-3px, 1px) rotate(-1.5deg); } 25% { transform: translate(3px, -2px) rotate(1.5deg); } 50% { transform: translate(-2px, 2px) rotate(-1deg); } 75% { transform: translate(2px, -1px) rotate(1deg); } 100% { transform: translate(-3px, 1px) rotate(-1.5deg); } }
+.stage-pack .crimp, .stage-pack .wrapper-body { transition: transform 0.45s cubic-bezier(0.3, 0.8, 0.3, 1), opacity 0.4s ease; }
+.stage-pack.torn .crimp.top { transform: translate(-40px, -70px) rotate(-16deg); opacity: 0; }
+.stage-pack.torn .wrapper-body { transform: translateY(56px) scale(0.9); opacity: 0; }
+.stage-pack.torn .crimp.bottom { transform: translateY(80px); opacity: 0; }
+.cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 10px; position: relative; z-index: 2; }
+.slot { position: relative; perspective: 1400px; opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -140px)) rotate(var(--rot, 0deg)) scale(0.5); transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.15), opacity 0.25s ease, filter 0.25s ease; will-change: transform; }
+.slot.dealt { opacity: 1; transform: none; }
+.slot.arm { transform: translateY(-10px) scale(1.05); filter: drop-shadow(0 0 16px var(--r)); z-index: 3; }
+.slot.tease { animation: tease 0.11s linear infinite; }
+.slot.tease-hard { animation: tease-hard 0.08s linear infinite; }
+@keyframes tease { 0% { transform: translate(-2px, -10px) rotate(-1.2deg) scale(1.05); } 50% { transform: translate(2px, -12px) rotate(1.2deg) scale(1.06); } 100% { transform: translate(-2px, -10px) rotate(-1.2deg) scale(1.05); } }
+@keyframes tease-hard { 0% { transform: translate(-5px, -12px) rotate(-3deg) scale(1.07); } 50% { transform: translate(5px, -15px) rotate(3deg) scale(1.1); } 100% { transform: translate(-5px, -12px) rotate(-3deg) scale(1.07); } }
+.slot.pop { animation: pop 0.5s cubic-bezier(0.2, 1.6, 0.3, 1); z-index: 3; }
+@keyframes pop { 0% { transform: scale(1); } 35% { transform: scale(1.14) rotate(-1.5deg); } 100% { transform: scale(1); } }
 .card { position: relative; aspect-ratio: 5 / 7; transform-style: preserve-3d; transition: transform 0.75s cubic-bezier(0.2, 0.7, 0.2, 1); --r: var(--r-0); }
 .card.flipped { transform: rotateY(180deg); }
 .face { position: absolute; inset: 0; backface-visibility: hidden; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); overflow: hidden; }
@@ -120,7 +143,25 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
 .card[data-tier="5"].flipped .face.back { animation: foil 2.4s ease-in-out infinite; }
 @keyframes foil { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.08) saturate(1.2); } }
 .card[data-tier="4"] .face.back { background: linear-gradient(180deg, #fbe9d6, var(--paper) 60%); }
+.big-stamp { position: absolute; left: 50%; top: 45%; z-index: 7; pointer-events: none; transform: translate(-50%, -50%) rotate(-8deg); font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6.5vw, 78px); letter-spacing: -0.04em; text-transform: uppercase; white-space: nowrap; color: var(--stamp, var(--ink)); border: 6px solid var(--stamp, var(--ink)); padding: 4px 18px; background: rgba(244, 239, 228, 0.93); box-shadow: 8px 8px 0 rgba(20, 19, 17, 0.22); animation: slam 0.5s cubic-bezier(0.2, 1.5, 0.3, 1) both; }
+@keyframes slam { 0% { transform: translate(-50%, -50%) rotate(-8deg) scale(3.4); opacity: 0; } 55% { opacity: 1; } 100% { transform: translate(-50%, -50%) rotate(-8deg) scale(1); opacity: 1; } }
+.big-stamp.out { animation: stamp-out 0.35s ease-in both; }
+@keyframes stamp-out { to { transform: translate(-50%, -50%) rotate(-8deg) scale(0.7); opacity: 0; } }
+.skip-hint { position: absolute; right: 6px; bottom: -8px; margin: 0; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.shake-1 { animation: shake1 0.35s linear; }
+.shake-2 { animation: shake2 0.45s linear; }
+.shake-3 { animation: shake3 0.65s linear; }
+@keyframes shake1 { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 1px); } }
+@keyframes shake2 { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(6px, -4px) rotate(0.3deg); } 40% { transform: translate(-6px, 4px) rotate(-0.3deg); } 60% { transform: translate(5px, 3px); } 80% { transform: translate(-4px, -3px); } }
+@keyframes shake3 { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(12px, -8px) rotate(0.8deg); } 30% { transform: translate(-12px, 8px) rotate(-0.8deg); } 45% { transform: translate(10px, 6px) rotate(0.5deg); } 60% { transform: translate(-9px, -6px) rotate(-0.5deg); } 75% { transform: translate(6px, 4px); } 90% { transform: translate(-4px, -2px); } }
 .result { margin-top: 24px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.result.show { animation: rise 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) both; }
+@keyframes rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.btn.pulse { animation: pulse-btn 1.5s ease-in-out infinite; }
+@keyframes pulse-btn { 50% { transform: scale(1.04); box-shadow: 6px 6px 0 var(--green); } }
+.hero-art { perspective: 900px; }
+#hero-wrapper { transition: transform 0.15s ease; }
+#hero-wrapper.tilting { animation: none; }
 .result-total { font-size: 24px; margin: 0; }
 .result-total strong { font-family: var(--display); font-weight: 800; letter-spacing: -0.03em; font-size: 34px; color: var(--green-ink); }
 .refund { margin-top: 22px; padding: 16px 18px; border: 2px dashed var(--red); color: var(--ink); }
@@ -206,6 +247,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
   .lede { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tape-track, .stamp.live, .card[data-tier="5"].flipped .face.back { animation: none; }
-  .card { transition: none; }
+  .tape-track, .stamp.live, .card[data-tier="5"].flipped .face.back, .stage-pack.wobble .wrapper, .stage-pack.rumble .wrapper, .slot.tease, .slot.tease-hard, .slot.pop, .big-stamp, .btn.pulse, .result.show { animation: none; }
+  .card, .slot, .stage-pack .crimp, .stage-pack .wrapper-body { transition: none; }
+  .slot { opacity: 1; transform: none; }
 }
