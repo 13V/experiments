@@ -7,6 +7,14 @@ window.STONK_CONFIG = {
   explorer: 'https://robinhoodchain.blockscout.com',
   github: 'https://github.com/13V/experiments',
 
+  // Marketing state before the contract is deployed. The site is treated as live when
+  // `contract` below is set OR `live` here is true; `label` is the fuller line shown for
+  // that live-without-a-contract-address edge case and as the disabled buy button's tooltip.
+  launch: { live: false, label: 'Launching soon on Robinhood Chain' },
+  // Links for the "Follow the launch" row and the footer. Leave a field empty ('') to hide
+  // that link entirely; nothing here is required.
+  social: { x: '', telegram: '', discord: '' },
+
   // The StonkPacks contract. Leave empty until deployed: the site then runs in demo mode,
   // where packs open locally with the same randomness and odds code as the contract.
   contract: '',

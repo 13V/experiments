@@ -115,16 +115,58 @@
   function renderMode() {
     const priceUsd = Number(state.price) / 10 ** C.usdgDecimals;
     $('price-label').textContent = `${priceUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDG`;
+    const launch = C.launch || {};
+    const social = C.social || {};
+    const live = !!(state.contract || launch.live);
+
+    // Hero CTAs: live keeps today's buy-primary layout; not-live swaps the roles so the
+    // working demo button carries the solid style and the buy button becomes an inert stamp.
+    const buyBtn = $('btn-buy');
+    const demoBtn = $('btn-demo');
+    buyBtn.classList.toggle('btn-solid', live);
+    buyBtn.classList.toggle('btn-soon', !live);
+    buyBtn.setAttribute('aria-disabled', String(!live));
+    if (live) buyBtn.removeAttribute('title'); else buyBtn.title = launch.label || 'Launching soon';
+    demoBtn.classList.toggle('btn-line', live);
+    demoBtn.classList.toggle('btn-solid', !live);
+    $('buy-soon-stamp').hidden = live;
+    $('mode-line').classList.toggle('note-serif', !live);
+
     if (state.contract) {
       $('mode-line').textContent = state.paused ? 'Sales are paused right now.' : state.locked === false ? 'The operator has not locked the odds yet. Nothing sells until they do.' : `Live on ${C.chainName}. Pay in USDG, prizes land as stock tokens in your wallet.`;
       const a = document.createElement('a');
       a.href = `${C.explorer}/address/${state.contract}`; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = `Contract ${SP.shortAddr(state.contract)} on ${C.chainName}.`;
+      a.textContent = 'Contract';
+      a.title = `${SP.shortAddr(state.contract)} on ${C.chainName}`;
       $('foot-contract').replaceChildren(a);
+    } else if (live) {
+      $('mode-line').textContent = launch.label || `Launching soon on ${C.chainName}.`;
+      $('foot-contract').textContent = 'Not deployed yet.';
     } else {
-      $('mode-line').textContent = 'Demo mode. The contract is not deployed yet; demo packs open right here with the same code the contract runs.';
+      $('mode-line').textContent = 'Demo packs open right here with the same code the contract will run.';
       $('foot-contract').textContent = 'Not deployed yet.';
     }
+
+    // Social chips: the hero's "follow the launch" row only makes sense pre-launch; the
+    // footer row is permanent and just reflects whichever links are configured.
+    const chipLink = (id, url) => {
+      const el = $(id);
+      if (!el) return false;
+      if (url) { el.href = url; el.hidden = false; return true; }
+      el.hidden = true;
+      el.removeAttribute('href');
+      return false;
+    };
+    const heroSocial = [
+      chipLink('social-x', social.x),
+      chipLink('social-telegram', social.telegram),
+      chipLink('social-discord', social.discord),
+    ].some(Boolean);
+    $('social-row').hidden = live || !heroSocial;
+    chipLink('foot-x', social.x);
+    chipLink('foot-telegram', social.telegram);
+    chipLink('foot-discord', social.discord);
+
     renderTape();
   }
 
@@ -751,7 +793,11 @@
     renderFair();
 
     $('btn-demo').onclick = () => { FX.unlock(); openDemo(); };
-    $('btn-buy').onclick = () => { FX.unlock(); if (state.contract) buyReal(); else { toast('Demo mode: opening a demo pack instead.'); openDemo(); } };
+    $('btn-buy').onclick = () => {
+      if ($('btn-buy').getAttribute('aria-disabled') === 'true') return;
+      FX.unlock();
+      if (state.contract) buyReal(); else { toast('Demo mode: opening a demo pack instead.'); openDemo(); }
+    };
     $('btn-again').onclick = () => { FX.unlock(); if (state.current && !state.current.demo) buyReal(); else openDemo(); };
     const soundBtn = $('btn-sound');
     const syncSound = () => { soundBtn.textContent = FX.isMuted() ? 'Sound off' : 'Sound on'; soundBtn.setAttribute('aria-pressed', String(!FX.isMuted())); };

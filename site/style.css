@@ -371,4 +371,22 @@ h2 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spac
   .ledger .stat + .stat { padding-left: 0; }
   .ledger .stat:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--rule); }
   .ledger .stat:nth-child(-n+2):nth-last-child(n+3) { border-bottom: 1px solid var(--rule); }
+/* pre-launch hero: the buy button as an inert stamped block, plus the launch's social chips */
+.btn-soon { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; padding-left: 16px; padding-right: 16px; background: transparent; color: var(--ink); box-shadow: none; cursor: default; }
+.btn-soon:hover, .btn-soon:active { background: transparent; color: var(--ink); transform: none; }
+.btn-soon .price { margin-left: 0; border-left-color: rgba(20, 19, 17, 0.25); }
+.note-serif { font-family: var(--serif); font-size: 17px; line-height: 1.5; letter-spacing: 0; color: var(--ink-2); }
+.social-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin: 18px 0 0; }
+.social-row-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.chip { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; border: 2px solid var(--ink); border-radius: 3px; font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: 0.02em; color: var(--ink); text-decoration: none; background: transparent; transition: background 0.12s ease, color 0.12s ease; }
+.chip:hover { background: var(--ink); color: var(--paper); }
+
+/* footer link row */
+.foot-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 8px 0; font-family: var(--display); font-size: 14px; }
+.foot-links a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); padding-bottom: 1px; }
+.foot-links a:hover { color: var(--ink); border-color: var(--ink); }
+.foot-links span { color: var(--ink-3); }
+
+@media (max-width: 520px) {
+  .chip { min-height: 44px; padding: 0 16px; }
 }

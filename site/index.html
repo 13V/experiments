@@ -43,10 +43,16 @@
       <h1>Booster packs, except the cards are shares.</h1>
       <p class="lede">Five random pulls per pack, paid to your wallet as real Robinhood stock tokens. Most pulls are a dollar of Ford. Some are fifty dollars of Costco. One pack in two thousand has a whole share of Eli Lilly in it.</p>
       <div class="cta-row">
-        <button id="btn-buy" class="btn btn-solid btn-big">Buy a pack <span class="price" id="price-label">20 USDG</span></button>
-        <button id="btn-demo" class="btn btn-line btn-big">Rip a demo pack</button>
+        <button id="btn-buy" class="btn btn-soon btn-big" aria-disabled="true">Buy a pack <span class="price" id="price-label">20 USDG</span><span class="stamp" id="buy-soon-stamp">launching soon</span></button>
+        <button id="btn-demo" class="btn btn-solid btn-big">Rip a demo pack</button>
       </div>
-      <p class="note" id="mode-line"></p>
+      <div class="social-row" id="social-row" hidden>
+        <span class="social-row-label">Follow the launch</span>
+        <a id="social-x" class="chip" href="#" target="_blank" rel="noopener" hidden>X</a>
+        <a id="social-telegram" class="chip" href="#" target="_blank" rel="noopener" hidden>Telegram</a>
+        <a id="social-discord" class="chip" href="#" target="_blank" rel="noopener" hidden>Discord</a>
+      </div>
+      <p class="note note-serif" id="mode-line">Demo packs open right here with the same code the contract will run.</p>
     </div>
     <div class="hero-art" aria-hidden="true">
       <div class="wrapper" id="hero-wrapper">
@@ -145,7 +151,13 @@
 </main>
 
 <footer class="colophon">
-  <p><span id="foot-contract">Not deployed yet.</span> <a id="foot-github" href="#" target="_blank" rel="noopener">Contract source and 126 tests.</a></p>
+  <div class="foot-links" id="foot-links">
+    <a id="foot-x" href="#" target="_blank" rel="noopener" hidden>X</a>
+    <a id="foot-telegram" href="#" target="_blank" rel="noopener" hidden>Telegram</a>
+    <a id="foot-discord" href="#" target="_blank" rel="noopener" hidden>Discord</a>
+    <span id="foot-contract">Not deployed yet.</span>
+    <a id="foot-github" href="#" target="_blank" rel="noopener">Source and tests</a>
+  </div>
   <p class="tiny">Unaudited. Prizes come from the operator's inventory; the odds are enforced by the contract, not by us. Packs containing securities are a regulated product almost everywhere. Sort that out before selling one. Chain id 4663. USDG is issued by Paxos. Robinhood is a trademark of its owner and has nothing to do with this.</p>
 </footer>
 
