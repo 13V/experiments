@@ -699,3 +699,88 @@ body.zooming #glass, body.zooming #led { transform-origin: var(--dock-x, 50%) va
   body.docked #masthead { border-radius: 0; }
   body.docked footer { border-radius: 0; }
 }
+
+/* ================================================================ the screens' own UI language
+   Ported verbatim from the painters that draw the monitors in the scene (scene.js): panel ground
+   #070c11, a 34px header strip at 4% white with a 4px cyan tab at its left, 15px semibold title,
+   dim meta right-aligned, ~33px rows striped rather than ruled, square corners, no shadows.
+   The app is one of those screens, so it is built from the same parts. */
+
+:root { --scr-bg: #070c11; --scr-head: rgba(255, 255, 255, .04); --scr-stripe: rgba(255, 255, 255, .025); }
+
+.card, .panel, .stat, .table-wrap, .chart, .mkt-stats {
+  background: var(--scr-bg) !important;
+  border: 1px solid var(--line);
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+.card::after, .panel::after, .table-wrap::after { display: none; }
+
+/* every panel wears the chrome bar */
+.panel > h3, .how h3, .order .segc + *, .position > h3 {
+  font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink);
+}
+.panel > h3, .how h3, .position > h3 {
+  margin: -22px -24px 16px; padding: 0 16px; height: 34px; line-height: 34px;
+  background: var(--scr-head); border-bottom: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+}
+.order { padding-top: 18px; }
+.order .segc { margin-top: 2px; border-radius: 2px; }
+.order .segc button { border-radius: 1px; }
+
+/* stat cells: the six-across strip the scene uses, not four rounded tiles */
+.stats { display: flex; gap: 0; border: 1px solid var(--line); background: var(--scr-bg); border-radius: 2px; margin-bottom: 18px; }
+.stat { flex: 1 1 0; border: 0 !important; border-left: 1px solid var(--line-2) !important; border-radius: 0 !important; padding: 13px 16px 15px; }
+.stat:first-child { border-left: 0 !important; }
+.stat::before { display: none; }
+.stat .label { font-size: 10px; letter-spacing: .12em; margin-bottom: 6px; color: var(--ink-2); }
+.stat .value { font-size: 21px; font-weight: 600; letter-spacing: -0.005em; }
+.stat .sub { font-size: 11px; margin-top: 4px; }
+@media (max-width: 900px) { .stats { flex-wrap: wrap; } .stat { flex: 1 1 46%; } }
+
+/* the table is the board painter: a chrome header, striped rows, no rules */
+.table-wrap { padding: 0; }
+thead th {
+  background: var(--scr-head) !important; color: var(--ink) !important;
+  font-size: 11px; font-weight: 600; letter-spacing: .11em;
+  height: 34px; padding: 0 12px !important; border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+}
+thead th:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+tbody td { height: 38px !important; padding: 0 12px !important; border-bottom: 0 !important; font-size: 14px; }
+tbody tr:nth-child(even) td { background: var(--scr-stripe); }
+tbody tr:hover td { background: rgba(87, 230, 255, .07) !important; }
+td.sym { font-weight: 600; }
+td.sym .name { font-size: 11px; margin-top: 0; }
+.symwrap { gap: 9px; }
+.avatar { width: 22px; height: 22px; border-radius: 2px; font-size: 9px; }
+.avatar.has-img { border-radius: 2px; }
+.mkt-title .avatar { width: 34px; height: 34px; border-radius: 3px; }
+tfoot td { background: var(--scr-head) !important; height: 30px; padding: 0 12px !important; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border-radius: 0 !important; }
+
+/* the premium column carries the bar the board painter draws behind its value */
+td.num.hasbar { position: relative; }
+td.num.hasbar::before {
+  content: ''; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: var(--bar, 0px); height: 15px; border-radius: 1px; background: currentColor; opacity: .16;
+}
+
+/* the market page stat row is the same strip */
+.mkt-stats .cell { padding: 13px 16px 15px; border-left: 1px solid var(--line-2); }
+.mkt-stats .label { font-size: 10px; letter-spacing: .12em; }
+.mkt-stats .val { font-size: 17px; }
+
+/* chrome bar on the chart, matching the panels */
+.chart .scr-bar { height: 34px; padding: 0 16px; background: var(--scr-head); border-left: 4px solid var(--accent); }
+.chart .scr-bar::before { display: none; }
+.chart .scr-glass { margin: 0; border: 0; border-radius: 0; border-top: 1px solid var(--line); }
+.chart .scr-led { margin: 0 32% 0; }
+.chart .cap { background: var(--scr-head); height: 30px; padding: 0 16px; display: flex; align-items: center; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* controls square off to match */
+button, .btn, select, input[type=text], input[type=number], .amt, .notice, .pill, .chips button, .toolbar input[type=text] { border-radius: 2px !important; }
+.pill { border-radius: 2px !important; font-size: 10px; letter-spacing: .1em; }
+.launch { border-radius: 2px; }
+#masthead nav a { border-radius: 2px; }
+.hf .track, .hf .fill { border-radius: 0; }

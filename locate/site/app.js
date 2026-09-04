@@ -695,7 +695,8 @@
           const prem = (d.priceUsd - q.mid) / q.mid;
           prems.push(Math.abs(prem));
           setTile(r.premC, (prem >= 0 ? '+' : '') + fmtPct(prem), prem);
-          r.premC.className = premClass(prem);
+          r.premC.className = premClass(prem) + ' hasbar';
+          r.premC.style.setProperty('--bar', `${Math.min(96, Math.abs(prem) * 1600)}px`);
           if (!widest || Math.abs(prem) > Math.abs(widest.prem)) widest = { symbol: m.symbol, prem };
         } else {
           setTile(r.premC, '—');
@@ -1253,7 +1254,7 @@
           symCell(r.symbol, r.name),
           h('td', { class: 'num', 'data-v': String(r.dex.priceUsd) }, fmtUsd(r.dex.priceUsd)),
           h('td', { class: 'num', 'data-v': r.q ? String(r.q.mid) : '' }, r.q ? fmtUsd(r.q.mid) : '—'),
-          h('td', { class: premClass(r.prem), 'data-v': r.prem !== null ? String(r.prem) : '' }, r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—'),
+          h('td', { class: premClass(r.prem) + (r.prem !== null ? ' hasbar' : ''), 'data-v': r.prem !== null ? String(r.prem) : '', style: r.prem !== null ? `--bar:${Math.min(110, Math.abs(r.prem) * 1600)}px` : '' }, r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—'),
           h('td', { class: 'num' + (c > 0 ? ' pos' : c < 0 ? ' neg' : ''), 'data-v': c === null || Number.isNaN(c) ? '' : String(c) }, c === null || Number.isNaN(c) ? '—' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'),
           h('td', { class: 'num dim', 'data-v': String(r.dex.vol24 || 0) }, fmtUsd(r.dex.vol24, 0)),
           h('td', {}, h('span', { class: 'pill' + (r.q?.halted ? ' halt' : ' open') }, r.q?.halted ? 'Halted' : 'Trading')),
