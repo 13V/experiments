@@ -546,6 +546,8 @@
   let currentCleanup = null;
   // which monitor each route lives on, so the camera lands somewhere that matches the content
   const POSE_FOR = { markets: 'markets', premium: 'premium', lend: 'desk', short: 'desk', m: 'desk' };
+  // roughly where that monitor appears in the wide shot, so the panel grows out of the right screen
+  const DOCK_ORIGIN = { markets: [0.50, 0.62], premium: [0.74, 0.62], desk: [0.26, 0.36] };
   function setActiveTab(tab) {
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.route === tab));
   }
@@ -557,9 +559,25 @@
     STATE.query = new URLSearchParams(hashParts[1] || '');
     // no route at all means the wide shot: the hero is a route, not a separate page
     const hero = raw === '';
+    const wasHero = !document.body.classList.contains('docked');
     document.body.classList.toggle('docked', !hero);
     const route = ROUTES.includes(raw) ? raw : 'markets';
-    if (window.LocateScene) window.LocateScene.setPose(hero ? 'hero' : (POSE_FOR[route] || 'markets'));
+    const pose = hero ? 'hero' : (POSE_FOR[route] || 'markets');
+    if (window.LocateScene) window.LocateScene.setPose(pose);
+    // Coming in from the wide shot: grow the UI out of the monitor the camera is flying at, so the
+    // panel and the camera arrive together instead of the UI simply appearing over the top.
+    if (!hero && wasHero) {
+      const o = DOCK_ORIGIN[pose] || DOCK_ORIGIN.markets;
+      // viewport pixels, not percentages: the app is taller than the screen, so a percentage of its
+      // own height puts the origin below the fold and the zoom appears to come from nowhere
+      document.body.style.setProperty('--dock-x', `${Math.round(innerWidth * o[0])}px`);
+      document.body.style.setProperty('--dock-y', `${Math.round(innerHeight * o[1])}px`);
+      document.body.classList.remove('zooming');
+      void document.body.offsetWidth;   // restart the animation
+      document.body.classList.add('zooming');
+      clearTimeout(navigate._zoomT);
+      navigate._zoomT = setTimeout(() => document.body.classList.remove('zooming'), 1250);
+    }
     if (hero) {
       if (currentCleanup) { try { currentCleanup(); } catch (e) { /* noop */ } currentCleanup = null; }
       setActiveTab(null);
