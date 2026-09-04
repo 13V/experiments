@@ -237,20 +237,20 @@ Before delivering any UI code, verify:
 ## Decisions taken for Locate (overrides the generated sections above)
 
 The generator was run with density 9, motion 2, variance 5 for "DeFi lending trading terminal fintech
-professional dense data". A first pass kept a dark terminal look; it read as hard on the eyes, so the
-shipped design commits to one idea instead: **a split-flap departure board.** Prose sits on a light
-station wall; every price is a black flip tile; the masthead carries a station clock.
+professional dense data". Two earlier passes (an amber terminal, then a split-flap departure board)
+were rejected as hard to read and as looking generated. What shipped is deliberately plain: the
+conventions of the lending apps people already use, executed carefully.
 
 | Area | Generated | Shipped | Reason |
 |---|---|---|---|
-| Pattern | Enterprise Gateway (hero, solutions, logos) | No landing page; the site opens on the Markets board | Locate is a tool. The board is the page. |
-| Style | Dark Mode (OLED), navy | Light wall `#ebe8e1` for prose, black boards `#101010` with tiles `#1f1f1f`, signage yellow `#ffd23f`, green `#3ddc84` and red `#ff5c5c` for signed premiums, gold tile past ±5% | Readability first: dark-on-light prose at 15:1, light-on-black figures at 13:1+. The sign is always printed, never colour alone. |
-| Typography | Fira Code / Fira Sans | Barlow Semi Condensed on tiles, headings and the clock; Barlow for prose. Base 16px, tiles 21px, headings 40px | Barlow descends from highway and railway signage, which is the board's world. Condensed figures stay large without widening the board. |
-| Spacing | 8–32px dense scale | 44px board rows, 48px inputs and buttons, 20–28px section gaps | Density 9 on the board, room to breathe on the wall. |
-| Motion | GSAP scroll reveal | Rows fade in with a 35ms stagger (capped at 24 rows); a tile flips (`rotateX`) when its value changes; `prefers-reduced-motion` disables both | Motion 2. The flip is the only animation and it carries meaning: a number changed. |
-| KPI cards | Stat grid | Ledger rows: label, dotted leader, black value tile | Reads as a ticket, not a dashboard. |
-| Navigation | Mega menu | Four platform-sign tabs, active one on a yellow block, `1–4` hotkeys with `kbd` hints, skip link, 48px targets | Skill checklist: keyboard nav, touch targets, visible focus. |
-| Phones | — | Boards drop to symbol, quote, DEX, premium; names and index hidden | A phone carries four columns legibly, not twelve. |
-| Copy | Marketing sections | Kicker plus one memo sentence per view; notices written as desk notes | The page must not read as generated. |
+| Pattern | Enterprise Gateway (hero, solutions, logos) | No landing page. Markets table first; a row opens that market's Short page | A tool, not a brochure. |
+| Style | Dark Mode (OLED), navy | White `#fff`, ink `#111`, secondary `#6f6f6f`, hairlines `#e7e7e7`, green `#128a4b` and red `#c8321f` for signed values only. No accent colour, no chips, no tiles | Readability and restraint. Colour means sign, nothing else. |
+| Typography | Fira Code / Fira Sans | Inter, tabular numerals, 15px body, 26px headings, normal case everywhere | One family; numbers align; nothing shouts. |
+| Spacing | 8–32px dense scale | 54px table rows, 44px inputs and buttons, 8px radius on controls, 10px on cards | Comfortable density; matches Morpho and Aave rows. |
+| Motion | GSAP scroll reveal | None beyond 120ms hover and focus transitions; reduced motion respected | Motion 2. |
+| KPI cards | Stat grid | Label-left, value-right rows inside cards | The convention people read fastest. |
+| Navigation | Mega menu | Four text links in the header; on phones the nav becomes its own row under the wordmark | Nothing to learn. |
+| Affordances | — | Markets rows link to the Short page with the stock preselected; the Premiums board has a text filter and a 24h change column; chain, block and quote age live in the footer | Real controls instead of decoration. |
+| Copy | Marketing sections | One heading and one or two plain sentences per page; notices written for users, never file paths | Must not read as generated. |
 
 Tokens live in `locate/site/style.css` `:root`.

@@ -56,17 +56,13 @@
     return h('span', { class: 'ubar' }, '▮'.repeat(n) + '▯'.repeat(10 - n), h('b', {}, fmtPct(u)));
   }
   const premClass = (p) => 'num' + (p === null || p === undefined ? '' : (p > 0 ? ' pos' : p < 0 ? ' neg' : '') + (Math.abs(p) > 0.05 ? ' hot' : ''));
-  /** One split-flap tile. */
-  const tile = (text, cls) => h('span', { class: 'tile' + (cls ? ' ' + cls : '') }, text);
-  /** Sets a cell's tile text; a changed value flips the tile. */
+  /** A cell value. `cls` maps to a tone: dim, pos, neg. */
+  const TONE = { dim: 'dim', green: 'pos', red: 'neg', yellow: '' };
+  const tile = (text, cls) => h('span', { class: ('v ' + (TONE[cls] ?? cls ?? '')).trim() }, text);
   function setTile(td, text) {
-    let t = td.querySelector('.tile');
+    let t = td.querySelector('.v');
     if (!t) { clear(td); t = tile(''); td.appendChild(t); }
-    if (t.textContent === text) return;
-    t.textContent = text;
-    t.classList.remove('flip');
-    void t.offsetWidth;
-    t.classList.add('flip');
+    if (t.textContent !== text) t.textContent = text;
   }
 
   // ================================================================== toasts
@@ -140,12 +136,12 @@
     const seg = document.getElementById('s-wallet');
     clear(seg);
     if (!STATE.account) {
-      seg.appendChild(h('button', { class: 'ghost', onclick: connectWallet }, 'connect wallet'));
+      seg.appendChild(h('button', { class: 'ghost', onclick: connectWallet }, 'Connect wallet'));
       return;
     }
     seg.appendChild(h('span', { class: 'dim' }, shortAddr(STATE.account)));
     const balSpan = h('span', { class: 'amber' }, ' …');
-    seg.appendChild(h('span', {}, ' · usdg '));
+    seg.appendChild(h('span', {}, ' USDG '));
     seg.appendChild(balSpan);
     try {
       const data = await ethCall(STATE.addresses.rpc, STATE.addresses.usdg, encodeCall('balanceOf(address)', STATE.account));
@@ -265,7 +261,8 @@
     if (!mine.length) return null;
     const best = mine.reduce((a, b) => ((b.liquidity?.usd || 0) > (a.liquidity?.usd || 0) ? b : a));
     const vol24 = mine.reduce((s, p) => s + (p.volume?.h24 || 0), 0);
-    return { priceUsd: Number(best.priceUsd), liqUsd: best.liquidity?.usd || 0, vol24, dexId: best.dexId, url: best.url, pairCount: mine.length };
+    const chg24 = best.priceChange && best.priceChange.h24 !== undefined ? Number(best.priceChange.h24) : null;
+    return { priceUsd: Number(best.priceUsd), liqUsd: best.liquidity?.usd || 0, vol24, chg24, dexId: best.dexId, url: best.url, pairCount: mine.length };
   }
   async function fetchDexForAddresses(addrs, { batchSize = 8, onProgress } = {}) {
     const result = new Map();
@@ -423,7 +420,9 @@
   let currentCleanup = null;
   function navigate() {
     if (currentCleanup) { try { currentCleanup(); } catch { /* noop */ } currentCleanup = null; }
-    const raw = location.hash.replace(/^#\/?/, '').split('?')[0];
+    const hashParts = location.hash.replace(/^#\/?/, '').split('?');
+    const raw = hashParts[0];
+    STATE.query = new URLSearchParams(hashParts[1] || '');
     const route = ROUTES.includes(raw) ? raw : 'markets';
     STATE.route = route;
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
@@ -435,9 +434,8 @@
 
   // ================================================================== Markets view
   function renderMarkets(view) {
-    const totalCap = STATE.markets.reduce((a, m) => a + (m.initialCapUsd || 0), 0);
-    view.appendChild(viewHead('Markets', `${STATE.markets.length} listed · caps ${fmtUsd(totalCap, 0)} · loan = stock, collateral = USDG`,
-      'One Morpho market per name. Lenders supply the stock through a vault; shorts post USDG and borrow it out. On-chain columns fill in as each market is created.'));
+    view.appendChild(viewHead('Markets', null,
+      'Borrow a stock against USDG, or lend yours and earn the borrow rate. One Morpho market per name; on-chain columns fill in as each market opens.'));
     const wrap = h('div', { class: 'table-wrap' });
     const table = h('table', { class: 'markets' });
     table.appendChild(h('thead', {}, h('tr', {},
@@ -445,7 +443,7 @@
       h('th', { class: 'num' }, 'Supply APY'), h('th', { class: 'num' }, 'Borrow APY'), h('th', {}, 'Utilisation'),
       h('th', { class: 'num' }, 'Available'), h('th', { class: 'num' }, 'RH quote'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Premium'), h('th', {}, 'Status')
     )));
-    const foot = h('td', { colspan: '12' }, 'quotes: Robinhood 24/5 · dex: DexScreener, Robinhood Chain pools · premium = dex / quote − 1 · past ±5% the tile turns gold');
+    const foot = h('td', { colspan: '12' }, 'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener. Premium is DEX over quote. Select a row to short or lend it.');
     table.appendChild(h('tfoot', {}, h('tr', {}, foot)));
     const tbody = h('tbody');
     table.appendChild(tbody);
@@ -461,8 +459,8 @@
       const quoteC = h('td', { class: 'num' }, tile('…'));
       const dexC = h('td', { class: 'num' }, tile('…'));
       const premC = h('td', { class: 'num' }, tile('…'));
-      const statusC = h('td', {}, tile(isDeployed(m) ? 'Open' : 'Soon', isDeployed(m) ? 'green' : 'dim'));
-      const tr = h('tr', { style: `--i:${tbody.childElementCount}` },
+      const statusC = h('td', {}, tile(isDeployed(m) ? 'Open' : 'Opens soon', isDeployed(m) ? '' : 'dim'));
+      const tr = h('tr', { class: 'link', tabindex: '0', role: 'link', onclick: () => { location.hash = `#/short?s=${m.symbol}`; }, onkeydown: (e) => { if (e.key === 'Enter') location.hash = `#/short?s=${m.symbol}`; } },
         h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
         h('td', { class: 'sym' }, tile(m.symbol, 'yellow'), h('span', { class: 'name' }, m.name)),
         h('td', { class: 'num' }, tile((m.lltvBps / 100).toFixed(1) + '%')),
@@ -487,7 +485,7 @@
         const r = rows.get(m.symbol);
         const q = quoteFor(m.symbol);
         setTile(r.quoteC, q ? fmtUsd(q.mid) : '—');
-        if (q && q.halted) { setTile(r.statusC, 'Halted'); r.statusC.querySelector('.tile').className = 'tile red'; }
+        if (q && q.halted) { setTile(r.statusC, 'Halted'); r.statusC.querySelector('.v').className = 'v neg'; }
         const d = dex.get(m.token.toLowerCase());
         setTile(r.dexC, d ? fmtUsd(d.priceUsd) : (d === null ? 'no pool' : '—'));
         if (q && d) {
@@ -523,10 +521,11 @@
   }
 
   function renderLend(view) {
-    view.appendChild(viewHead('Lend', 'ERC-4626 vaults · fee 10% of interest only',
-      'Deposit the stock, hold vault shares, earn what the shorts pay. Withdrawals come from idle first, then from the market; at full utilisation you wait for repayments.'));
+    view.appendChild(viewHead('Lend', null,
+      'Deposit a stock, receive vault shares, earn what shorts pay. The vault keeps 10% of interest and nothing else. Withdrawals wait for repayments when everything is borrowed.'));
     const picker = h('div', { class: 'field' }, h('label', {}, 'Stock'));
-    let symbol = STATE.markets[0].symbol;
+    const wanted = STATE.query && STATE.query.get('s');
+    let symbol = STATE.markets.some((m) => m.symbol === wanted) ? wanted : STATE.markets[0].symbol;
     const body = h('div');
     picker.appendChild(stockSelect((s) => { symbol = s; paint(); }, symbol));
     view.appendChild(picker);
@@ -544,7 +543,19 @@
       const m = STATE.markets.find((x) => x.symbol === symbol);
       const vault = STATE.addresses.vaults ? STATE.addresses.vaults[symbol] : null;
       if (!vault) {
-        body.appendChild(h('div', { class: 'notice' }, h('strong', {}, `${symbol} vault opens with its market. `), `Planned cap ${fmtUsd(m.initialCapUsd, 0)} of ${symbol} at ${(m.lltvBps / 100).toFixed(1)}% LLTV. Until then there is nothing to deposit into.`));
+        body.appendChild(h('div', { class: 'notice' }, h('strong', {}, `${symbol} vault opens with its market. `), 'Until then there is nothing to deposit into. What it will look like:'));
+        const capEl = h('div', { class: 'value small' }, fmtUsd(m.initialCapUsd, 0));
+        body.appendChild(h('div', { class: 'panel' },
+          h('h3', {}, `${symbol} vault`),
+          h('dl', { class: 'ledger' },
+            lrow('Lending cap', capEl),
+            lrow('Loan-to-value', h('div', { class: 'value small' }, (m.lltvBps / 100).toFixed(1) + '%')),
+            lrow('Performance fee', h('div', { class: 'value small' }, '10% of interest')),
+            lrow('Collateral shorts post', h('div', { class: 'value small' }, 'USDG')),
+            lrow('Withdrawals', h('div', { class: 'value small' }, 'Idle balance first, then the market'))
+          )
+        ));
+        getReferencePrice(m).then((rp) => { if (!mine.retired && rp) capEl.textContent = `${fmtUsd(m.initialCapUsd, 0)} · ${fmtNum(m.initialCapUsd / rp.value, 1)} ${symbol}`; });
         return;
       }
       const apyEl = h('div', { class: 'value' }, '…');
@@ -645,10 +656,11 @@
 
   // ================================================================== Short view
   function renderShort(view) {
-    view.appendChild(viewHead('Short', 'post USDG · borrow the stock · sell it on the DEX',
-      'Liquidation when borrow exceeds collateral × price × LLTV, i.e. health factor under 1. Feeds freeze Friday 20:00 ET to Sunday 20:00 ET; size for the Monday reopen, not for Friday.'));
+    view.appendChild(viewHead('Short', null,
+      'Post USDG, borrow the stock, sell it on the DEX. Liquidation happens when borrow exceeds collateral × price × LLTV. Feeds pause over the weekend, so size for the Sunday reopen.'));
     const picker = h('div', { class: 'field' }, h('label', {}, 'Stock'));
-    let symbol = STATE.markets[0].symbol;
+    const wanted = STATE.query && STATE.query.get('s');
+    let symbol = STATE.markets.some((m) => m.symbol === wanted) ? wanted : STATE.markets[0].symbol;
     const body = h('div');
     picker.appendChild(stockSelect((s) => { symbol = s; paint(); }, symbol));
     view.appendChild(picker);
@@ -660,6 +672,9 @@
       const deployed = isDeployed(m);
       const priceLine = h('div', { class: 'dim', style: 'margin:-4px 0 14px;font-size:15px' }, 'reference price: …');
       body.appendChild(priceLine);
+      const left = h('div');
+      const right = h('div');
+      body.appendChild(h('div', { class: 'two' }, left, right));
 
       let refPrice = null;
       const calc = h('div', { class: 'panel' });
@@ -681,7 +696,7 @@
         h('div', { class: 'field' }, h('label', {}, 'Target'), targetIn)
       ));
       calc.appendChild(out);
-      body.appendChild(calc);
+      left.appendChild(calc);
 
       function recompute() {
         const coll = parseFloat(collIn.value);
@@ -713,7 +728,8 @@
         const rp = await getReferencePrice(m);
         if (mine.retired) return;
         refPrice = rp;
-        priceLine.textContent = rp ? `reference price: ${fmtUsd(rp.value)} (source: ${rp.source}${rp.source !== 'oracle' ? ' — oracle not deployed yet' : ''})` : 'reference price unavailable';
+        const src = { oracle: 'from the market oracle', dex: 'from the DEX pool', quote: "from Robinhood's quote" }[rp && rp.source] || '';
+        priceLine.textContent = rp ? `Reference price ${fmtUsd(rp.value)} ${src}` : 'Reference price unavailable';
         recompute();
       })();
 
@@ -744,18 +760,18 @@
         actions.appendChild(openErr);
         actions.appendChild(h('div', { class: 'hint' }, 'Up to three wallet prompts: authorise the router on Morpho once, approve the USDG, open.'));
       }
-      body.appendChild(actions);
+      right.appendChild(actions);
 
       // ---- position panel ----
       const posPanel = h('div', { class: 'panel' }, h('h3', {}, 'Your position'));
       const posBody = h('div');
       posPanel.appendChild(posBody);
-      body.appendChild(posPanel);
+      right.appendChild(posPanel);
 
       async function loadPositionPanel() {
         clear(posBody);
-        if (!deployed || !STATE.addresses.router) { posBody.appendChild(h('div', { class: 'dim' }, 'no market yet, so no position')); return; }
-        if (!STATE.account) { posBody.appendChild(h('div', { class: 'dim' }, 'connect wallet to see your position')); return; }
+        if (!deployed || !STATE.addresses.router) { posBody.appendChild(h('div', { class: 'dim' }, 'Nothing yet. Positions show here once the market opens.')); return; }
+        if (!STATE.account) { posBody.appendChild(h('div', { class: 'dim' }, 'Connect a wallet to see your position.')); return; }
         posBody.appendChild(h('div', { class: 'dim' }, 'loading…'));
         try {
           const mp = mpFor(m);
@@ -822,16 +838,21 @@
 
   // ================================================================== Premium Board
   function renderPremium(view) {
-    view.appendChild(viewHead('Premium board', 'DEX price vs Robinhood 24/5 quote · sorted by |premium|',
-      'Every Robinhood stock token with a pool. Robinhood mints and burns only while the exchange is open, so the pool drifts from the quote; the drift is what a short here captures.'));
-    const status = h('div', { class: 'dim', style: 'margin:-4px 0 12px;font-size:15px' }, 'loading…');
-    view.appendChild(status);
+    view.appendChild(viewHead('Premiums', null,
+      'DEX price against Robinhood\'s quote for every stock token with a pool, largest gap first. Robinhood only mints and burns while the exchange is open, so pools drift.'));
+    const filter = h('input', { type: 'text', placeholder: 'Filter by symbol or name', 'aria-label': 'Filter' });
+    const status = h('span', { class: 'count' }, 'Loading…');
+    view.appendChild(h('div', { class: 'toolbar' }, filter, status));
     const wrap = h('div', { class: 'table-wrap hidden' });
     const table = h('table', { class: 'premium' });
     table.appendChild(h('thead', {}, h('tr', {},
-      h('th', { class: 'idx' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'RH quote'),
-      h('th', { class: 'num' }, 'Premium'), h('th', { class: 'num' }, '24h DEX vol'), h('th', {}, 'Status'), h('th', {}, '')
+      h('th', { class: 'idx' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Quote'),
+      h('th', { class: 'num' }, 'Premium'), h('th', { class: 'num' }, '24h'), h('th', { class: 'num' }, 'Volume 24h'), h('th', {}, 'Status'), h('th', {}, '')
     )));
+    filter.addEventListener('input', () => {
+      const q = filter.value.trim().toLowerCase();
+      for (const tr of table.querySelectorAll('tbody tr')) tr.hidden = q !== '' && !(tr.dataset.k || '').includes(q);
+    });
     const tbody = h('tbody');
     table.appendChild(tbody);
     wrap.appendChild(table);
@@ -870,8 +891,7 @@
         const d = dex.get(info.addr.toLowerCase());
         if (d) rows.push({ symbol, name: info.name, addr: info.addr, dex: d });
       }
-      clear(status);
-      status.appendChild(h('span', {}, `${rows.length} of ${bySymbolAddr.size} Robinhood-Chain tokens have a DEX pool. `, h('a', { href: '#', onclick: (e) => { e.preventDefault(); navigate(); } }, 'reload')));
+      status.textContent = `${rows.length} of ${bySymbolAddr.size} tokens have a pool`;
       paintRows(rows);
     })();
 
@@ -885,15 +905,17 @@
       });
       withPrem.sort((a, b) => Math.abs(b.prem ?? 0) - Math.abs(a.prem ?? 0));
       for (const r of withPrem) {
-        const tr = h('tr', { style: `--i:${tbody.childElementCount}` },
+        const c = r.dex.chg24;
+        const tr = h('tr', { 'data-k': (r.symbol + ' ' + r.name).toLowerCase() },
           h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
-          h('td', { class: 'sym' }, tile(r.symbol, 'yellow'), h('span', { class: 'name' }, r.name)),
-          h('td', { class: 'num' }, tile(fmtUsd(r.dex.priceUsd))),
-          h('td', { class: 'num' }, tile(r.q ? fmtUsd(r.q.mid) : '—', r.q ? '' : 'dim')),
-          h('td', { class: premClass(r.prem) }, tile(r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—')),
-          h('td', { class: 'num' }, tile(fmtUsd(r.dex.vol24, 0), 'dim')),
-          h('td', {}, tile(r.q?.halted ? 'Halted' : 'Open', r.q?.halted ? 'red' : 'green')),
-          h('td', {}, h('a', { class: 'tile', href: r.dex.url, target: '_blank', rel: 'noopener' }, 'Pair ↗'))
+          h('td', { class: 'sym' }, r.symbol, h('span', { class: 'name' }, r.name)),
+          h('td', { class: 'num' }, fmtUsd(r.dex.priceUsd)),
+          h('td', { class: 'num' }, r.q ? fmtUsd(r.q.mid) : '—'),
+          h('td', { class: premClass(r.prem) }, r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—'),
+          h('td', { class: 'num' + (c > 0 ? ' pos' : c < 0 ? ' neg' : '') }, c === null || Number.isNaN(c) ? '—' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'),
+          h('td', { class: 'num dim' }, fmtUsd(r.dex.vol24, 0)),
+          h('td', {}, r.q?.halted ? h('span', { class: 'badge halt' }, 'Halted') : h('span', { class: 'badge live' }, 'Trading')),
+          h('td', {}, h('a', { class: 'v', href: r.dex.url, target: '_blank', rel: 'noopener' }, 'View pool'))
         );
         tbody.appendChild(tr);
       }
@@ -922,7 +944,7 @@
         return;
       }
       const age = Math.max(0, Math.round(Date.now() / 1000 - STATE.quotesTs));
-      el.appendChild(h('span', {}, 'quotes ', h('b', {}, age + 's')));
+      el.appendChild(h('span', {}, 'quotes ', h('b', {}, age + 's ago')));
     }, 1000);
   }
 
@@ -961,7 +983,7 @@
     }
     const chainSeg = document.getElementById('s-chain');
     clear(chainSeg);
-    chainSeg.appendChild(h('span', {}, 'chain ', h('b', {}, `robinhood/${STATE.addresses.chainId}`)));
+    chainSeg.appendChild(h('span', {}, 'Robinhood Chain ', h('b', {}, String(STATE.addresses.chainId))));
 
     document.getElementById('btn-connect').addEventListener('click', connectWallet);
     wireWalletEvents();
