@@ -468,19 +468,32 @@
   }
 
   // ================================================================== router
-  const ROUTES = ['markets', 'lend', 'short', 'premium'];
+  const ROUTES = ['markets', 'lend', 'short', 'premium', 'm'];
   let currentCleanup = null;
+  function setActiveTab(tab) {
+    document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.route === tab));
+  }
   function navigate() {
     if (currentCleanup) { try { currentCleanup(); } catch { /* noop */ } currentCleanup = null; }
     const hashParts = location.hash.replace(/^#\/?/, '').split('?');
-    const raw = hashParts[0];
+    const segs = hashParts[0].split('/');
+    const raw = segs[0];
     STATE.query = new URLSearchParams(hashParts[1] || '');
     const route = ROUTES.includes(raw) ? raw : 'markets';
     STATE.route = route;
-    document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
+    STATE.param = segs[1] ? decodeURIComponent(segs[1]) : null;
+    const mode = route === 'lend' ? 'lend' : route === 'short' ? 'short' : (STATE.query.get('mode') === 'lend' ? 'lend' : 'short');
+    setActiveTab(route === 'm' ? mode : route);
     const view = document.getElementById('view');
     clear(view);
-    const renderers = { markets: renderMarkets, lend: renderLend, short: renderShort, premium: renderPremium };
+    view.scrollTop = 0;
+    const renderers = {
+      markets: renderMarkets,
+      premium: renderPremium,
+      lend: (v) => renderMarket(v, 'lend'),
+      short: (v) => renderMarket(v, 'short'),
+      m: (v) => renderMarket(v, mode),
+    };
     currentCleanup = renderers[route](view) || null;
   }
 
@@ -505,7 +518,7 @@
       h('th', { class: 'num' }, 'Available'), h('th', { class: 'num' }, 'RH quote'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Premium'), h('th', {}, 'Status')
     )));
     makeSortable(table);
-    const foot = h('td', { colspan: '12' }, 'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener. Premium is DEX over quote. Select a row to short or lend it.');
+    const foot = h('td', { colspan: '12' }, 'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener. Premium is DEX over quote. Select a row to open the market.');
     table.appendChild(h('tfoot', {}, h('tr', {}, foot)));
     const tbody = h('tbody');
     table.appendChild(tbody);
@@ -522,7 +535,7 @@
       const dexC = h('td', { class: 'num' }, skel());
       const premC = h('td', { class: 'num' }, skel());
       const statusC = h('td', {}, h('span', { class: 'pill' + (isDeployed(m) ? ' open' : '') }, isDeployed(m) ? 'Open' : 'Opens soon'));
-      const tr = h('tr', { class: 'link', tabindex: '0', role: 'link', onclick: () => { location.hash = `#/short?s=${m.symbol}`; }, onkeydown: (e) => { if (e.key === 'Enter') location.hash = `#/short?s=${m.symbol}`; } },
+      const tr = h('tr', { class: 'link', tabindex: '0', role: 'link', onclick: () => { location.hash = `#/m/${m.symbol}`; }, onkeydown: (e) => { if (e.key === 'Enter') location.hash = `#/m/${m.symbol}`; } },
         h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
         symCell(m.symbol, m.name),
         h('td', { class: 'num', 'data-v': String(m.lltvBps) }, tile((m.lltvBps / 100).toFixed(1) + '%')),
@@ -586,328 +599,422 @@
     return () => { cancelled = true; };
   }
 
-  // ================================================================== Lend view
-  function stockSelect(onChange, selected) {
-    const sel = h('select', { onchange: (e) => onChange(e.target.value) },
-      ...STATE.markets.map((m) => h('option', { value: m.symbol, selected: m.symbol === selected || undefined }, `${m.symbol} — ${m.name}`))
+  // ================================================================== Market page (Short / Lend)
+  async function tokenBalance(token, account) {
+    const data = await ethCall(STATE.addresses.rpc, token, encodeCall('balanceOf(address)', account));
+    return toBig(decodeWords(data)[0]);
+  }
+  /** Plain decimal string for an input (no thousands separators). */
+  function plainToken(raw, decimals, maxFrac) { return fmtToken(raw, decimals, maxFrac).replace(/,/g, ''); }
+
+  function howCard(mode, symbol) {
+    const steps = mode === 'short' ? [
+      ['Post USDG', 'Your collateral stays yours until you close. It earns nothing while posted.'],
+      [`Borrow ${symbol} and sell it`, 'The router borrows the stock to your wallet in the same transaction. Sell it on the DEX pool.'],
+      ['Buy back, repay, withdraw', 'Close whenever you like. You keep the price difference less the borrow interest.'],
+    ] : [
+      [`Deposit ${symbol}`, 'You receive vault shares that track your deposit plus the interest it earns.'],
+      ['Shorts pay you', 'The vault lends your stock to the market. Borrowers pay the rate; the vault keeps 10% of the interest.'],
+      ['Withdraw when there is liquidity', 'At full utilisation you wait for repayments. Lending caps are set by the vault owner.'],
+    ];
+    return h('div', { class: 'card how' },
+      h('h3', {}, mode === 'short' ? 'How a short works' : 'How lending works'),
+      h('ol', {}, ...steps.map((st, i) => h('li', {}, h('i', {}, String(i + 1)), h('b', {}, st[0]), st[1])))
     );
-    return sel;
   }
 
-  function renderLend(view) {
-    view.appendChild(viewHead('Lend', null,
-      'Deposit a stock, receive vault shares, earn what shorts pay. The vault keeps 10% of interest and nothing else. Withdrawals wait for repayments when everything is borrowed.'));
-    const picker = h('div', { class: 'field' }, h('label', {}, 'Stock'));
-    const wanted = STATE.query && STATE.query.get('s');
-    let symbol = STATE.markets.some((m) => m.symbol === wanted) ? wanted : STATE.markets[0].symbol;
-    const body = h('div');
-    picker.appendChild(stockSelect((s) => { symbol = s; paint(); }, symbol));
-    view.appendChild(picker);
-    view.appendChild(body);
+  function renderMarket(view, mode) {
+    const wanted = STATE.param || (STATE.query && STATE.query.get('s'));
+    const m = STATE.markets.find((x) => x.symbol === wanted) || STATE.markets[0];
+    const symbol = m.symbol;
+    const deployed = isDeployed(m);
+    const vault = STATE.addresses.vaults ? STATE.addresses.vaults[symbol] : null;
+    const routerLive = deployed && !!STATE.addresses.router;
+    const mine = { retired: false };
+    let curMode = mode;
 
-    // Each paint() owns a `mine.retired` flag. Switching stock (a new paint()) or unmounting the
-    // view retires the previous paint's flag, so an in-flight refreshStats() from a stock the
-    // user already navigated away from never writes into elements that no longer represent it.
-    function paint() {
-      const mine = { retired: false };
-      if (paint._retire) paint._retire();
-      paint._retire = () => { mine.retired = true; };
+    // ---- header: identity left, price right ----
+    const bigPrice = h('div', { class: 'big skel' });
+    const priceLab = h('div', { class: 'lab' }, ' ');
+    const priceSub = h('div', { class: 'sub' });
+    view.appendChild(h('header', { class: 'mkt-head' },
+      h('div', { class: 'mkt-title' }, avatar(symbol),
+        h('div', {},
+          h('h2', {}, symbol, h('span', { class: 'pill' + (deployed ? ' open' : '') }, deployed ? 'Open' : 'Opens soon')),
+          h('div', { class: 'name' }, m.name, ' · ', h('a', { href: '#/markets' }, 'All markets')))),
+      h('div', { class: 'mkt-price' }, priceLab, bigPrice, priceSub)
+    ));
 
-      clear(body);
-      const m = STATE.markets.find((x) => x.symbol === symbol);
-      const vault = STATE.addresses.vaults ? STATE.addresses.vaults[symbol] : null;
-      if (!vault) {
-        body.appendChild(h('div', { class: 'notice' }, h('strong', {}, `${symbol} vault opens with its market. `), 'Until then there is nothing to deposit into. What it will look like:'));
-        const capEl = h('div', { class: 'value small' }, fmtUsd(m.initialCapUsd, 0));
-        body.appendChild(h('div', { class: 'panel' },
-          h('h3', {}, `${symbol} vault`),
-          h('dl', { class: 'ledger' },
-            lrow('Lending cap', capEl),
-            lrow('Loan-to-value', h('div', { class: 'value small' }, (m.lltvBps / 100).toFixed(1) + '%')),
-            lrow('Performance fee', h('div', { class: 'value small' }, '10% of interest')),
-            lrow('Collateral shorts post', h('div', { class: 'value small' }, 'USDG')),
-            lrow('Withdrawals', h('div', { class: 'value small' }, 'Idle balance first, then the market'))
-          )
-        ));
-        getReferencePrice(m).then((rp) => { if (!mine.retired && rp) capEl.textContent = `${fmtUsd(m.initialCapUsd, 0)} · ${fmtNum(m.initialCapUsd / rp.value, 1)} ${symbol}`; });
-        return;
-      }
-      const apyEl = h('div', { class: 'value' }, '…');
-      const totalEl = h('div', { class: 'value small' }, '…');
-      const liqEl = h('div', { class: 'value small' }, '…');
-      const posEl = h('div', { class: 'value small' }, STATE.account ? '…' : 'connect wallet');
-      body.appendChild(h('dl', { class: 'ledger' },
-        lrow('Supply APY', apyEl),
-        lrow('Total deposited', totalEl),
-        lrow('Vault liquidity', liqEl),
-        lrow('Your position', posEl)
-      ));
+    const grid = h('div', { class: 'mkt' });
+    const main = h('div', { class: 'mkt-main' });
+    const side = h('aside', { class: 'mkt-side' });
+    grid.appendChild(main);
+    grid.appendChild(side);
+    view.appendChild(grid);
 
-      let maxWithdrawRaw = null; // uint256, from the vault's own maxWithdraw(owner) — min(owner assets, liquidity())
-      const depAmt = h('input', { type: 'text', placeholder: '0.0' });
-      const depErr = h('div', { class: 'inline-error hidden' });
-      const depBtn = h('button', {
-        onclick: async () => {
-          depErr.classList.add('hidden');
-          const raw = parseAmount(depAmt.value, STOCK_DECIMALS);
-          if (raw === null || raw <= 0n) { depErr.textContent = 'enter a valid amount'; depErr.classList.remove('hidden'); return; }
-          depBtn.disabled = true;
-          try {
-            await ensureAllowance(m.token, vault, raw, symbol);
-            await sendTx({ to: vault, data: encodeCall('deposit(uint256,address)', raw, STATE.account), title: `deposit ${symbol}` });
-            depAmt.value = '';
-            refreshStats();
-          } catch (e) { depErr.textContent = describeError(e); depErr.classList.remove('hidden'); }
-          depBtn.disabled = false;
-        },
-      }, 'Deposit');
-      const withAmt = h('input', { type: 'text', placeholder: '0.0' });
-      const withErr = h('div', { class: 'inline-error hidden' });
-      const withHint = h('div', { class: 'hint' }, STATE.account ? 'max: …' : '');
-      const withBtn = h('button', {
-        class: 'ghost',
-        onclick: async () => {
-          withErr.classList.add('hidden');
-          const raw = parseAmount(withAmt.value, STOCK_DECIMALS);
-          if (raw === null || raw <= 0n) { withErr.textContent = 'enter a valid amount'; withErr.classList.remove('hidden'); return; }
-          if (maxWithdrawRaw !== null && raw > maxWithdrawRaw) { withErr.textContent = `exceeds maxWithdraw (${fmtToken(maxWithdrawRaw, STOCK_DECIMALS, 4)} ${symbol})`; withErr.classList.remove('hidden'); return; }
-          withBtn.disabled = true;
-          try {
-            await sendTx({ to: vault, data: encodeCall('withdraw(uint256,address,address)', raw, STATE.account, STATE.account), title: `withdraw ${symbol}` });
-            withAmt.value = '';
-            refreshStats();
-          } catch (e) { withErr.textContent = describeError(e); withErr.classList.remove('hidden'); }
-          withBtn.disabled = false;
-        },
-      }, 'Withdraw');
+    // ---- stats ----
+    const cell = (label, val) => h('div', { class: 'cell' }, h('div', { class: 'label' }, label), val);
+    const soon = () => h('div', { class: 'val dim' }, deployed ? '…' : '—');
+    const borrowApyEl = soon(), supplyApyEl = soon(), availEl = soon(), utilEl = soon();
+    main.appendChild(h('div', { class: 'card mkt-stats' },
+      cell('Loan-to-value', h('div', { class: 'val' }, (m.lltvBps / 100).toFixed(1) + '%')),
+      cell('Borrow APY', borrowApyEl),
+      cell('Supply APY', supplyApyEl),
+      cell('Available', availEl),
+      cell('Utilisation', utilEl),
+      cell('Lending cap', h('div', { class: 'val' }, fmtUsd(m.initialCapUsd, 0)))
+    ));
 
-      body.appendChild(h('div', { class: 'panel' },
-        h('div', { class: 'row' },
-          h('div', { class: 'field' }, h('label', {}, `Deposit ${symbol}`), depAmt, depErr),
-          h('div', {}, depBtn)
-        ),
-        h('div', { class: 'row' },
-          h('div', { class: 'field' }, h('label', {}, `Withdraw ${symbol}`), withAmt, withHint, withErr),
-          h('div', {}, withBtn)
-        ),
-        !STATE.account ? h('div', { class: 'notice' }, 'Connect a wallet to deposit or withdraw.') : null
-      ));
+    // ---- position (only shown when there is something to show) ----
+    const posCard = h('div', { class: 'card panel position hidden' }, h('h3', {}, 'Your position'));
+    const posBody = h('div');
+    posCard.appendChild(posBody);
+    main.appendChild(posCard);
 
-      async function refreshStats() {
-        try {
-          const [totalAssetsData, liqData] = await Promise.all([
-            ethCall(STATE.addresses.rpc, vault, encodeCall('totalAssets()')),
-            ethCall(STATE.addresses.rpc, vault, encodeCall('liquidity()')),
-          ]);
-          if (mine.retired) return;
-          totalEl.textContent = fmtToken(toBig(decodeWords(totalAssetsData)[0]), STOCK_DECIMALS, 2) + ' ' + symbol;
-          liqEl.textContent = fmtToken(toBig(decodeWords(liqData)[0]), STOCK_DECIMALS, 2) + ' ' + symbol;
-          if (isDeployed(m)) {
-            const d = await loadMarketOnchain(m);
-            if (!mine.retired && d) apyEl.textContent = fmtPct(d.supplyApy);
-          }
-          if (STATE.account) {
-            const [maxWData, balData] = await Promise.all([
-              ethCall(STATE.addresses.rpc, vault, encodeCall('maxWithdraw(address)', STATE.account)),
-              ethCall(STATE.addresses.rpc, vault, encodeCall('balanceOf(address)', STATE.account)),
-            ]);
-            if (mine.retired) return;
-            maxWithdrawRaw = toBig(decodeWords(maxWData)[0]);
-            withHint.textContent = `max: ${fmtToken(maxWithdrawRaw, STOCK_DECIMALS, 4)} ${symbol}`;
-            const shares = toBig(decodeWords(balData)[0]);
-            const assetsData = await ethCall(STATE.addresses.rpc, vault, encodeCall('convertToAssets(uint256)', shares));
-            if (mine.retired) return;
-            const assets = toBig(decodeWords(assetsData)[0]);
-            posEl.textContent = fmtToken(assets, STOCK_DECIMALS, 4) + ' ' + symbol;
-          }
-        } catch (e) { if (!mine.retired) console.warn('lend stats failed', e); }
-      }
-      refreshStats();
+    // ---- chart ----
+    const chart = h('div', { class: 'card chart' }, h('div', { class: 'ph' }, 'Loading price chart…'));
+    main.appendChild(chart);
+    let how = howCard(curMode, symbol);
+    main.appendChild(how);
+
+    // ---- order panel ----
+    const panel = h('div', { class: 'card order' });
+    side.appendChild(panel);
+
+    const live = { ref: null, quote: null, dex: null, onchain: null, usdgBal: null, stockBal: null, vaultLiq: null, vaultTotal: null, myAssets: null, maxWithdraw: null };
+    let recomputeShort = () => {};
+    let paintLendRows = () => {};
+
+    function switchMode(next) {
+      if (next === curMode) return;
+      curMode = next;
+      setActiveTab(next);
+      try { history.replaceState(null, '', `#/m/${symbol}${next === 'lend' ? '?mode=lend' : ''}`); } catch { /* noop */ }
+      const fresh = howCard(curMode, symbol);
+      main.replaceChild(fresh, how);
+      how = fresh;
+      paintPanel();
     }
-    paint();
-    return () => { if (paint._retire) paint._retire(); };
-  }
 
-  // ================================================================== Short view
-  function renderShort(view) {
-    view.appendChild(viewHead('Short', null,
-      'Post USDG, borrow the stock, sell it on the DEX. Liquidation happens when borrow exceeds collateral × price × LLTV. Feeds pause over the weekend, so size for the Sunday reopen.'));
-    const picker = h('div', { class: 'field' }, h('label', {}, 'Stock'));
-    const wanted = STATE.query && STATE.query.get('s');
-    let symbol = STATE.markets.some((m) => m.symbol === wanted) ? wanted : STATE.markets[0].symbol;
-    const body = h('div');
-    picker.appendChild(stockSelect((s) => { symbol = s; paint(); }, symbol));
-    view.appendChild(picker);
-    view.appendChild(body);
+    function cta(label, onclick, disabled) {
+      const b = h('button', { class: 'cta', onclick }, label);
+      if (disabled) b.disabled = true;
+      return b;
+    }
 
-    function paint() {
-      clear(body);
-      const m = STATE.markets.find((x) => x.symbol === symbol);
-      const deployed = isDeployed(m);
-      const priceLine = h('div', { class: 'dim', style: 'margin:-4px 0 14px;font-size:15px' }, 'reference price: …');
-      body.appendChild(priceLine);
-      const left = h('div');
-      const right = h('div');
-      body.appendChild(h('div', { class: 'two' }, left, right));
-
-      let refPrice = null;
-      const calc = h('div', { class: 'panel' });
-      calc.appendChild(h('h3', {}, 'Size calculator'));
-      const collIn = h('input', { type: 'text', value: '10000', placeholder: '10000' });
-      const modeSel = h('select', {}, h('option', { value: 'hf' }, 'target health factor'), h('option', { value: 'borrow' }, `target borrow (${symbol})`));
-      const targetIn = h('input', { type: 'text', value: '1.5', placeholder: '1.5' });
-      const borrowEl = h('div', { class: 'value small' }, '—');
-      const hfEl = h('div', { class: 'value' }, '—');
-      const liqEl = h('div', { class: 'value small' }, '—');
-      const out = h('dl', { class: 'ledger' },
-        lrow('Borrow', borrowEl),
-        lrow('Health factor', hfEl),
-        lrow('Liquidation price', liqEl)
-      );
-      calc.appendChild(h('div', { class: 'row' },
-        h('div', { class: 'field' }, h('label', {}, 'Collateral (USDG)'), collIn),
-        h('div', { class: 'field' }, h('label', {}, 'Mode'), modeSel),
-        h('div', { class: 'field' }, h('label', {}, 'Target'), targetIn)
+    function paintPanel() {
+      clear(panel);
+      panel.appendChild(h('div', { class: 'segc' },
+        h('button', { class: curMode === 'short' ? 'on' : '', onclick: () => switchMode('short') }, 'Short'),
+        h('button', { class: curMode === 'lend' ? 'on' : '', onclick: () => switchMode('lend') }, 'Lend')
       ));
-      calc.appendChild(out);
-      left.appendChild(calc);
+      if (curMode === 'short') paintShort(); else paintLend();
+    }
 
+    // ---------------------------------------------------------------- short
+    function paintShort() {
+      const lltv = m.lltvBps / 10000;
+      const collIn = h('input', { type: 'text', value: '1000', inputmode: 'decimal', 'aria-label': 'Collateral in USDG' });
+      const borrowIn = h('input', { type: 'text', value: '', inputmode: 'decimal', 'aria-label': `Borrow in ${symbol}` });
+      const collBal = h('a', { href: '#' }, live.usdgBal === null ? '' : `Balance ${fmtToken(live.usdgBal, STATE.addresses.usdgDecimals, 2)} · Max`);
+      collBal.addEventListener('click', (e) => { e.preventDefault(); if (live.usdgBal !== null) { collIn.value = plainToken(live.usdgBal, STATE.addresses.usdgDecimals, 2); setFromHf(1.5); } });
+      const maxLink = h('a', { href: '#' }, 'Max at 1.5×');
+      maxLink.addEventListener('click', (e) => { e.preventDefault(); setFromHf(1.5); });
+
+      panel.appendChild(h('div', { class: 'amt' },
+        h('div', { class: 'top' }, h('span', {}, 'Collateral'), collBal),
+        h('div', { class: 'in' }, collIn, h('span', { class: 'unit' }, 'USDG'))
+      ));
+      panel.appendChild(h('div', { class: 'amt' },
+        h('div', { class: 'top' }, h('span', {}, 'Borrow'), maxLink),
+        h('div', { class: 'in' }, borrowIn, h('span', { class: 'unit' }, avatar(symbol), symbol))
+      ));
+      const chipVals = [1.2, 1.5, 2, 3];
+      const chips = chipVals.map((v) => h('button', { class: 'ghost', onclick: () => setFromHf(v) }, `${v}×`));
+      panel.appendChild(h('div', { class: 'chips' }, h('span', {}, 'Health factor'), ...chips));
+
+      const fill = h('div', { class: 'fill' });
+      const hfLbl = h('b', {}, '—');
+      const liqLbl = h('span', {}, '');
+      panel.appendChild(h('div', { class: 'hf' }, h('div', { class: 'track' }, fill), h('div', { class: 'lbl' }, h('span', {}, 'Health factor ', hfLbl), liqLbl)));
+
+      const rLiq = h('b', {}, '—'), rApy = h('b', {}, live.onchain ? fmtPct(live.onchain.borrowApy) : (deployed ? '…' : '—')), rRecv = h('b', {}, '—'), rPrice = h('b', {}, '—');
+      panel.appendChild(h('div', { class: 'rows' },
+        h('div', { class: 'r' }, h('span', {}, 'Liquidation price'), rLiq),
+        h('div', { class: 'r' }, h('span', {}, 'Reference price'), rPrice),
+        h('div', { class: 'r' }, h('span', {}, 'Borrow APY'), rApy),
+        h('div', { class: 'r' }, h('span', {}, 'Loan-to-value'), h('b', {}, (m.lltvBps / 100).toFixed(1) + '%')),
+        h('div', { class: 'r' }, h('span', {}, 'You receive'), rRecv)
+      ));
+
+      const err = h('div', { class: 'inline-error hidden' });
+      let btn;
+      if (!routerLive) btn = cta('Opens soon', null, true);
+      else if (!STATE.account) btn = cta('Connect wallet', connectWallet);
+      else btn = cta(`Open ${symbol} short`, async () => {
+        err.classList.add('hidden');
+        const collRaw = parseAmount(collIn.value, STATE.addresses.usdgDecimals);
+        const borrowRaw = parseAmount(borrowIn.value, STOCK_DECIMALS);
+        if (!collRaw || collRaw <= 0n || !borrowRaw || borrowRaw <= 0n) { err.textContent = 'Enter a collateral and a borrow amount.'; err.classList.remove('hidden'); return; }
+        btn.disabled = true;
+        try { await doOpenShort(m, collRaw, borrowRaw); await refreshAccount(); }
+        catch (e) { err.textContent = describeError(e); err.classList.remove('hidden'); }
+        btn.disabled = false;
+      });
+      panel.appendChild(btn);
+      panel.appendChild(err);
+      panel.appendChild(h('div', { class: 'fine' }, routerLive
+        ? 'Up to three wallet prompts: authorise the router on Morpho once, approve the USDG, open. The stock lands in your wallet; sell it on the DEX pool.'
+        : `The ${symbol} market opens once its oracle and market exist on Morpho. Sizing below runs on the ${live.ref ? ({ oracle: 'oracle', dex: 'DEX', quote: 'Robinhood' })[live.ref.source] : 'reference'} price meanwhile.`));
+
+      function setFromHf(hf) {
+        const coll = parseFloat(collIn.value);
+        if (!live.ref || !isFinite(coll) || coll <= 0) { recompute(); return; }
+        const maxB = (coll * lltv) / live.ref.value;
+        borrowIn.value = (maxB / hf).toFixed(4);
+        recompute();
+      }
       function recompute() {
         const coll = parseFloat(collIn.value);
-        const target = parseFloat(targetIn.value);
-        hfEl.classList.remove('red');
-        if (!refPrice || !isFinite(coll) || coll <= 0 || !isFinite(target) || target <= 0) {
-          borrowEl.textContent = '—';
-          hfEl.textContent = '—';
-          liqEl.textContent = '—';
+        const borrow = parseFloat(borrowIn.value);
+        const price = live.ref ? live.ref.value : null;
+        rPrice.textContent = price ? fmtUsd(price) : '—';
+        chips.forEach((c) => c.classList.remove('on'));
+        if (!price || !isFinite(coll) || coll <= 0 || !isFinite(borrow) || borrow <= 0) {
+          fill.style.width = '0%'; fill.className = 'fill'; hfLbl.textContent = '—'; liqLbl.textContent = ''; rLiq.textContent = '—'; rRecv.textContent = '—';
           return;
         }
-        const lltv = m.lltvBps / 10000;
-        const maxBorrowAtLtv = (coll * lltv) / refPrice.value; // SPEC §2: collateral*price/1e36*lltv/1e18, in human units
-        let borrow, hf;
-        if (modeSel.value === 'hf') { hf = target; borrow = maxBorrowAtLtv / hf; }
-        else { borrow = target; hf = borrow > 0 ? maxBorrowAtLtv / borrow : Infinity; }
-        const liq = hf * refPrice.value; // liqPrice = hf_current * currentPrice; matches LocateRouter.positionOf's own collateral*lltv*1e12/borrowAssets identically (see its NatSpec)
-        borrowEl.textContent = fmtNum(borrow, 4) + ' ' + symbol;
-        hfEl.textContent = isFinite(hf) ? hf.toFixed(3) : '∞';
-        if (hf < 1.2) hfEl.classList.add('red');
-        liqEl.textContent = fmtUsd(liq);
+        const hf = (coll * lltv) / price / borrow;
+        const liq = (coll * lltv) / borrow;
+        const pct = Math.max(0, Math.min(1, (hf - 1) / 2));
+        fill.style.width = (pct * 100).toFixed(1) + '%';
+        fill.className = 'fill' + (hf < 1.1 ? ' bad' : hf < 1.5 ? ' warn' : '');
+        hfLbl.textContent = isFinite(hf) ? hf.toFixed(2) : '∞';
+        liqLbl.textContent = hf < 1 ? 'Below 1: would be liquidated on open' : `Liquidated if ${symbol} reaches ${fmtUsd(liq)} (${liq / price - 1 >= 0 ? '+' : ''}${fmtPct(liq / price - 1, 1)})`;
+        rLiq.textContent = fmtUsd(liq);
+        rRecv.textContent = `${fmtNum(borrow, 4)} ${symbol} ≈ ${fmtUsd(borrow * price)}`;
+        const near = chipVals.find((v) => Math.abs(v - hf) < 0.005);
+        if (near) chips[chipVals.indexOf(near)].classList.add('on');
       }
-      [collIn, targetIn, modeSel].forEach((elm) => elm.addEventListener('input', recompute));
+      collIn.addEventListener('input', () => { if (borrowIn.value === '') setFromHf(1.5); else recompute(); });
+      borrowIn.addEventListener('input', recompute);
+      recomputeShort = () => { if (borrowIn.value === '') setFromHf(1.5); else recompute(); };
+      recomputeShort();
+    }
 
-      const mine = { retired: false };
-      if (paint._retire) paint._retire();
-      paint._retire = () => { mine.retired = true; };
-      (async () => {
-        const rp = await getReferencePrice(m);
-        if (mine.retired) return;
-        refPrice = rp;
-        const src = { oracle: 'from the market oracle', dex: 'from the DEX pool', quote: "from Robinhood's quote" }[rp && rp.source] || '';
-        priceLine.textContent = rp ? `Reference price ${fmtUsd(rp.value)} ${src}` : 'Reference price unavailable';
-        recompute();
-      })();
+    // ---------------------------------------------------------------- lend
+    function paintLend() {
+      const depIn = h('input', { type: 'text', value: '', placeholder: '0', inputmode: 'decimal', 'aria-label': `Deposit in ${symbol}` });
+      const depBal = h('a', { href: '#' }, live.stockBal === null ? '' : `Balance ${fmtToken(live.stockBal, STOCK_DECIMALS, 4)} · Max`);
+      depBal.addEventListener('click', (e) => { e.preventDefault(); if (live.stockBal !== null) depIn.value = plainToken(live.stockBal, STOCK_DECIMALS, 6); });
+      panel.appendChild(h('div', { class: 'amt' },
+        h('div', { class: 'top' }, h('span', {}, 'Deposit'), depBal),
+        h('div', { class: 'in' }, depIn, h('span', { class: 'unit' }, avatar(symbol), symbol))
+      ));
+      const rApy = h('b', {}), rLiq = h('b', {}), rTot = h('b', {}), rMine = h('b', {});
+      panel.appendChild(h('div', { class: 'rows' },
+        h('div', { class: 'r' }, h('span', {}, 'Supply APY'), rApy),
+        h('div', { class: 'r' }, h('span', {}, 'Deposited in vault'), rTot),
+        h('div', { class: 'r' }, h('span', {}, 'Withdrawable now'), rLiq),
+        h('div', { class: 'r' }, h('span', {}, 'Your deposit'), rMine),
+        h('div', { class: 'r' }, h('span', {}, 'Performance fee'), h('b', {}, '10% of interest'))
+      ));
+      paintLendRows = () => {
+        rApy.textContent = live.onchain ? fmtPct(live.onchain.supplyApy) : (vault ? '…' : '—');
+        rTot.textContent = live.vaultTotal !== null ? `${fmtToken(live.vaultTotal, STOCK_DECIMALS, 2)} ${symbol}` : (vault ? '…' : '—');
+        rLiq.textContent = live.vaultLiq !== null ? `${fmtToken(live.vaultLiq, STOCK_DECIMALS, 2)} ${symbol}` : (vault ? '…' : '—');
+        rMine.textContent = live.myAssets !== null ? `${fmtToken(live.myAssets, STOCK_DECIMALS, 4)} ${symbol}` : (STATE.account ? (vault ? '…' : '—') : 'Connect wallet');
+      };
+      paintLendRows();
 
-      // ---- action panel ----
-      const actions = h('div', { class: 'panel' });
-      actions.appendChild(h('h3', {}, 'Open'));
-      if (!deployed) {
-        actions.appendChild(h('div', { class: 'notice' }, h('strong', {}, `${symbol} market not open yet. `), 'The calculator above runs on the DEX price meanwhile; the oracle takes over once the market exists on Morpho.'));
-      } else if (!STATE.addresses.router) {
-        actions.appendChild(h('div', { class: 'notice' }, h('strong', {}, 'Router not live yet. '), 'The market exists; the one-transaction open is not wired to it yet.'));
-      } else {
-        const openErr = h('div', { class: 'inline-error hidden' });
-        const openBtn = h('button', {
-          onclick: async () => {
-            openErr.classList.add('hidden');
-            if (!STATE.account) { openErr.textContent = 'connect wallet first'; openErr.classList.remove('hidden'); return; }
-            const collRaw = parseAmount(collIn.value, STATE.addresses.usdgDecimals);
-            const borrowText = borrowEl.textContent.split(' ')[0].replace(/,/g, '');
-            const borrowRaw = parseAmount(borrowText, STOCK_DECIMALS);
-            if (!collRaw || collRaw <= 0n || !borrowRaw || borrowRaw <= 0n) { openErr.textContent = 'set a collateral amount and target above'; openErr.classList.remove('hidden'); return; }
-            openBtn.disabled = true;
-            try { await doOpenShort(m, collRaw, borrowRaw); loadPositionPanel(); }
-            catch (e) { openErr.textContent = describeError(e); openErr.classList.remove('hidden'); }
-            openBtn.disabled = false;
-          },
-        }, `Authorize + Approve + Open ${symbol} short`);
-        actions.appendChild(openBtn);
-        actions.appendChild(openErr);
-        actions.appendChild(h('div', { class: 'hint' }, 'Up to three wallet prompts: authorise the router on Morpho once, approve the USDG, open.'));
-      }
-      right.appendChild(actions);
-
-      // ---- position panel ----
-      const posPanel = h('div', { class: 'panel' }, h('h3', {}, 'Your position'));
-      const posBody = h('div');
-      posPanel.appendChild(posBody);
-      right.appendChild(posPanel);
-
-      async function loadPositionPanel() {
-        clear(posBody);
-        if (!deployed || !STATE.addresses.router) { posBody.appendChild(h('div', { class: 'dim' }, 'Nothing yet. Positions show here once the market opens.')); return; }
-        if (!STATE.account) { posBody.appendChild(h('div', { class: 'dim' }, 'Connect a wallet to see your position.')); return; }
-        posBody.appendChild(h('div', { class: 'dim' }, 'loading…'));
+      const err = h('div', { class: 'inline-error hidden' });
+      let btn;
+      if (!vault) btn = cta('Opens soon', null, true);
+      else if (!STATE.account) btn = cta('Connect wallet', connectWallet);
+      else btn = cta(`Deposit ${symbol}`, async () => {
+        err.classList.add('hidden');
+        const raw = parseAmount(depIn.value, STOCK_DECIMALS);
+        if (!raw || raw <= 0n) { err.textContent = 'Enter an amount to deposit.'; err.classList.remove('hidden'); return; }
+        btn.disabled = true;
         try {
-          const mp = mpFor(m);
-          const data = await ethCall(STATE.addresses.rpc, STATE.addresses.router, encodeCall('positionOf((address,address,address,address,uint256),address)', marketParamsTuple(mp), STATE.account));
-          const w = decodeWords(data);
-          const pos = { collateral: toBig(w[0]), borrowAssets: toBig(w[1]), maxBorrow: toBig(w[2]), healthFactorWad: toBig(w[3]), liquidationPrice: toBig(w[4]) };
-          clear(posBody);
-          const dex = await ensureDexData([m.token]);
-          const pairUrl = dex.get(m.token.toLowerCase())?.url;
-          posBody.appendChild(h('dl', { class: 'ledger' },
-            lrow('Collateral', h('div', { class: 'value small' }, fmtToken(pos.collateral, STATE.addresses.usdgDecimals, 2) + ' USDG')),
-            lrow('Borrowed', h('div', { class: 'value small' }, fmtToken(pos.borrowAssets, STOCK_DECIMALS, 4) + ' ' + symbol)),
-            lrow('Health factor', h('div', { class: `value${pos.healthFactorWad < (12n * 10n ** 17n) ? ' red' : ''}` }, fmtHf(pos.healthFactorWad)))
-          ));
-          posBody.appendChild(h('div', { class: 'dim', style: 'margin:8px 0;font-size:15px' }, `Max borrow ${fmtToken(pos.maxBorrow, STOCK_DECIMALS, 4)} ${symbol} · liquidation price ${fmtUsd(Number(pos.liquidationPrice) / 1e18)} USDG/share`));
-          if (pairUrl) posBody.appendChild(h('div', { style: 'margin-bottom:10px' }, h('a', { href: pairUrl, target: '_blank', rel: 'noopener' }, `sell / buy back ${symbol} on DEX →`)));
+          await ensureAllowance(m.token, vault, raw, symbol);
+          await sendTx({ to: vault, data: encodeCall('deposit(uint256,address)', raw, STATE.account), title: `deposit ${symbol}` });
+          depIn.value = '';
+          await refreshAccount();
+        } catch (e) { err.textContent = describeError(e); err.classList.remove('hidden'); }
+        btn.disabled = false;
+      });
+      panel.appendChild(btn);
+      panel.appendChild(err);
 
-          const addIn = h('input', { type: 'text', placeholder: '0.0' });
-          const addErr = h('div', { class: 'inline-error hidden' });
-          const addBtn = h('button', { class: 'ghost', onclick: async () => {
-            addErr.classList.add('hidden');
-            const raw = parseAmount(addIn.value, STATE.addresses.usdgDecimals);
-            if (!raw || raw <= 0n) { addErr.textContent = 'enter an amount'; addErr.classList.remove('hidden'); return; }
-            addBtn.disabled = true;
-            try { await doAddCollateral(m, raw); addIn.value = ''; loadPositionPanel(); }
-            catch (e) { addErr.textContent = describeError(e); addErr.classList.remove('hidden'); }
-            addBtn.disabled = false;
-          } }, 'Add collateral');
+      if (vault && STATE.account) {
+        panel.appendChild(h('div', { class: 'sub-h' }, 'Withdraw'));
+        const wIn = h('input', { type: 'text', placeholder: '0', inputmode: 'decimal', 'aria-label': `Withdraw in ${symbol}` });
+        const wMax = h('a', { href: '#' }, live.maxWithdraw !== null ? `Max ${fmtToken(live.maxWithdraw, STOCK_DECIMALS, 4)}` : '');
+        wMax.addEventListener('click', (e) => { e.preventDefault(); if (live.maxWithdraw !== null) wIn.value = plainToken(live.maxWithdraw, STOCK_DECIMALS, 6); });
+        panel.appendChild(h('div', { class: 'amt' }, h('div', { class: 'top' }, h('span', {}, 'Amount'), wMax), h('div', { class: 'in' }, wIn, h('span', { class: 'unit' }, symbol))));
+        const wErr = h('div', { class: 'inline-error hidden' });
+        const wBtn = h('button', { class: 'ghost cta', onclick: async () => {
+          wErr.classList.add('hidden');
+          const raw = parseAmount(wIn.value, STOCK_DECIMALS);
+          if (!raw || raw <= 0n) { wErr.textContent = 'Enter an amount to withdraw.'; wErr.classList.remove('hidden'); return; }
+          if (live.maxWithdraw !== null && raw > live.maxWithdraw) { wErr.textContent = `Only ${fmtToken(live.maxWithdraw, STOCK_DECIMALS, 4)} ${symbol} can leave right now.`; wErr.classList.remove('hidden'); return; }
+          wBtn.disabled = true;
+          try {
+            await sendTx({ to: vault, data: encodeCall('withdraw(uint256,address,address)', raw, STATE.account, STATE.account), title: `withdraw ${symbol}` });
+            wIn.value = '';
+            await refreshAccount();
+          } catch (e) { wErr.textContent = describeError(e); wErr.classList.remove('hidden'); }
+          wBtn.disabled = false;
+        } }, 'Withdraw');
+        panel.appendChild(wBtn);
+        panel.appendChild(wErr);
+      }
+      panel.appendChild(h('div', { class: 'fine' }, vault
+        ? 'Withdrawals come from the vault\'s idle balance first, then from the market. When everything is borrowed you wait for repayments.'
+        : `The ${symbol} vault opens with its market. Planned cap ${fmtUsd(m.initialCapUsd, 0)} at ${(m.lltvBps / 100).toFixed(1)}% loan-to-value.`));
+    }
 
-          const repayIn = h('input', { type: 'text', placeholder: '0.0' });
-          const repayErr = h('div', { class: 'inline-error hidden' });
-          const repayBtn = h('button', { class: 'ghost', onclick: async () => {
-            repayErr.classList.add('hidden');
-            const raw = parseAmount(repayIn.value, STOCK_DECIMALS);
-            if (!raw || raw <= 0n) { repayErr.textContent = 'enter an amount'; repayErr.classList.remove('hidden'); return; }
-            repayBtn.disabled = true;
-            try { await doRepayAmount(m, raw); repayIn.value = ''; loadPositionPanel(); }
-            catch (e) { repayErr.textContent = describeError(e); repayErr.classList.remove('hidden'); }
-            repayBtn.disabled = false;
-          } }, 'Repay');
+    // ---------------------------------------------------------------- position
+    async function loadPosition() {
+      if (!routerLive || !STATE.account) { posCard.classList.add('hidden'); return; }
+      try {
+        const mp = mpFor(m);
+        const data = await ethCall(STATE.addresses.rpc, STATE.addresses.router, encodeCall('positionOf((address,address,address,address,uint256),address)', marketParamsTuple(mp), STATE.account));
+        if (mine.retired) return;
+        const w = decodeWords(data);
+        const pos = { collateral: toBig(w[0]), borrowAssets: toBig(w[1]), maxBorrow: toBig(w[2]), healthFactorWad: toBig(w[3]), liquidationPrice: toBig(w[4]) };
+        if (pos.collateral === 0n && pos.borrowAssets === 0n) { posCard.classList.add('hidden'); return; }
+        clear(posBody);
+        posCard.classList.remove('hidden');
+        posBody.appendChild(h('dl', { class: 'ledger' },
+          lrow('Collateral', h('div', { class: 'value small' }, fmtToken(pos.collateral, STATE.addresses.usdgDecimals, 2) + ' USDG')),
+          lrow('Borrowed', h('div', { class: 'value small' }, fmtToken(pos.borrowAssets, STOCK_DECIMALS, 4) + ' ' + symbol)),
+          lrow('Health factor', h('div', { class: `value${pos.healthFactorWad < (12n * 10n ** 17n) ? ' red' : ''}` }, fmtHf(pos.healthFactorWad))),
+          lrow('Liquidation price', h('div', { class: 'value small' }, pos.borrowAssets > 0n ? fmtUsd(Number(pos.liquidationPrice) / 1e18) : '—')),
+          lrow('Can still borrow', h('div', { class: 'value small' }, fmtToken(pos.maxBorrow > pos.borrowAssets ? pos.maxBorrow - pos.borrowAssets : 0n, STOCK_DECIMALS, 4) + ' ' + symbol))
+        ));
+        if (live.dex && live.dex.url) posBody.appendChild(h('div', { style: 'margin:6px 0 12px' }, h('a', { href: live.dex.url, target: '_blank', rel: 'noopener' }, `Trade ${symbol} on the DEX pool ↗`)));
 
-          const closeErr = h('div', { class: 'inline-error hidden' });
-          const closeBtn = h('button', { class: 'danger', onclick: async () => {
-            closeErr.classList.add('hidden');
-            closeBtn.disabled = true;
-            try { await doCloseShort(m); loadPositionPanel(); }
-            catch (e) { closeErr.textContent = describeError(e); closeErr.classList.remove('hidden'); }
-            closeBtn.disabled = false;
-          } }, `Close (repay all, withdraw all)`);
+        const addIn = h('input', { type: 'text', placeholder: '0' });
+        const addErr = h('div', { class: 'inline-error hidden' });
+        const addBtn = h('button', { class: 'ghost', onclick: async () => {
+          addErr.classList.add('hidden');
+          const raw = parseAmount(addIn.value, STATE.addresses.usdgDecimals);
+          if (!raw || raw <= 0n) { addErr.textContent = 'Enter an amount.'; addErr.classList.remove('hidden'); return; }
+          addBtn.disabled = true;
+          try { await doAddCollateral(m, raw); addIn.value = ''; await refreshAccount(); }
+          catch (e) { addErr.textContent = describeError(e); addErr.classList.remove('hidden'); }
+          addBtn.disabled = false;
+        } }, 'Add collateral');
+        const repayIn = h('input', { type: 'text', placeholder: '0' });
+        const repayErr = h('div', { class: 'inline-error hidden' });
+        const repayBtn = h('button', { class: 'ghost', onclick: async () => {
+          repayErr.classList.add('hidden');
+          const raw = parseAmount(repayIn.value, STOCK_DECIMALS);
+          if (!raw || raw <= 0n) { repayErr.textContent = 'Enter an amount.'; repayErr.classList.remove('hidden'); return; }
+          repayBtn.disabled = true;
+          try { await doRepayAmount(m, raw); repayIn.value = ''; await refreshAccount(); }
+          catch (e) { repayErr.textContent = describeError(e); repayErr.classList.remove('hidden'); }
+          repayBtn.disabled = false;
+        } }, 'Repay');
+        const closeErr = h('div', { class: 'inline-error hidden' });
+        const closeBtn = h('button', { class: 'danger', onclick: async () => {
+          closeErr.classList.add('hidden');
+          closeBtn.disabled = true;
+          try { await doCloseShort(m); await refreshAccount(); }
+          catch (e) { closeErr.textContent = describeError(e); closeErr.classList.remove('hidden'); }
+          closeBtn.disabled = false;
+        } }, 'Close position');
+        posBody.appendChild(h('div', { class: 'row' }, h('div', { class: 'field' }, h('label', {}, 'Add collateral (USDG)'), addIn, addErr), h('div', {}, addBtn)));
+        posBody.appendChild(h('div', { class: 'row' }, h('div', { class: 'field' }, h('label', {}, `Repay (${symbol})`), repayIn, repayErr), h('div', {}, repayBtn)));
+        posBody.appendChild(h('div', { class: 'actions' }, closeBtn, closeErr));
+      } catch (e) {
+        if (!mine.retired) console.warn('position read failed', e);
+      }
+    }
 
-          posBody.appendChild(h('div', { class: 'row' }, h('div', { class: 'field' }, h('label', {}, 'Add collateral (USDG)'), addIn, addErr), h('div', {}, addBtn)));
-          posBody.appendChild(h('div', { class: 'row' }, h('div', { class: 'field' }, h('label', {}, `Repay (${symbol})`), repayIn, repayErr), h('div', {}, repayBtn)));
-          posBody.appendChild(h('div', { class: 'actions' }, closeBtn, closeErr));
-        } catch (e) {
-          clear(posBody);
-          posBody.appendChild(h('div', { class: 'dim' }, 'no position, or read failed: ' + describeError(e)));
+    async function refreshAccount() {
+      if (!STATE.account) return;
+      try {
+        const [usdg, stock] = await Promise.all([tokenBalance(STATE.addresses.usdg, STATE.account), tokenBalance(m.token, STATE.account)]);
+        if (mine.retired) return;
+        live.usdgBal = usdg; live.stockBal = stock;
+        if (vault) {
+          const [maxW, bal] = await Promise.all([
+            ethCall(STATE.addresses.rpc, vault, encodeCall('maxWithdraw(address)', STATE.account)),
+            ethCall(STATE.addresses.rpc, vault, encodeCall('balanceOf(address)', STATE.account)),
+          ]);
+          const shares = toBig(decodeWords(bal)[0]);
+          const assets = await ethCall(STATE.addresses.rpc, vault, encodeCall('convertToAssets(uint256)', shares));
+          if (mine.retired) return;
+          live.maxWithdraw = toBig(decodeWords(maxW)[0]);
+          live.myAssets = toBig(decodeWords(assets)[0]);
+        }
+        paintPanel();
+        await loadPosition();
+      } catch (e) { if (!mine.retired) console.warn('account refresh failed', e); }
+    }
+
+    paintPanel();
+
+    // ---- data ----
+    (async () => {
+      await fetchQuotes();
+      const dexMap = await ensureDexData([m.token]);
+      if (mine.retired) return;
+      const q = quoteFor(symbol);
+      const d = dexMap.get(m.token.toLowerCase()) || null;
+      live.quote = q; live.dex = d;
+      bigPrice.classList.remove('skel');
+      if (q) { bigPrice.textContent = fmtUsd(q.mid); priceLab.textContent = 'Robinhood quote'; }
+      else if (d) { bigPrice.textContent = fmtUsd(d.priceUsd); priceLab.textContent = 'DEX price'; }
+      else { bigPrice.textContent = '—'; priceLab.textContent = 'No price'; }
+      clear(priceSub);
+      if (d) {
+        const prem = q ? (d.priceUsd - q.mid) / q.mid : null;
+        priceSub.appendChild(h('span', {}, 'DEX ', h('b', {}, fmtUsd(d.priceUsd))));
+        if (prem !== null) priceSub.appendChild(h('span', {}, 'Premium ', h('b', { class: prem > 0 ? 'pos' : prem < 0 ? 'neg' : '' }, (prem >= 0 ? '+' : '') + fmtPct(prem))));
+        if (d.chg24 !== null && !Number.isNaN(d.chg24)) priceSub.appendChild(h('span', {}, '24h ', h('b', { class: d.chg24 > 0 ? 'pos' : d.chg24 < 0 ? 'neg' : '' }, (d.chg24 >= 0 ? '+' : '') + d.chg24.toFixed(2) + '%')));
+        priceSub.appendChild(h('span', {}, 'Volume 24h ', h('b', {}, fmtUsd(d.vol24, 0))));
+        clear(chart);
+        chart.appendChild(h('iframe', { src: d.url + '?embed=1&theme=light&chartTheme=light&trades=0&info=0&chartLeftToolbar=0&loadChartSettings=0&chartResolution=15', loading: 'lazy', title: `${symbol} price on the DEX pool` }));
+        chart.appendChild(h('div', { class: 'cap' }, h('span', {}, `${symbol} / USDG pool on Robinhood Chain, via DexScreener`), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'Open on DexScreener ↗')));
+      } else {
+        clear(chart);
+        chart.appendChild(h('div', { class: 'ph' }, `No DEX pool found for ${symbol} yet.`));
+      }
+      if (q && q.halted) { const pill = view.querySelector('.mkt-title .pill'); if (pill) { pill.textContent = 'Halted'; pill.className = 'pill halt'; } }
+
+      live.ref = await getReferencePrice(m);
+      if (mine.retired) return;
+      recomputeShort();
+
+      if (deployed) {
+        const oc = await loadMarketOnchain(m);
+        if (mine.retired) return;
+        if (oc) {
+          live.onchain = oc;
+          borrowApyEl.textContent = fmtPct(oc.borrowApy); borrowApyEl.className = 'val';
+          supplyApyEl.textContent = fmtPct(oc.supplyApy); supplyApyEl.className = 'val';
+          utilEl.textContent = fmtPct(oc.utilisation); utilEl.className = 'val';
+          const avail = Number(oc.availableRaw) / 1e18;
+          availEl.textContent = `${fmtNum(avail, 2)} ${symbol}`; availEl.className = 'val';
+          paintPanel();
         }
       }
-      loadPositionPanel();
-    }
-    paint();
-    return () => { if (paint._retire) paint._retire(); };
+      if (vault) {
+        try {
+          const [tot, liq] = await Promise.all([ethCall(STATE.addresses.rpc, vault, encodeCall('totalAssets()')), ethCall(STATE.addresses.rpc, vault, encodeCall('liquidity()'))]);
+          if (mine.retired) return;
+          live.vaultTotal = toBig(decodeWords(tot)[0]); live.vaultLiq = toBig(decodeWords(liq)[0]);
+          paintLendRows();
+        } catch (e) { console.warn('vault read failed', e); }
+      }
+      await refreshAccount();
+    })();
+
+    return () => { mine.retired = true; };
   }
 
   // ================================================================== Premium Board
@@ -988,7 +1095,8 @@
         : `${rows.length} markets`;
       for (const r of withPrem) {
         const c = r.dex.chg24;
-        const tr = h('tr', { 'data-k': (r.symbol + ' ' + r.name).toLowerCase() },
+        const listed = STATE.markets.some((mm) => mm.symbol === r.symbol);
+        const tr = h('tr', { 'data-k': (r.symbol + ' ' + r.name).toLowerCase(), class: listed ? 'link' : '', onclick: listed ? () => { location.hash = `#/m/${r.symbol}`; } : null },
           h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
           symCell(r.symbol, r.name),
           h('td', { class: 'num', 'data-v': String(r.dex.priceUsd) }, fmtUsd(r.dex.priceUsd)),
