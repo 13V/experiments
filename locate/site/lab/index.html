@@ -9,65 +9,57 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Inline+Display:wght@700;900&family=Chakra+Petch:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --hud: rgba(235, 240, 238, .82); --hud-dim: rgba(235, 240, 238, .45); --accent: #dfff4a; }
+  :root { --hud: rgba(226, 236, 240, .85); --hud-dim: rgba(226, 236, 240, .42); --accent: #57e6ff; --amber: #ffb35c; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #060907; color: #eef1ee; overflow: hidden; font-family: 'Chakra Petch', 'Segoe UI', sans-serif; }
+  html, body { margin: 0; height: 100%; background: #04070a; color: #e6eef2; overflow: hidden; font-family: 'Chakra Petch', 'Segoe UI', sans-serif; }
   #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   .shade { position: fixed; left: 0; right: 0; z-index: 4; pointer-events: none; }
-  .shade.top { top: 0; height: 34%; background: linear-gradient(rgba(4,8,7,.72), rgba(4,8,7,0)); }
-  .shade.bottom { bottom: 0; height: 42%; background: linear-gradient(rgba(4,8,7,0), rgba(4,8,7,.9)); }
-  /* camcorder frame */
+  .shade.top { top: 0; height: 30%; background: linear-gradient(rgba(3,6,9,.7), rgba(3,6,9,0)); }
+  .shade.bottom { bottom: 0; height: 36%; background: linear-gradient(rgba(3,6,9,0), rgba(3,6,9,.82)); }
   .frame { position: fixed; inset: 14px; pointer-events: none; z-index: 5; }
   .frame i { position: absolute; width: 26px; height: 26px; border: 1.5px solid var(--hud-dim); }
   .frame i.tl { left: 0; top: 0; border-right: 0; border-bottom: 0; }
   .frame i.tr { right: 0; top: 0; border-left: 0; border-bottom: 0; }
   .frame i.bl { left: 0; bottom: 0; border-right: 0; border-top: 0; }
   .frame i.br { right: 0; bottom: 0; border-left: 0; border-top: 0; }
-  .hud { position: fixed; z-index: 6; font-size: 13px; letter-spacing: .08em; color: var(--hud); text-transform: uppercase; pointer-events: none; text-shadow: 0 0 8px rgba(0,0,0,.6); }
+  .hud { position: fixed; z-index: 6; font-size: 13px; letter-spacing: .08em; color: var(--hud); text-transform: uppercase; pointer-events: none; text-shadow: 0 0 8px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
   .hud.tl { left: 32px; top: 30px; }
   .hud.tr { right: 32px; top: 30px; display: flex; align-items: center; gap: 8px; }
-  .hud.tr i { width: 8px; height: 8px; border-radius: 50%; background: #ff4444; box-shadow: 0 0 10px #ff4444; animation: blink 1.2s steps(1) infinite; }
+  .hud.tr i { width: 8px; height: 8px; border-radius: 50%; background: #ff4a4a; box-shadow: 0 0 10px #ff4a4a; animation: blink 1.2s steps(1) infinite; }
   .hud.bl { left: 32px; bottom: 28px; }
-  .hud.br { right: 32px; bottom: 28px; font-variant-numeric: tabular-nums; }
+  .hud.br { right: 32px; bottom: 28px; }
   @keyframes blink { 50% { opacity: .15; } }
-  .cross { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; z-index: 5; pointer-events: none; opacity: .55; }
-  .cross::before, .cross::after { content: ''; position: absolute; background: var(--hud); }
-  .cross::before { left: 50%; top: 0; width: 1px; height: 100%; }
-  .cross::after { top: 50%; left: 0; height: 1px; width: 100%; }
-  /* nav pills */
-  nav { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.08); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.12); }
-  nav a { color: #eef1ee; text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: .02em; padding: 8px 16px; border-radius: 9px; transition: background .15s; }
-  nav a:hover, nav a.on { background: rgba(255,255,255,.14); }
-  /* hero copy */
+  nav { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.07); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.12); }
+  nav a { color: #e6eef2; text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: .02em; padding: 8px 16px; border-radius: 9px; transition: background .15s; }
+  nav a:hover { background: rgba(255,255,255,.14); }
   .hero { position: fixed; left: 50%; top: 8%; transform: translateX(-50%); z-index: 7; text-align: center; pointer-events: none; width: min(92vw, 1100px); }
-  .hero h1 { margin: 0; font-family: 'Big Shoulders Inline Display', 'Arial Narrow', sans-serif; font-weight: 900; font-size: clamp(48px, 7.2vw, 116px); line-height: .92; letter-spacing: .01em; text-transform: uppercase; color: rgba(236, 240, 236, .92); text-shadow: 0 0 40px rgba(180, 220, 200, .25); }
+  .hero h1 { margin: 0; font-family: 'Big Shoulders Inline Display', 'Arial Narrow', sans-serif; font-weight: 900; font-size: clamp(46px, 7vw, 112px); line-height: .92; letter-spacing: .01em; text-transform: uppercase; color: rgba(232, 240, 244, .93); text-shadow: 0 0 44px rgba(87, 230, 255, .18); }
   .hero h1 span { display: block; }
-  .cta { position: fixed; left: 50%; bottom: 8%; transform: translateX(-50%); z-index: 7; text-align: center; width: min(92vw, 640px); }
-  .cta p { margin: 0 0 18px; font-size: 16px; line-height: 1.5; color: rgba(236, 240, 236, .9); text-shadow: 0 1px 12px rgba(0,0,0,.8); }
-  .cta .btns { display: flex; gap: 12px; justify-content: center; }
-  .cta a { display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: 6px; font-size: 15px; font-weight: 600; text-decoration: none; letter-spacing: .02em; transition: transform .15s, background .15s; }
-  .cta a.p { background: rgba(255,255,255,.92); color: #0b0f0c; }
-  .cta a.s { background: rgba(255,255,255,.08); color: #eef1ee; border: 1px solid rgba(255,255,255,.35); backdrop-filter: blur(8px); }
-  .cta a:hover { transform: translateY(-1px); }
   .live { position: fixed; left: 50%; bottom: calc(8% + 118px); transform: translateX(-50%); z-index: 7; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--hud-dim); white-space: nowrap; }
   .live b { color: var(--accent); font-weight: 500; }
-  #boot { position: fixed; inset: 0; z-index: 20; background: #060907; display: flex; align-items: center; justify-content: center; color: var(--hud-dim); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; transition: opacity .6s; }
+  .cta { position: fixed; left: 50%; bottom: 8%; transform: translateX(-50%); z-index: 7; text-align: center; width: min(92vw, 640px); }
+  .cta p { margin: 0 0 18px; font-size: 16px; line-height: 1.5; color: rgba(232, 240, 244, .9); text-shadow: 0 1px 12px rgba(0,0,0,.8); }
+  .cta .btns { display: flex; gap: 12px; justify-content: center; }
+  .cta a { display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: 6px; font-size: 15px; font-weight: 600; text-decoration: none; letter-spacing: .02em; transition: transform .15s; }
+  .cta a.p { background: rgba(236, 242, 246, .94); color: #07111a; }
+  .cta a.s { background: rgba(255,255,255,.08); color: #e6eef2; border: 1px solid rgba(255,255,255,.35); backdrop-filter: blur(8px); }
+  .cta a:hover { transform: translateY(-1px); }
+  #boot { position: fixed; inset: 0; z-index: 20; background: #04070a; display: flex; align-items: center; justify-content: center; color: var(--hud-dim); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; transition: opacity .6s; }
   #boot.gone { opacity: 0; pointer-events: none; }
-  @media (max-width: 720px) { .hud.tl, .hud.bl { left: 18px; } .hud.tr, .hud.br { right: 18px; } nav a { padding: 8px 11px; font-size: 12px; } .hero { top: 13%; } .cta { bottom: 7%; } .cta .btns { flex-direction: column; } .live { display: none; } }
+  @media (max-width: 720px) { .hud.tl, .hud.bl { left: 18px; } .hud.tr, .hud.br { right: 18px; } nav a { padding: 8px 11px; font-size: 12px; } .hero { top: 12%; } .cta { bottom: 6%; } .cta .btns { flex-direction: column; } .live { display: none; } }
   @media (prefers-reduced-motion: reduce) { .hud.tr i { animation: none; } }
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
 <div class="shade top"></div><div class="shade bottom"></div>
-<div id="boot">Tuning the desk…</div>
+<div id="boot">Opening the desk…</div>
 
 <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 <div class="hud tl" id="fps">— fps</div>
 <div class="hud tr"><i></i>Live</div>
 <div class="hud bl" id="date">[ -- / -- / -- ]</div>
-<div class="hud br" id="tc">[ --:--:-- ]</div>
-<div class="cross"></div>
+<div class="hud br" id="tc">--:--:-- UTC</div>
 
 <nav>
   <a href="../#/markets">Markets</a>
@@ -95,7 +87,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// ------------------------------------------------------------------ data (live when the API is there)
+// ------------------------------------------------------------------ data (live when the API is there, demo otherwise)
 const DEMO = [
   { symbol: 'NVDA', name: 'NVIDIA', quote: 230.12, dex: 230.15 }, { symbol: 'TSLA', name: 'Tesla', quote: 369.8, dex: 356.24 },
   { symbol: 'GME', name: 'GameStop', quote: 19.34, dex: 19.63 }, { symbol: 'SPY', name: 'S&P 500', quote: 773.85, dex: 772.07 },
@@ -104,7 +96,7 @@ const DEMO = [
   { symbol: 'GOOGL', name: 'Alphabet', quote: 343.4, dex: 343.33 }, { symbol: 'QQQ', name: 'Nasdaq 100', quote: 719.34, dex: 718.8 },
 ];
 let STOCKS = DEMO.slice();
-let BOARD = []; // every token with a pool, for the tape
+let BOARD = DEMO.map((s) => ({ symbol: s.symbol, quote: s.quote, dex: s.dex, prem: (s.dex - s.quote) / s.quote }));
 async function loadLive() {
   try {
     const markets = await (await fetch('../config/markets.json')).json();
@@ -114,93 +106,128 @@ async function loadLive() {
     const d = await (await fetch('../api/dex?addrs=' + addrs.join(','))).json();
     const rows = markets.map((m) => ({ symbol: m.symbol, name: m.name, quote: quotes.get(m.symbol), dex: d.pools[m.token.toLowerCase()] ? d.pools[m.token.toLowerCase()].priceUsd : null })).filter((r) => r.quote && r.dex);
     if (rows.length >= 6) STOCKS = rows;
-    // the tape: every registry token that has a pool
     const reg = [];
     for (const a of q.assets || []) { const dep = (a.deployments || []).find((x) => x.chainId === 4663); if (dep) reg.push({ symbol: a.tokenSymbol, addr: dep.contractAddress.toLowerCase() }); }
     const chunks = []; for (let i = 0; i < reg.length; i += 60) chunks.push(reg.slice(i, i + 60));
     const all = [];
     for (const c of chunks) {
       const r = await (await fetch('../api/dex?addrs=' + c.map((x) => x.addr).join(','))).json();
-      for (const x of c) { const p = r.pools[x.addr]; const qq = quotes.get(x.symbol); if (p && qq) all.push({ symbol: x.symbol, quote: qq, dex: p.priceUsd, prem: (p.priceUsd - qq) / qq }); }
+      for (const x of c) { const p = r.pools[x.addr]; const qq = quotes.get(x.symbol); if (p && qq) all.push({ symbol: x.symbol, quote: qq, dex: p.priceUsd, prem: (p.priceUsd - qq) / qq, vol: p.vol24 || 0 }); }
     }
     all.sort((a, b) => Math.abs(b.prem) - Math.abs(a.prem));
-    BOARD = all;
+    if (all.length) BOARD = all;
     document.getElementById('live-n').textContent = String(all.length);
     if (all.length) document.getElementById('live-w').textContent = `${all[0].symbol} ${all[0].prem >= 0 ? '+' : ''}${(all[0].prem * 100).toFixed(1)}%`;
-  } catch (e) { /* demo data stays */ document.getElementById('livebar').style.display = 'none'; }
+  } catch (e) { document.getElementById('livebar').style.display = 'none'; }
 }
 
-// ------------------------------------------------------------------ screen painters (canvas textures)
-const W = 512, H = 400;
-function scanlines(ctx, alpha = 0.22) {
-  ctx.fillStyle = `rgba(0,0,0,${alpha})`;
-  for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+// ------------------------------------------------------------------ screen painters (16:9 canvases, a modern dark trading UI)
+const W = 768, H = 432;
+const UP = '#3ddc84', DOWN = '#ff5c6a', CY = '#57e6ff', INK = '#dbe6ec', DIM = 'rgba(219,230,236,.55)', GRID = 'rgba(120,160,180,.12)';
+const fmt = (n, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+function chrome(ctx, title, right) {
+  ctx.fillStyle = '#070c11'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fillRect(0, 0, W, 34);
+  ctx.fillStyle = CY; ctx.fillRect(0, 0, 4, 34);
+  ctx.font = '600 15px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillStyle = INK; ctx.fillText(title, 16, 17);
+  if (right) { ctx.textAlign = 'right'; ctx.fillStyle = DIM; ctx.fillText(right, W - 14, 17); ctx.textAlign = 'left'; }
 }
-function noise(ctx, amt) {
-  const img = ctx.getImageData(0, 0, W, H); const d = img.data;
-  for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - .5) * amt; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
-  ctx.putImageData(img, 0, 0);
+// price series per symbol: a random walk anchored on the live price
+const series = new Map();
+function getSeries(s, t) {
+  let S = series.get(s.symbol);
+  if (!S) { S = { candles: [], last: s.dex, t0: -1 }; let p = s.dex * (1 - 0.012 * Math.random()); for (let i = 0; i < 64; i++) { const o = p; p *= 1 + (Math.random() - 0.5) * 0.006; S.candles.push({ o, c: p, h: Math.max(o, p) * (1 + Math.random() * 0.002), l: Math.min(o, p) * (1 - Math.random() * 0.002), v: 0.3 + Math.random() }); } series.set(s.symbol, S); }
+  const step = Math.floor(t / 1.6);
+  if (step !== S.t0) { S.t0 = step; const prev = S.candles[S.candles.length - 1].c; const c = prev * (1 + (Math.random() - 0.5) * 0.004); S.candles.push({ o: prev, c, h: Math.max(prev, c) * (1 + Math.random() * 0.0015), l: Math.min(prev, c) * (1 - Math.random() * 0.0015), v: 0.3 + Math.random() }); if (S.candles.length > 64) S.candles.shift(); }
+  const cur = S.candles[S.candles.length - 1]; cur.c = cur.o * (1 + Math.sin(t * 3.1) * 0.0015 + Math.sin(t * 7.7) * 0.0006); cur.h = Math.max(cur.h, cur.c); cur.l = Math.min(cur.l, cur.c);
+  return S;
 }
 const painters = {
-  ticker(ctx, t, s) {
-    const prem = (s.dex - s.quote) / s.quote; const up = prem >= 0;
-    ctx.fillStyle = up ? '#08160e' : '#170909'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = up ? 'rgba(84,255,150,.08)' : 'rgba(255,90,90,.08)'; ctx.fillRect(0, 0, W, H * (0.5 + 0.5 * Math.sin(t * .7)));
-    ctx.fillStyle = '#e9efe9'; ctx.font = '700 118px "Chakra Petch", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText(s.symbol, 28, 34);
-    ctx.font = '500 30px "Chakra Petch", sans-serif'; ctx.fillStyle = 'rgba(233,239,233,.7)'; ctx.fillText(s.name.toUpperCase().slice(0, 18), 32, 164);
-    ctx.font = '600 64px "Chakra Petch", sans-serif'; ctx.fillStyle = up ? '#5cff9a' : '#ff6a5c'; ctx.fillText(`${prem >= 0 ? '+' : ''}${(prem * 100).toFixed(2)}%`, 30, 228);
-    ctx.font = '500 28px "Chakra Petch", sans-serif'; ctx.fillStyle = 'rgba(233,239,233,.8)';
-    ctx.fillText(`DEX $${s.dex.toFixed(2)}`, 32, 316); ctx.fillText(`RH  $${s.quote.toFixed(2)}`, 300, 316);
-    scanlines(ctx);
+  candles(ctx, t, s) {
+    const S = getSeries(s, t); const c = S.candles; const last = c[c.length - 1].c; const first = c[0].o; const chg = (last - first) / first;
+    chrome(ctx, `${s.symbol} · ${s.name.toUpperCase()}`, 'RH CHAIN · USDG POOL · 1m');
+    ctx.font = '600 30px "Chakra Petch", sans-serif'; ctx.fillStyle = INK; ctx.textBaseline = 'top'; ctx.fillText(`$${fmt(last)}`, 16, 46);
+    ctx.font = '500 18px "Chakra Petch", sans-serif'; ctx.fillStyle = chg >= 0 ? UP : DOWN; ctx.fillText(`${chg >= 0 ? '+' : ''}${(chg * 100).toFixed(2)}%`, 16 + ctx.measureText(`$${fmt(last)}`).width + 70, 54);
+    const x0 = 16, x1 = W - 74, y0 = 92, y1 = H - 60; const hi = Math.max(...c.map((k) => k.h)), lo = Math.min(...c.map((k) => k.l));
+    const Y = (p) => y1 - ((p - lo) / (hi - lo || 1)) * (y1 - y0);
+    ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.font = '400 12px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM;
+    for (let i = 0; i <= 4; i++) { const y = y0 + (y1 - y0) * i / 4; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.fillText(fmt(hi - (hi - lo) * i / 4), x1 + 8, y - 6); }
+    const cw = (x1 - x0) / c.length;
+    c.forEach((k, i) => { const x = x0 + i * cw + cw / 2; const up = k.c >= k.o; ctx.strokeStyle = ctx.fillStyle = up ? UP : DOWN; ctx.beginPath(); ctx.moveTo(x, Y(k.h)); ctx.lineTo(x, Y(k.l)); ctx.stroke(); const top = Y(Math.max(k.o, k.c)), bot = Y(Math.min(k.o, k.c)); ctx.fillRect(x - cw * 0.32, top, cw * 0.64, Math.max(1.5, bot - top)); });
+    // moving average
+    ctx.strokeStyle = 'rgba(87,230,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath();
+    c.forEach((k, i) => { const w = c.slice(Math.max(0, i - 8), i + 1); const m = w.reduce((a, b) => a + b.c, 0) / w.length; const x = x0 + i * cw + cw / 2; i ? ctx.lineTo(x, Y(m)) : ctx.moveTo(x, Y(m)); }); ctx.stroke();
+    // volume
+    c.forEach((k, i) => { const x = x0 + i * cw; ctx.fillStyle = k.c >= k.o ? 'rgba(61,220,132,.35)' : 'rgba(255,92,106,.35)'; ctx.fillRect(x + 1, H - 16 - k.v * 34, cw - 2, k.v * 34); });
+    // last price line
+    ctx.strokeStyle = 'rgba(219,230,236,.5)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x0, Y(last)); ctx.lineTo(x1, Y(last)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = chg >= 0 ? UP : DOWN; ctx.fillRect(x1 + 2, Y(last) - 10, 68, 20); ctx.fillStyle = '#04070a'; ctx.font = '600 12px "Chakra Petch", sans-serif'; ctx.fillText(fmt(last), x1 + 8, Y(last) - 6);
   },
-  bars(ctx) {
-    const cols = ['#c0c0c0', '#c0c000', '#00c0c0', '#00c000', '#c000c0', '#c00000', '#0000c0'];
-    cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(i * W / 7, 0, W / 7 + 1, H * .68); });
-    const low = ['#0000c0', '#131313', '#c000c0', '#131313', '#00c0c0', '#131313', '#c0c0c0'];
-    low.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(i * W / 7, H * .68, W / 7 + 1, H * .08); });
-    ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, H * .76, W, H * .24);
-    ctx.fillStyle = '#e9efe9'; ctx.font = '600 26px "Chakra Petch", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText('LOCATE · RH CHAIN 4663', 24, H * .8 + 8);
-    scanlines(ctx, .18);
+  book(ctx, t, s) {
+    chrome(ctx, `${s.symbol} ORDER BOOK`, 'DEPTH · USDG');
+    const mid = s.dex; const rows = 11; const rowH = 32; const y0 = 44;
+    ctx.font = '500 15px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    const col = (x, txt, color, align = 'left') => { ctx.textAlign = align; ctx.fillStyle = color; ctx.fillText(txt, x, 0); };
+    for (let i = 0; i < rows; i++) {
+      const y = y0 + i * rowH + rowH / 2; const ask = mid * (1 + (rows - i) * 0.0009); const bid = mid * (1 - (i + 1) * 0.0009);
+      const sa = 20 + 140 * Math.abs(Math.sin(t * 0.9 + i * 1.7)), sb = 20 + 140 * Math.abs(Math.cos(t * 0.7 + i * 1.3));
+      ctx.fillStyle = 'rgba(255,92,106,.16)'; ctx.fillRect(W / 2 - 6 - sa, y - 12, sa, 24);
+      ctx.fillStyle = 'rgba(61,220,132,.16)'; ctx.fillRect(W / 2 + 6, y - 12, sb, 24);
+      ctx.save(); ctx.translate(0, y); col(W / 2 - 16, fmt(ask), DOWN, 'right'); col(W / 2 - 200, fmt(sa / 40, 3), DIM, 'right'); col(W / 2 + 16, fmt(bid), UP); col(W / 2 + 200, fmt(sb / 40, 3), DIM); ctx.restore();
+    }
+    ctx.textAlign = 'center'; ctx.fillStyle = INK; ctx.font = '600 16px "Chakra Petch", sans-serif'; ctx.fillText(`MID ${fmt(mid)} · SPREAD ${(0.09).toFixed(2)}%`, W / 2, H - 22); ctx.textAlign = 'left';
+  },
+  board(ctx, t) {
+    chrome(ctx, 'PREMIUM BOARD', 'DEX VS ROBINHOOD · SORTED BY GAP');
+    const rows = BOARD.slice(0, 11); ctx.font = '500 16px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    rows.forEach((r, i) => {
+      const y = 52 + i * 33; const blink = i === 0 && Math.sin(t * 4) > 0;
+      ctx.fillStyle = blink ? 'rgba(87,230,255,.08)' : (i % 2 ? 'rgba(255,255,255,.025)' : 'transparent'); ctx.fillRect(8, y - 14, W - 16, 30);
+      ctx.textAlign = 'left'; ctx.fillStyle = INK; ctx.fillText(r.symbol, 20, y);
+      ctx.fillStyle = DIM; ctx.fillText(`$${fmt(r.quote)}`, 130, y); ctx.fillText(`$${fmt(r.dex)}`, 250, y);
+      const w = Math.min(220, Math.abs(r.prem) * 1800); ctx.fillStyle = r.prem >= 0 ? 'rgba(61,220,132,.35)' : 'rgba(255,92,106,.35)'; ctx.fillRect(380, y - 7, w, 14);
+      ctx.textAlign = 'right'; ctx.fillStyle = r.prem >= 0 ? UP : DOWN; ctx.fillText(`${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(2)}%`, W - 20, y);
+    });
+    ctx.textAlign = 'left';
+  },
+  heat(ctx, t) {
+    chrome(ctx, 'MARKET MAP · PREMIUM', `${BOARD.length} TOKENS WITH POOLS`);
+    const items = BOARD.slice(0, 24); const cols = 6, rows = 4; const gw = (W - 24) / cols, gh = (H - 52) / rows;
+    items.forEach((r, i) => {
+      const x = 12 + (i % cols) * gw, y = 42 + Math.floor(i / cols) * gh; const a = Math.min(1, Math.abs(r.prem) * 12 + 0.12);
+      ctx.fillStyle = r.prem >= 0 ? `rgba(61,220,132,${a * 0.55})` : `rgba(255,92,106,${a * 0.55})`; ctx.fillRect(x + 2, y + 2, gw - 4, gh - 4);
+      ctx.fillStyle = INK; ctx.font = '600 17px "Chakra Petch", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText(r.symbol, x + 10, y + 10);
+      ctx.font = '500 14px "Chakra Petch", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(`${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(1)}%`, x + 10, y + gh - 26);
+    });
+  },
+  position(ctx, t, s) {
+    chrome(ctx, 'POSITIONS · LOCATE', 'MORPHO BLUE · CHAIN 4663');
+    const hf = 1.63 + 0.12 * Math.sin(t * 0.5);
+    ctx.font = '500 14px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM; ctx.textBaseline = 'top'; ctx.fillText('HEALTH FACTOR', 20, 48);
+    ctx.font = '700 64px "Chakra Petch", sans-serif'; ctx.fillStyle = hf < 1.2 ? DOWN : INK; ctx.fillText(hf.toFixed(2), 16, 66);
+    // gauge
+    const cx = W - 120, cy = 118, R = 62; ctx.lineWidth = 12; ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * 0.75, Math.PI * 2.25); ctx.stroke();
+    ctx.strokeStyle = hf < 1.2 ? DOWN : hf < 1.5 ? '#ffd23f' : UP; ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * 0.75, Math.PI * 0.75 + Math.PI * 1.5 * Math.min(1, (hf - 1) / 2)); ctx.stroke();
+    ctx.font = '500 13px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.fillText('LIQ AT', cx, cy - 12); ctx.fillStyle = INK; ctx.font = '600 16px "Chakra Petch", sans-serif'; ctx.fillText(`+${((hf - 1) * 100).toFixed(0)}%`, cx, cy + 6); ctx.textAlign = 'left';
+    const rows = [[`SHORT ${STOCKS[0].symbol}`, `${fmt(2000 / STOCKS[0].dex, 3)}`, `$${fmt(STOCKS[0].dex * 1.6)}`, UP], [`SHORT ${STOCKS[1].symbol}`, `${fmt(1200 / STOCKS[1].dex, 3)}`, `$${fmt(STOCKS[1].dex * 1.42)}`, DOWN], [`LEND ${STOCKS[2].symbol}`, `${fmt(4000 / STOCKS[2].dex, 2)}`, `${(6.4 + Math.sin(t) * 0.2).toFixed(2)}% APY`, CY]];
+    ctx.font = '500 15px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    ['POSITION', 'SIZE', 'LIQ PRICE / APY'].forEach((h, i) => { ctx.fillStyle = DIM; ctx.fillText(h, [20, 260, 440][i], 214); });
+    rows.forEach((r, i) => { const y = 250 + i * 40; ctx.fillStyle = 'rgba(255,255,255,.03)'; ctx.fillRect(10, y - 16, W - 20, 32); ctx.fillStyle = INK; ctx.fillText(r[0], 20, y); ctx.fillStyle = DIM; ctx.fillText(r[1], 260, y); ctx.fillStyle = r[3]; ctx.fillText(r[2], 440, y); });
+    ctx.fillStyle = DIM; ctx.font = '500 13px "Chakra Petch", sans-serif'; ctx.fillText('FEEDS PAUSE FRI 20:00 ET → SUN 20:00 ET · SIZE FOR THE REOPEN', 20, H - 22);
   },
   tape(ctx, t) {
-    ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, W, H);
-    const rows = (BOARD.length ? BOARD : STOCKS.map((s) => ({ symbol: s.symbol, prem: (s.dex - s.quote) / s.quote }))).slice(0, 40);
-    ctx.font = '600 30px "Chakra Petch", sans-serif'; ctx.textBaseline = 'top';
-    const lh = 44; const off = (t * 26) % (rows.length * lh);
-    for (let i = -1; i < 11; i++) {
-      const idx = ((Math.floor(off / lh) + i) % rows.length + rows.length) % rows.length; const r = rows[idx];
-      const y = i * lh - (off % lh) + 10;
-      ctx.fillStyle = '#e9efe9'; ctx.fillText(r.symbol, 26, y);
-      ctx.fillStyle = r.prem >= 0 ? '#5cff9a' : '#ff6a5c'; const txt = `${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(2)}%`; ctx.fillText(txt, W - 26 - ctx.measureText(txt).width, y);
-      ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(20, y + lh - 6, W - 40, 1);
+    chrome(ctx, 'ROBINHOOD 24/5 QUOTES', 'ALL TOKENS');
+    const rows = BOARD; ctx.font = '500 16px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    const lh = 33, n = Math.max(rows.length, 1); const off = (t * 22) % (n * lh);
+    for (let i = -1; i < 13; i++) {
+      const idx = ((Math.floor(off / lh) + i) % n + n) % n; const r = rows[idx]; if (!r) continue; const y = 52 + i * lh - (off % lh);
+      if (y < 40 || y > H - 8) continue;
+      ctx.textAlign = 'left'; ctx.fillStyle = INK; ctx.fillText(r.symbol, 20, y); ctx.fillStyle = DIM; ctx.fillText(`$${fmt(r.quote)}`, 150, y); ctx.fillText(`DEX $${fmt(r.dex)}`, 300, y);
+      ctx.textAlign = 'right'; ctx.fillStyle = r.prem >= 0 ? UP : DOWN; ctx.fillText(`${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(2)}%`, W - 20, y);
+      ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.beginPath(); ctx.moveTo(14, y + 16); ctx.lineTo(W - 14, y + 16); ctx.stroke();
     }
-    ctx.fillStyle = 'rgba(5,7,10,.9)'; ctx.fillRect(0, 0, W, 40); ctx.fillStyle = '#dfff4a'; ctx.font = '600 22px "Chakra Petch", sans-serif'; ctx.fillText('PREMIUM BOARD · DEX VS ROBINHOOD', 24, 9);
-    scanlines(ctx);
-  },
-  wordmark(ctx, t) {
-    ctx.fillStyle = '#0c0d10'; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(223,255,74,.9)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(W / 2, H / 2 - 20, 70 + 6 * Math.sin(t * 2), 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(W / 2, H / 2 - 20, 14, 0, Math.PI * 2); ctx.fillStyle = 'rgba(223,255,74,.9)'; ctx.fill();
-    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) { ctx.beginPath(); ctx.moveTo(W / 2 + dx * 86, H / 2 - 20 + dy * 86); ctx.lineTo(W / 2 + dx * 118, H / 2 - 20 + dy * 118); ctx.stroke(); }
-    ctx.fillStyle = '#e9efe9'; ctx.font = '700 44px "Chakra Petch", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('LOCATE', W / 2, H - 78); ctx.textAlign = 'left';
-    scanlines(ctx);
-  },
-  static(ctx) {
-    for (let y = 0; y < H; y += 2) { const g = 60 + Math.random() * 150; ctx.fillStyle = `rgb(${g},${g},${g})`; ctx.fillRect(0, y, W, 2); }
-    for (let i = 0; i < 900; i++) { const g = Math.random() * 255; ctx.fillStyle = `rgb(${g},${g},${g})`; ctx.fillRect(Math.random() * W, Math.random() * H, 3 + Math.random() * 14, 2); }
-    scanlines(ctx, .3);
-  },
-  health(ctx, t) {
-    ctx.fillStyle = '#070b0a'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(233,239,233,.7)'; ctx.font = '500 26px "Chakra Petch", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText('HEALTH FACTOR', 28, 30);
-    const hf = 1.5 + 0.35 * Math.sin(t * .6);
-    ctx.fillStyle = '#e9efe9'; ctx.font = '700 120px "Chakra Petch", sans-serif'; ctx.fillText(hf.toFixed(2), 24, 70);
-    const w = W - 56; ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fillRect(28, 240, w, 18);
-    ctx.fillStyle = hf < 1.2 ? '#ff6a5c' : hf < 1.5 ? '#ffd23f' : '#5cff9a'; ctx.fillRect(28, 240, w * Math.min(1, (hf - 1) / 2), 18);
-    ctx.fillStyle = 'rgba(233,239,233,.7)'; ctx.font = '500 26px "Chakra Petch", sans-serif'; ctx.fillText(`LIQUIDATION AT +${((hf - 1) * 100).toFixed(0)}%`, 28, 290);
-    ctx.fillText('SIZE FOR THE SUNDAY REOPEN', 28, 330);
-    scanlines(ctx);
+    ctx.textAlign = 'left';
   },
 };
 
@@ -208,80 +235,113 @@ const painters = {
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 const scene = new THREE.Scene();
 const bgc = document.createElement('canvas'); bgc.width = 4; bgc.height = 256; const bgx = bgc.getContext('2d');
-const grd = bgx.createLinearGradient(0, 0, 0, 256); grd.addColorStop(0, '#2b4a48'); grd.addColorStop(0.45, '#12211f'); grd.addColorStop(1, '#050807');
+const grd = bgx.createLinearGradient(0, 0, 0, 256); grd.addColorStop(0, '#0a1620'); grd.addColorStop(0.5, '#071019'); grd.addColorStop(1, '#03060a');
 bgx.fillStyle = grd; bgx.fillRect(0, 0, 4, 256);
-const bgTex = new THREE.CanvasTexture(bgc); bgTex.colorSpace = THREE.SRGBColorSpace;
-scene.background = bgTex;
-scene.fog = new THREE.FogExp2(0x0e1a18, 0.06);
-const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-camera.position.set(0, 1.1, 9.4);
+const bgTex = new THREE.CanvasTexture(bgc); bgTex.colorSpace = THREE.SRGBColorSpace; scene.background = bgTex;
+scene.fog = new THREE.FogExp2(0x06111a, 0.045);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.05, 100);
+camera.position.set(0.30, 1.72, 7.1);
 
-const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a4d4a, roughness: 0.78, metalness: 0.05 });
-const bezelMat = new THREE.MeshStandardMaterial({ color: 0x232625, roughness: 0.6, metalness: 0.1 });
-const darkMat = new THREE.MeshStandardMaterial({ color: 0x1b1d1c, roughness: 0.9 });
-
+const bezelMat = new THREE.MeshStandardMaterial({ color: 0x141a20, roughness: 0.55, metalness: 0.3 });
+const armMat = new THREE.MeshStandardMaterial({ color: 0x20262c, roughness: 0.6, metalness: 0.5 });
+const deskMat = new THREE.MeshStandardMaterial({ color: 0x10151a, roughness: 0.28, metalness: 0.35 });
 const screens = [];
-function makeTV({ w = 2.2, h = 1.7, d = 1.9, painter, data, x = 0, y = 0, z = 0, ry = 0, rx = 0, rz = 0, tint = '#ffffff' }) {
+function monitor({ painter, data, x, y, z, ry = 0, rx = 0, w = 1.62, h = 0.91, tint }) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, 0.08), bodyMat); body.position.z = -d / 2 + 0.05; g.add(body);
-  const bezel = new THREE.Mesh(new RoundedBoxGeometry(w * 0.9, h * 0.86, 0.12, 3, 0.05), bezelMat); bezel.position.z = -0.06; g.add(bezel);
-  // slightly bulged screen: sphere section
-  const sw = w * 0.78, sh = h * 0.72; const R = 6;
-  const geo = new THREE.SphereGeometry(R, 32, 24, Math.PI / 2 - (sw / 2) / R, sw / R, Math.PI / 2 - (sh / 2) / R, sh / R);
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d', { willReadFrequently: true });
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  tex.repeat.set(1, 1);
-  const mat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false });
-  const scr = new THREE.Mesh(geo, mat); scr.position.z = 0.16 - R;
-  g.add(scr);
-  const glow = new THREE.PointLight(new THREE.Color(tint), 9, 4.2, 2); glow.position.set(0, 0, 0.9); g.add(glow);
-  g.position.set(x, y, z); g.rotation.set(rx, ry, rz);
+  const bezel = new THREE.Mesh(new RoundedBoxGeometry(w + 0.05, h + 0.05, 0.035, 3, 0.012), bezelMat); g.add(bezel);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false })); scr.position.z = 0.019; g.add(scr);
+  // LED under-glow strip
+  const led = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.008, 0.01), new THREE.MeshBasicMaterial({ color: 0x57e6ff, toneMapped: false })); led.position.set(0, -h / 2 - 0.03, -0.01); g.add(led);
+  const glow = new THREE.PointLight(new THREE.Color(tint || '#7fd6ff'), 2.2, 3.2, 2); glow.position.set(0, 0, 0.5); g.add(glow);
+  g.position.set(x, y, z); g.rotation.set(rx, ry, 0);
   scene.add(g);
-  screens.push({ ctx, tex, painter, data, glow, phase: Math.random() * 10, rate: 6 + Math.random() * 4, last: -1 });
+  screens.push({ ctx, tex, painter, data, glow, phase: Math.random() * 10, rate: 8 + Math.random() * 4, last: -1 });
   return g;
 }
-
-function buildWall() {
+function build() {
   const s = (i) => STOCKS[i % STOCKS.length];
-  makeTV({ painter: 'ticker', data: s(0), x: -3.9, y: 1.00, z: -0.6, ry: 0.42, rz: 0.02, w: 2.6, h: 2.0, d: 2.2, tint: '#59d18a' });
-  makeTV({ painter: 'ticker', data: s(1), x: -1.35, y: 0.55, z: -1.5, ry: 0.18, w: 2.1, h: 1.65, d: 1.9, tint: '#ff7a6a' });
-  makeTV({ painter: 'wordmark', x: 0.55, y: 0.85, z: -2.3, ry: -0.05, w: 1.5, h: 1.25, d: 1.5, tint: '#dfff4a' });
-  makeTV({ painter: 'bars', x: 4.7, y: 1.05, z: -1.7, ry: -0.5, rz: -0.03, w: 2.1, h: 1.6, d: 1.9, tint: '#c8c0ff' });
-  makeTV({ painter: 'tape', x: 2.2, y: 0.00, z: -1.2, ry: -0.3, w: 1.9, h: 1.55, d: 1.8, tint: '#7fe0c0' });
-  makeTV({ painter: 'health', x: -4.1, y: -1.30, z: 0.2, ry: 0.5, w: 2.3, h: 1.75, d: 2.0, tint: '#ffd23f' });
-  makeTV({ painter: 'ticker', data: s(2), x: -1.6, y: -1.40, z: -0.3, ry: 0.12, w: 2.3, h: 1.8, d: 2.0, tint: '#5cff9a' });
-  makeTV({ painter: 'static', x: 0.9, y: -1.20, z: -0.9, ry: -0.1, w: 1.7, h: 1.4, d: 1.6, tint: '#e0e0e0' });
-  makeTV({ painter: 'ticker', data: s(3), x: 4.3, y: -0.90, z: 0.1, ry: -0.55, w: 2.5, h: 1.95, d: 2.1, tint: '#ff7a6a' });
-  makeTV({ painter: 'ticker', data: s(4), x: 6.0, y: 2.2, z: -4.2, ry: -0.35, w: 2.0, h: 1.6, d: 1.8, tint: '#59d18a' });
-  makeTV({ painter: 'ticker', data: s(5), x: -5.6, y: -0.15, z: -2.8, ry: 0.6, w: 2.0, h: 1.6, d: 1.8, tint: '#c8c0ff' });
+  // six screens, three across, two high, the wings toed in
+  const yB = 0.62, yT = 1.58, dx = 1.68;
+  monitor({ painter: 'candles', data: s(0), x: 0, y: yB, z: 0, tint: '#5fb8ff' });
+  monitor({ painter: 'book', data: s(0), x: -dx, y: yB, z: 0.26, ry: 0.32, tint: '#3ddc84' });
+  monitor({ painter: 'board', x: dx, y: yB, z: 0.26, ry: -0.32, tint: '#ff8a8a' });
+  monitor({ painter: 'heat', x: 0, y: yT, z: -0.02, rx: 0.16, tint: '#57e6ff' });
+  monitor({ painter: 'position', data: s(1), x: -dx, y: yT, z: 0.24, ry: 0.32, rx: 0.16, tint: '#ffd23f' });
+  monitor({ painter: 'tape', x: dx, y: yT, z: 0.24, ry: -0.32, rx: 0.16, tint: '#5fb8ff' });
+  // arms and a spine
+  for (const x of [-dx, 0, dx]) { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.0, 0.06), armMat); arm.position.set(x * 0.98, 1.05, -0.12 + (x ? 0.2 : 0)); scene.add(arm); }
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.05, 0.05), armMat); bar.position.set(0, 1.08, -0.16); scene.add(bar);
+  // desk
+  const desk = new THREE.Mesh(new RoundedBoxGeometry(4.6, 0.06, 1.7, 2, 0.02), deskMat); desk.position.set(0, 0.06, 0.55); scene.add(desk);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.006, 0.02), new THREE.MeshBasicMaterial({ color: 0x57e6ff, toneMapped: false })); edge.position.set(0, 0.032, 1.4); scene.add(edge);
+  // keyboard, mouse, mug, phone
+  const kb = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.025, 0.3, 2, 0.01), new THREE.MeshStandardMaterial({ color: 0x0c1014, roughness: 0.5 })); kb.position.set(0.05, 0.1, 0.95); scene.add(kb);
+  const kbl = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.24), new THREE.MeshBasicMaterial({ color: 0x1f6f8a, toneMapped: false, transparent: true, opacity: 0.55 })); kbl.rotation.x = -Math.PI / 2; kbl.position.set(0.05, 0.114, 0.95); scene.add(kbl);
+  const mouse = new THREE.Mesh(new RoundedBoxGeometry(0.11, 0.05, 0.17, 3, 0.03), new THREE.MeshStandardMaterial({ color: 0x0c1014, roughness: 0.45 })); mouse.position.set(0.72, 0.11, 0.98); scene.add(mouse);
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.16, 24), new THREE.MeshStandardMaterial({ color: 0xe8e2d6, roughness: 0.4 })); mug.position.set(-1.2, 0.17, 1.0); scene.add(mug);
+  const phone = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.012, 0.28, 2, 0.006), new THREE.MeshStandardMaterial({ color: 0x0a0d10, roughness: 0.3, metalness: 0.4 })); phone.position.set(1.1, 0.1, 1.05); phone.rotation.y = 0.3; scene.add(phone);
+  const phoneScr = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.25), new THREE.MeshBasicMaterial({ color: 0x1a3b4a, toneMapped: false })); phoneScr.rotation.x = -Math.PI / 2; phoneScr.rotation.z = 0.3; phoneScr.position.set(1.1, 0.107, 1.05); scene.add(phoneScr);
+  // window wall behind: mullions and city bokeh
+  const mull = new THREE.MeshStandardMaterial({ color: 0x0b1116, roughness: 0.7 });
+  for (const x of [-3.2, -1.1, 1.1, 3.2]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 6, 0.08), mull); m.position.set(x, 2.2, -2.6); scene.add(m); }
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(9, 0.1, 0.3), mull); sill.position.set(0, 0.0, -2.6); scene.add(sill);
+  const N = 420; const pos = new Float32Array(N * 3); const col = new Float32Array(N * 3); const palette = [[1, .72, .42], [1, .9, .7], [.5, .75, 1], [.9, .95, 1], [1, .45, .4], [.4, .9, .8]];
+  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - .5) * 26; pos[i * 3 + 1] = Math.random() * 6 - 0.5; pos[i * 3 + 2] = -7 - Math.random() * 12; const c = palette[Math.floor(Math.random() * palette.length)]; col.set(c, i * 3); }
+  const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const sc = document.createElement('canvas'); sc.width = sc.height = 64; const sx = sc.getContext('2d'); const rg = sx.createRadialGradient(32, 32, 2, 32, 32, 30); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.35, 'rgba(255,255,255,.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sx.fillStyle = rg; sx.fillRect(0, 0, 64, 64);
+  const spr = new THREE.CanvasTexture(sc);
+  const city = new THREE.Points(bg, new THREE.PointsMaterial({ size: 0.42, map: spr, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })); city.userData.mat = city.material; scene.add(city); scene.userData.city = city;
   // floor
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x070c0a, roughness: 0.75, metalness: 0.15 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = -1.75; scene.add(floor);
-  // cables / clutter: a few thin dark boxes
-  for (let i = 0; i < 14; i++) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.06 + Math.random() * 0.4, 0.06, 1 + Math.random() * 3), darkMat);
-    m.position.set(-6 + Math.random() * 12, -1.72, -3 + Math.random() * 5); m.rotation.y = Math.random() * 3; scene.add(m);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x05080b, roughness: 0.6, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.7; scene.add(floor);
+  // lights: cool from the screens, warm desk lamp on the left
+  scene.add(new THREE.AmbientLight(0x2a3d4a, 1.2));
+  const lamp = new THREE.PointLight(0xffb35c, 6, 4, 2); lamp.position.set(-1.9, 1.3, 0.9); scene.add(lamp);
+  const lampBody = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.06, 16), new THREE.MeshBasicMaterial({ color: 0xffc98a, toneMapped: false })); lampBody.position.set(-1.9, 1.3, 0.9); scene.add(lampBody);
+  const rim = new THREE.DirectionalLight(0x5f7fff, 0.8); rim.position.set(3, 4, -4); scene.add(rim);
+  // the trader: an out-of-focus silhouette in the foreground, parented to the camera
+  // Silhouette drawn once at 1024², then blurred: it occludes the bright screens, which is what
+  // makes it read as a person. Rim light on the screen-facing edge, warm bounce from the lamp side.
+  const SZ = 1024;
+  const shape = document.createElement('canvas'); shape.width = shape.height = SZ; const sh = shape.getContext('2d');
+  function body(cx) {
+    cx.beginPath();
+    cx.moveTo(40, SZ);                                        // left hem
+    cx.bezierCurveTo(60, 720, 210, 610, 340, 585);            // left arm/shoulder
+    cx.bezierCurveTo(392, 560, 404, 520, 400, 470);           // trapezius into neck
+    cx.bezierCurveTo(398, 300, 452, 214, 540, 214);           // left of skull
+    cx.bezierCurveTo(632, 214, 686, 300, 684, 470);           // right of skull
+    cx.bezierCurveTo(680, 520, 692, 560, 744, 585);           // neck into right shoulder
+    cx.bezierCurveTo(874, 610, 1024, 720, 1044, SZ);          // right arm/hem
+    cx.closePath();
   }
-  // dust
-  const N = 900; const pos = new Float32Array(N * 3);
-  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - .5) * 16; pos[i * 3 + 1] = Math.random() * 6 - 1.5; pos[i * 3 + 2] = (Math.random() - .5) * 10; }
-  const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xbfd8cc, size: 0.02, transparent: true, opacity: 0.55, depthWrite: false }));
-  scene.add(dust); scene.userData.dust = dust;
-  scene.add(new THREE.AmbientLight(0x4a6a62, 2.2));
-  const top = new THREE.DirectionalLight(0xbfe6d6, 1.6); top.position.set(1, 8, 2); scene.add(top);
-  const key = new THREE.DirectionalLight(0x9fd6c0, 2.2); key.position.set(-4, 6, 4); scene.add(key);
-  const rim = new THREE.DirectionalLight(0x5f7fff, 1.4); rim.position.set(5, 3, -6); scene.add(rim);
+  // chair back behind the body
+  sh.fillStyle = '#000'; sh.beginPath(); sh.roundRect(120, 690, 840, 400, 70); sh.fill();
+  // headset band + cup
+  sh.lineWidth = 26; sh.strokeStyle = '#000'; sh.beginPath(); sh.arc(542, 330, 156, Math.PI * 1.06, Math.PI * 1.94); sh.stroke();
+  sh.beginPath(); sh.ellipse(392, 372, 40, 58, -0.12, 0, Math.PI * 2); sh.fill();
+  body(sh); sh.fill();
+  // rim: stroke the same outline in a cool screen-lit tone, then a warm pass offset toward the lamp
+  sh.globalCompositeOperation = 'source-atop';
+  sh.lineWidth = 8; sh.strokeStyle = 'rgba(150, 226, 255, 1)'; body(sh); sh.stroke();
+  sh.save(); sh.translate(-6, -3); sh.lineWidth = 5; sh.strokeStyle = 'rgba(255, 179, 92, .85)'; body(sh); sh.stroke(); sh.restore();
+  sh.globalCompositeOperation = 'source-over';
+  const pc = document.createElement('canvas'); pc.width = pc.height = SZ; const px = pc.getContext('2d');
+  px.filter = 'blur(7px)'; px.drawImage(shape, 0, 0);
+  const ptex = new THREE.CanvasTexture(pc); ptex.colorSpace = THREE.SRGBColorSpace;
+  const person = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.98), new THREE.MeshBasicMaterial({ map: ptex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+  person.position.set(-0.44, -0.44, -1.70); camera.add(person); scene.add(camera); scene.userData.person = person;
 }
-buildWall();
+build();
 
 // ------------------------------------------------------------------ post: bloom + film grade
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.75, 0.55, 0.62); composer.addPass(bloom);
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.6, 0.72));
 const Grade = {
   uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -289,28 +349,12 @@ const Grade = {
     uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uRes; varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
     void main(){
-      vec2 uv = vUv;
-      // gentle barrel distortion, like a lens
-      vec2 c = uv - 0.5; float r2 = dot(c, c); uv = 0.5 + c * (1.0 + 0.06 * r2);
-      // chromatic aberration grows toward the edges
-      float ca = 0.0028 * r2 * 4.0;
-      float rr = texture2D(tDiffuse, uv + c * ca).r;
-      float gg = texture2D(tDiffuse, uv).g;
-      float bb = texture2D(tDiffuse, uv - c * ca).b;
-      vec3 col = vec3(rr, gg, bb);
-      // scanlines and a slow rolling band
-      float sl = 0.94 + 0.06 * sin(uv.y * uRes.y * 1.6);
-      float band = 0.97 + 0.03 * smoothstep(0.0, 0.08, abs(fract(uv.y - uTime * 0.05) - 0.5));
-      col *= sl * band;
-      // film grain
-      float g = hash(uv * uRes.xy * 0.5 + fract(uTime) * 100.0) - 0.5;
-      col += g * 0.085;
-      // vignette and a cool grade
-      float vig = smoothstep(0.95, 0.25, length(c) * 1.15);
-      col *= mix(0.35, 1.0, vig);
-      col = mix(col, col * vec3(0.92, 1.02, 0.98), 0.6);
-      // flicker
-      col *= 0.985 + 0.015 * sin(uTime * 60.0);
+      vec2 c = vUv - 0.5; float r2 = dot(c, c); vec2 uv = 0.5 + c * (1.0 + 0.035 * r2);
+      float ca = 0.006 * r2;
+      vec3 col = vec3(texture2D(tDiffuse, uv + c * ca).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - c * ca).b);
+      float g = hash(uv * uRes.xy * 0.5 + fract(uTime) * 100.0) - 0.5; col += g * 0.055;
+      float vig = smoothstep(0.98, 0.3, length(c) * 1.2); col *= mix(0.3, 1.0, vig);
+      col = mix(col, col * vec3(0.94, 1.0, 1.06), 0.5);
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
@@ -320,39 +364,38 @@ composer.addPass(new OutputPass());
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false); composer.setSize(w, h);
-  camera.aspect = w / h; camera.updateProjectionMatrix();
+  camera.aspect = w / h; camera.fov = w < 720 ? 46 : 34; camera.updateProjectionMatrix();
   grade.uniforms.uRes.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
-  camera.fov = w < 720 ? 58 : 38; camera.updateProjectionMatrix(); camera.userData.z = w < 720 ? 11.6 : 9.4;
+  camera.userData.z = w < 720 ? 9.4 : 7.1;
+  if (scene.userData.person) { const p = scene.userData.person; p.position.x = w < 720 ? -0.20 : -0.44; p.position.y = w < 720 ? -0.60 : -0.44; p.scale.setScalar(w < 720 ? 1.25 : 1); }
 }
 addEventListener('resize', resize); resize();
 
-// ------------------------------------------------------------------ HUD
+// ------------------------------------------------------------------ HUD + loop
 const fpsEl = document.getElementById('fps'), tcEl = document.getElementById('tc'), dateEl = document.getElementById('date');
 const d0 = new Date(); dateEl.textContent = `[ ${String(d0.getMonth() + 1).padStart(2, '0')} / ${String(d0.getDate()).padStart(2, '0')} / ${String(d0.getFullYear()).slice(2)} ]`;
 let frames = 0, fpsT = performance.now();
 const mouse = { x: 0, y: 0 };
 addEventListener('pointermove', (e) => { mouse.x = (e.clientX / innerWidth - 0.5) * 2; mouse.y = (e.clientY / innerHeight - 0.5) * 2; });
-
 const clock = new THREE.Clock();
 let booted = false;
 function frame() {
   const t = clock.getElapsedTime();
-  // screens: repaint at their own low rate, staggered
   for (const s of screens) {
     const step = Math.floor((t + s.phase) * s.rate);
-    if (step !== s.last) { s.last = step; painters[s.painter](s.ctx, t + s.phase, s.data); s.tex.needsUpdate = true; s.glow.intensity = 8 + 2.5 * Math.sin((t + s.phase) * 7.0) * Math.random(); }
+    if (step !== s.last) { s.last = step; painters[s.painter](s.ctx, t + s.phase, s.data); s.tex.needsUpdate = true; }
   }
-  // camera: slow drift + parallax
-  const tx = Math.sin(t * 0.18) * 0.45 + mouse.x * 0.6, ty = 1.1 + Math.cos(t * 0.13) * 0.18 - mouse.y * 0.35;
-  camera.position.x += (tx - camera.position.x) * 0.03; camera.position.y += (ty - camera.position.y) * 0.03; camera.position.z += ((camera.userData.z || 9.4) - camera.position.z) * 0.05;
-  camera.lookAt(0.2, 0.05, -1.2);
-  scene.userData.dust.rotation.y = t * 0.01; scene.userData.dust.position.y = Math.sin(t * 0.2) * 0.1;
+  const tx = 0.30 + Math.sin(t * 0.15) * 0.16 + mouse.x * 0.28, ty = 1.72 + Math.cos(t * 0.11) * 0.06 - mouse.y * 0.14;
+  camera.position.x += (tx - camera.position.x) * 0.03; camera.position.y += (ty - camera.position.y) * 0.03; camera.position.z += ((camera.userData.z || 3.9) - camera.position.z) * 0.05;
+  camera.lookAt(0.05, 1.06, 0);
+  const p = scene.userData.person; const py = innerWidth < 720 ? -0.60 : -0.44;
+  p.position.y = py + Math.sin(t * 0.9) * 0.005; p.position.x += (((innerWidth < 720 ? -0.20 : -0.44) - mouse.x * 0.04) - p.position.x) * 0.05;
+  scene.userData.city.material.size = 0.42 + Math.sin(t * 0.8) * 0.02;
   grade.uniforms.uTime.value = t;
   composer.render();
   frames++; const now = performance.now();
   if (now - fpsT > 500) { fpsEl.textContent = `${Math.round(frames * 1000 / (now - fpsT))} fps`; frames = 0; fpsT = now; }
-  const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = Math.floor(t) % 60, ff = Math.floor((t % 1) * 24);
-  tcEl.textContent = `[ ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}:${String(ff).padStart(2, '0')} ]`;
+  tcEl.textContent = new Date().toISOString().slice(11, 19) + ' UTC';
   if (!booted && t > 0.4) { booted = true; document.getElementById('boot').classList.add('gone'); }
   requestAnimationFrame(frame);
 }
