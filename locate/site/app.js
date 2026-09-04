@@ -1035,7 +1035,7 @@
         if (d.chg24 !== null && !Number.isNaN(d.chg24)) priceSub.appendChild(h('span', {}, '24h ', h('b', { class: d.chg24 > 0 ? 'pos' : d.chg24 < 0 ? 'neg' : '' }, (d.chg24 >= 0 ? '+' : '') + d.chg24.toFixed(2) + '%')));
         priceSub.appendChild(h('span', {}, 'Volume 24h ', h('b', {}, fmtUsd(d.vol24, 0))));
         clear(chart);
-        chart.appendChild(h('iframe', { src: d.url + '?embed=1&theme=light&chartTheme=light&trades=0&info=0&chartLeftToolbar=0&loadChartSettings=0&chartResolution=15', loading: 'lazy', title: `${symbol} price on the DEX pool` }));
+        chart.appendChild(h('iframe', { src: d.url + '?embed=1&theme=dark&chartTheme=dark&trades=0&info=0&chartLeftToolbar=0&loadChartSettings=0&chartResolution=15', loading: 'lazy', title: `${symbol} price on the DEX pool` }));
         chart.appendChild(h('div', { class: 'cap' }, h('span', {}, `${symbol} / USDG pool on Robinhood Chain, via DexScreener`), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'Open on DexScreener ↗')));
       } else {
         clear(chart);
