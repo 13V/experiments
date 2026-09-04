@@ -706,7 +706,7 @@ body.zooming #glass, body.zooming #led { transform-origin: var(--dock-x, 50%) va
    dim meta right-aligned, ~33px rows striped rather than ruled, square corners, no shadows.
    The app is one of those screens, so it is built from the same parts. */
 
-:root { --scr-bg: #070c11; --scr-head: rgba(255, 255, 255, .04); --scr-stripe: rgba(255, 255, 255, .025); }
+:root { --scr-bg: #0e1a24; --scr-head: rgba(255, 255, 255, .055); --scr-stripe: rgba(255, 255, 255, .032); }
 
 .card, .panel, .stat, .table-wrap, .chart, .mkt-stats {
   background: var(--scr-bg) !important;
@@ -784,3 +784,80 @@ button, .btn, select, input[type=text], input[type=number], .amt, .notice, .pill
 .launch { border-radius: 2px; }
 #masthead nav a { border-radius: 2px; }
 .hf .track, .hf .fill { border-radius: 0; }
+
+/* ================================================================ grunge on the surfaces
+   Grain over type destroys it; grain *under* type does not. Every panel's own background gets the
+   noise, the scanlines and the uneven light, so the surfaces read as filthy glass while the numbers
+   printed on them stay sharp. */
+
+:root {
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.95'/%3E%3C/svg%3E");
+  --scan: repeating-linear-gradient(rgba(0, 0, 0, .34) 0 1px, rgba(255, 255, 255, .02) 1px 2px, transparent 2px 3px);
+}
+
+.card, .panel, .stat, .table-wrap, .chart, .mkt-stats, .stats, #masthead, footer, .notice, .amt {
+  background-color: var(--scr-bg) !important;
+  background-image:
+    /* uneven light: a hot corner and a dead one, never a flat wash */
+    radial-gradient(120% 130% at 8% -14%, rgba(140, 215, 250, .17), transparent 52%),
+    radial-gradient(80% 85% at 112% 118%, rgba(0, 0, 0, .78), transparent 58%),
+    radial-gradient(60% 70% at 88% 6%, rgba(0, 0, 0, .45), transparent 60%),
+    var(--scan),
+    var(--noise) !important;
+  background-blend-mode: screen, multiply, multiply, normal, overlay !important;
+  background-size: auto, auto, auto, auto, 220px 220px !important;
+}
+#masthead, footer { background-color: rgba(6, 11, 16, .97) !important; }
+
+/* rows carry the scan too, so the table surface is textured all the way down */
+tbody tr:nth-child(even) td { background-image: var(--scan); }
+tbody td { background-image: var(--scan); background-blend-mode: multiply; }
+
+/* inside the chassis: light bleeding from the top edge, dirt pooling in the corners */
+body.docked #app {
+  box-shadow:
+    0 0 0 7px #0a1219,
+    0 0 0 8px #1d2a36,
+    0 42px 130px rgba(0, 0, 0, .8),
+    0 0 160px rgba(87, 230, 255, .16),
+    0 0 400px rgba(40, 130, 190, .10),
+    inset 0 42px 90px -60px rgba(140, 215, 250, .40),
+    inset 0 0 150px rgba(0, 0, 0, .75) !important;
+}
+
+/* the panel edges catch light unevenly, the way a real bezel does */
+.card, .panel, .stat, .table-wrap, .chart {
+  border-color: #1d2a35 !important;
+  box-shadow: inset 0 1px 0 rgba(150, 215, 255, .09), inset 0 -18px 40px -30px rgba(0, 0, 0, .9) !important;
+}
+
+/* a last, light pass of grain over the whole picture - enough to sit on the type without eating it */
+#dust {
+  position: fixed; inset: 3.4vh 0; left: 0; right: 0; width: min(93vw, 1580px); margin-inline: auto;
+  z-index: 44; pointer-events: none; opacity: 0; transition: opacity .8s ease .3s; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700'%3E%3Cg fill='none' stroke='%23bcd8e8' stroke-width='.7' opacity='.30'%3E%3Cpath d='M120 40 L188 96'/%3E%3Cpath d='M700 120 L744 210'/%3E%3Cpath d='M300 600 L372 556'/%3E%3Cpath d='M820 430 L860 486'/%3E%3C/g%3E%3Cg fill='%23cfe4f0' opacity='.24'%3E%3Ccircle cx='210' cy='300' r='1.1'/%3E%3Ccircle cx='640' cy='90' r='.9'/%3E%3Ccircle cx='450' cy='520' r='1.3'/%3E%3Ccircle cx='780' cy='640' r='1'/%3E%3Ccircle cx='90' cy='480' r='.8'/%3E%3Ccircle cx='560' cy='260' r='1.1'/%3E%3Ccircle cx='330' cy='150' r='.9'/%3E%3Ccircle cx='880' cy='200' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 900px 700px;
+}
+body.docked #dust { opacity: .55; }
+@media (max-width: 860px) { #dust { display: none; } }
+
+#topgrain {
+  position: fixed; top: -40%; left: -40%; width: 180%; height: 180%;
+  z-index: 993; pointer-events: none; opacity: .10; mix-blend-mode: overlay;
+  background-image: var(--noise); background-size: 200px 200px;
+  animation: grainShift .55s steps(6) infinite;
+}
+@media (prefers-reduced-motion: reduce) { #dust {
+  position: fixed; inset: 3.4vh 0; left: 0; right: 0; width: min(93vw, 1580px); margin-inline: auto;
+  z-index: 44; pointer-events: none; opacity: 0; transition: opacity .8s ease .3s; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700'%3E%3Cg fill='none' stroke='%23bcd8e8' stroke-width='.7' opacity='.30'%3E%3Cpath d='M120 40 L188 96'/%3E%3Cpath d='M700 120 L744 210'/%3E%3Cpath d='M300 600 L372 556'/%3E%3Cpath d='M820 430 L860 486'/%3E%3C/g%3E%3Cg fill='%23cfe4f0' opacity='.24'%3E%3Ccircle cx='210' cy='300' r='1.1'/%3E%3Ccircle cx='640' cy='90' r='.9'/%3E%3Ccircle cx='450' cy='520' r='1.3'/%3E%3Ccircle cx='780' cy='640' r='1'/%3E%3Ccircle cx='90' cy='480' r='.8'/%3E%3Ccircle cx='560' cy='260' r='1.1'/%3E%3Ccircle cx='330' cy='150' r='.9'/%3E%3Ccircle cx='880' cy='200' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 900px 700px;
+}
+body.docked #dust { opacity: .55; }
+@media (max-width: 860px) { #dust { display: none; } }
+
+#topgrain { animation: none; } }
+
+/* phosphor bleed on anything bright */
+.stat .value, .mkt-price .big, td.sym, thead th:first-child { text-shadow: 0 0 22px rgba(130, 205, 240, .22); }
+.pill.open, .badge.live { text-shadow: 0 0 14px rgba(61, 220, 132, .45); }
