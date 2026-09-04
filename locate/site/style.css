@@ -950,3 +950,38 @@ body.docked #app { background: #000 !important; }
   animation: grainShift .45s steps(5) infinite reverse;
 }
 @media (prefers-reduced-motion: reduce) { #finegrain { animation: none; } }
+
+/* ================================================================ grain, contained
+   The grain layers were oversized and animated by translating the whole element, so the noise tile
+   moved past the bezel and flashed at the frame edge. They now sit exactly on the screen, clipped to
+   it, and animate their background-position instead - nothing moves outside the glass. The chromatic
+   fringes and the rolling band went with them: both crossed the border and neither belongs there. */
+
+#topgrain, #finegrain {
+  /* 3px inside the chassis on every edge, so no grain can ever touch the bezel */
+  position: fixed; top: calc(3.4vh + 3px); bottom: calc(3.4vh + 3px); left: 0; right: 0;
+  width: calc(min(93vw, 1580px) - 6px); height: auto !important; margin-inline: auto;
+  border-radius: 12px; overflow: hidden;
+  opacity: 0; transition: opacity .5s ease .3s;
+  animation: none !important;
+  transform: none !important;
+}
+body.docked #topgrain { opacity: .13; animation: grainPan 1.1s steps(9) infinite !important; }
+body.docked #finegrain { opacity: .07; animation: grainPan 0.8s steps(7) infinite reverse !important; }
+
+/* the tile shifts inside the element, so the edges never move */
+@keyframes grainPan {
+  0%   { background-position: 0 0; }
+  100% { background-position: 220px 220px; }
+}
+
+/* these crossed the bezel; the room keeps its vignette, nothing else */
+#lens::before, #lens::after { display: none !important; }
+#roll { display: none !important; }
+
+@media (max-width: 860px) {
+  #topgrain, #finegrain { top: 0; bottom: 0; width: 100%; border-radius: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.docked #topgrain, body.docked #finegrain { animation: none !important; }
+}
