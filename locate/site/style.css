@@ -985,3 +985,99 @@ body.docked #finegrain { opacity: .07; animation: grainPan 0.8s steps(7) infinit
 @media (prefers-reduced-motion: reduce) {
   body.docked #topgrain, body.docked #finegrain { animation: none !important; }
 }
+
+/* ================================================================ masthead: the cyan rule, carried in
+   The signature move of the product is a solid cyan rule marking the active thing — vertical,
+   because the sections it labels stack in a column. The masthead's sections run in a row instead,
+   so the rule turns: it becomes the header's own bottom hairline, thickened to 3px and lit cyan
+   under whichever tab is active — the header's separator and the nav's active-state are the same
+   line. Everything else recedes to dim text on black: the mark, the network line, the wallet.
+   Connect Wallet reads as the one action in the bar — a hairline box with a cyan rule and cyan
+   label — never a filled slab, so the data stays the only bright thing on the screen. */
+
+#masthead {
+  background: none !important;
+  border-bottom: 1px solid var(--line-2) !important;
+  /* #app is a flex column: without this the header is a shrinkable flex item and
+     collapses to its content height, so the 3px rule never sits where it should */
+  flex: 0 0 auto !important;
+  height: 58px !important;
+  padding: 0 26px !important;
+  gap: 30px !important;
+}
+
+/* brand mark: cyan is allowed here (it is the mark, not data) but it does not glow or shout */
+#masthead .brand { gap: 9px !important; font-size: 15px !important; }
+#masthead .brand svg { filter: none !important; opacity: .85; transition: opacity .15s; }
+#masthead .brand span { color: var(--ink-2); transition: color .15s; }
+#masthead .brand:hover svg { opacity: 1; }
+#masthead .brand:hover span { color: var(--ink); }
+
+/* nav: each tab spans the full header height, so the active rule can sit flush with the header's
+   own baseline — no rounded box, no tint fill, just the label and, when active, the rule under it */
+#masthead nav { align-self: stretch; gap: 2px !important; }
+#masthead nav a {
+  display: flex; align-items: center; height: 100%;
+  padding: 0 15px !important; margin: 0 !important; border-radius: 0 !important;
+  box-shadow: inset 0 -3px 0 0 transparent;
+  transition: color .15s, box-shadow .15s;
+}
+#masthead nav a:hover {
+  color: var(--ink) !important; background: none !important;
+  box-shadow: inset 0 -3px 0 0 var(--line) !important;
+}
+#masthead nav a.active {
+  color: var(--accent) !important; background: none !important;
+  box-shadow: inset 0 -3px 0 0 var(--accent) !important;
+}
+#masthead nav a:focus-visible { outline-offset: -3px; }
+
+/* network state: a quiet status line, not a bordered pill */
+#masthead .net {
+  border: 0 !important; border-radius: 0 !important; padding: 0 !important;
+  background: none !important; gap: 7px !important;
+  color: var(--ink-3); font-size: 11px; letter-spacing: .12em;
+}
+#masthead .net i { box-shadow: 0 0 6px var(--up); }
+
+/* connect wallet: hairline outline + cyan rule + cyan label — an action, not a slab of colour */
+#masthead #btn-connect, #masthead .wallet button {
+  background: none !important; color: var(--accent) !important;
+  border: 1px solid var(--line) !important; border-left: 3px solid var(--accent) !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  height: 34px !important; padding: 0 16px 0 13px !important;
+  font-size: 11px; font-weight: 600; letter-spacing: .12em;
+  transition: border-color .15s, background .15s, color .15s;
+}
+#masthead #btn-connect:hover, #masthead .wallet button:hover {
+  border-color: var(--accent-2) !important; border-left-color: var(--accent) !important;
+  background: var(--accent-tint) !important; color: var(--accent) !important;
+}
+#masthead #btn-connect:focus-visible, #masthead .wallet button:focus-visible { outline-offset: 2px; }
+
+/* connected state: dim address and unit, the balance in ink — no colour claimed by a number
+   that isn't signed */
+#masthead .wallet { gap: 10px !important; font-size: 13px; }
+#masthead .wallet > span:first-child { color: var(--ink-3); }
+#masthead .wallet > span:nth-child(2) { color: var(--ink-3); font-size: 11px; letter-spacing: .07em; }
+#masthead .wallet .amber { color: var(--ink) !important; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+#masthead a:focus-visible, #masthead button:focus-visible { border-radius: 0 !important; }
+
+@media (max-width: 760px) {
+  #masthead {
+    padding: 0 16px !important; height: auto !important; min-height: 52px !important;
+    flex-wrap: wrap !important; gap: 0 12px !important;
+  }
+  #masthead .brand { order: 1; padding: 11px 0; }
+  #masthead .spacer { order: 2; }
+  #masthead .wallet { order: 3; padding: 11px 0; }
+  #masthead nav {
+    order: 4; flex-basis: 100%; align-self: auto; gap: 4px !important;
+    padding: 0 !important; margin: 0 -16px; overflow-x: auto;
+    border-top: 1px solid var(--line-2);
+  }
+  #masthead nav a { height: 42px; padding: 0 16px !important; font-size: 12px; white-space: nowrap; }
+  #masthead nav a:first-child { padding-left: 16px !important; }
+  #masthead #btn-connect, #masthead .wallet button { height: 30px !important; padding: 0 13px 0 11px !important; font-size: 10px; }
+}
