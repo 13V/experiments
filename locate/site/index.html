@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Locate — Robinhood Chain</title>
+<meta name="description" content="Borrow stock tokens against USDG, or lend them out, on Robinhood Chain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="statusbar">
+    <div class="brand">LOCATE</div>
+    <div class="seg seg-extra" id="s-chain">chain <b>—</b></div>
+    <div class="seg" id="s-block">block <b>—</b></div>
+    <div class="seg seg-extra" id="s-feed">feed <b>—</b></div>
+    <div class="spacer"></div>
+    <div class="seg wallet" id="s-wallet"><button id="btn-connect" class="ghost">connect wallet</button></div>
+  </header>
+
+  <nav id="tabs">
+    <a href="#/markets" data-route="markets">Markets</a>
+    <a href="#/lend" data-route="lend">Lend</a>
+    <a href="#/short" data-route="short">Short</a>
+    <a href="#/premium" data-route="premium">Premium Board</a>
+  </nav>
+
+  <main id="view"><p class="dim">loading —</p></main>
+
+  <footer>
+    Locate — stock-token lending and one-click spot shorting on Robinhood Chain. Not investment advice. Markets can and do go to zero.
+  </footer>
+
+</div>
+
+<div id="toasts"></div>
+
+<script src="./lib.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
