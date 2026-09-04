@@ -177,30 +177,38 @@
 
   // ================================================================== quotes proxy (Robinhood, no CORS)
   let quotesNoticeLogged = false;
+  let quotesInFlight = null;
   async function fetchQuotes(force) {
-    // One attempt per 15s (matching the function's own s-maxage) whether it succeeded or
-    // failed — otherwise every view that calls fetchQuotes() during a single render would
-    // re-probe /api/quotes and, locally without `vercel dev`, re-trigger the browser's own
-    // resource-fail logging for that request on every single call.
+    // One request at a time: every view that asks while a fetch is in flight awaits that same
+    // fetch (boot warms the cache, so the first view would otherwise see an empty result).
+    // After that, one attempt per 15s (matching the function's own s-maxage) whether it
+    // succeeded or failed — locally without `vercel dev` this also stops the browser's own
+    // resource-fail logging from repeating on every call.
+    if (quotesInFlight) return quotesInFlight;
     const attemptedRecently = STATE.quotesLastAttempt && (Date.now() / 1000 - STATE.quotesLastAttempt) < 15;
     if (attemptedRecently && !force) return STATE.quotes || { assets: [], prices: [] };
     STATE.quotesLastAttempt = Date.now() / 1000;
-    try {
-      const res = await fetch('/api/quotes');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      STATE.quotes = data;
-      STATE.quotesTs = data.ts || Date.now() / 1000;
-      STATE.quotesUnavailable = false;
-    } catch (e) {
-      STATE.quotesUnavailable = true;
-      if (!STATE.quotes) STATE.quotes = { assets: [], prices: [] };
-      // Deliberately console.info, not console.error: this is an expected, fully-handled
-      // state when running locally without `vercel dev` (see the notice on Markets/Premium),
-      // not a real failure. Logged once so it's still visible while debugging.
-      if (!quotesNoticeLogged) { console.info('[locate] /api/quotes unavailable (expected without `vercel dev`) — DEX prices still load.'); quotesNoticeLogged = true; }
-    }
-    return STATE.quotes;
+    quotesInFlight = (async () => {
+      try {
+        const res = await fetch('/api/quotes');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        STATE.quotes = data;
+        STATE.quotesTs = data.ts || Date.now() / 1000;
+        STATE.quotesUnavailable = false;
+      } catch (e) {
+        STATE.quotesUnavailable = true;
+        if (!STATE.quotes) STATE.quotes = { assets: [], prices: [] };
+        // Deliberately console.info, not console.error: this is an expected, fully-handled
+        // state when running locally without `vercel dev` (see the notice on Markets/Premium),
+        // not a real failure. Logged once so it's still visible while debugging.
+        if (!quotesNoticeLogged) { console.info('[locate] /api/quotes unavailable (expected without `vercel dev`) — DEX prices still load.'); quotesNoticeLogged = true; }
+      } finally {
+        quotesInFlight = null;
+      }
+      return STATE.quotes;
+    })();
+    return quotesInFlight;
   }
   function quoteFor(symbol) {
     const row = (STATE.quotes?.prices || []).find((p) => p.tokenSymbol === symbol);
@@ -623,9 +631,9 @@
       let refPrice = null;
       const calc = h('div', { class: 'panel' });
       calc.appendChild(h('h3', {}, 'Size calculator'));
-      const collIn = h('input', { type: 'text', placeholder: '10000' });
+      const collIn = h('input', { type: 'text', value: '10000', placeholder: '10000' });
       const modeSel = h('select', {}, h('option', { value: 'hf' }, 'target health factor'), h('option', { value: 'borrow' }, `target borrow (${symbol})`));
-      const targetIn = h('input', { type: 'text', placeholder: '1.5' });
+      const targetIn = h('input', { type: 'text', value: '1.5', placeholder: '1.5' });
       const borrowEl = h('div', { class: 'value small' }, '—');
       const hfEl = h('div', { class: 'value' }, '—');
       const liqEl = h('div', { class: 'value small' }, '—');
