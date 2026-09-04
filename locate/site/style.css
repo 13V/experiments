@@ -925,3 +925,28 @@ body.docked #app { background: #000 !important; }
 .mkt-stats .cell { border: 0 !important; padding: 0 !important; }
 .lrow { border-color: var(--line-2) !important; }
 .amt { background: none !important; border: 1px solid var(--line) !important; }
+
+/* ================================================================ grain on the black
+   Two corrections. The diagonal sheen over the chart was reading as a smear across live data, so it
+   is gone. And grain blended with `overlay` is mathematically invisible against pure black - which
+   is exactly what the page became once the panels came off - so the grain layer switches to `screen`,
+   where black + noise resolves to the speckle you actually want. */
+
+.chart .scr-glass::after { display: none !important; }
+#glass { background: none !important; }
+
+#topgrain {
+  mix-blend-mode: screen !important;
+  opacity: .13 !important;
+  z-index: 45;
+}
+
+/* a second, finer pass fixed to the picture so the grain has two scales, like real stock */
+#finegrain {
+  position: fixed; inset: 0; z-index: 46; pointer-events: none;
+  mix-blend-mode: screen; opacity: .07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23f)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  animation: grainShift .45s steps(5) infinite reverse;
+}
+@media (prefers-reduced-motion: reduce) { #finegrain { animation: none; } }
