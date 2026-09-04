@@ -16,7 +16,10 @@
 <div id="app">
 
   <header id="masthead">
-    <a class="wordmark" href="#/markets">Locate</a>
+    <a class="brand" href="#/markets" aria-label="Locate home">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <span>Locate</span>
+    </a>
     <nav id="tabs" aria-label="Sections">
       <a href="#/markets" data-route="markets">Markets</a>
       <a href="#/lend" data-route="lend">Lend</a>
@@ -24,18 +27,43 @@
       <a href="#/premium" data-route="premium">Premiums</a>
     </nav>
     <div class="spacer"></div>
-    <div class="wallet" id="s-wallet"><button id="btn-connect" class="ghost">Connect wallet</button></div>
+    <span class="net"><i aria-hidden="true"></i>Robinhood Chain</span>
+    <div class="wallet" id="s-wallet"><button id="btn-connect">Connect wallet</button></div>
   </header>
 
   <main id="view" tabindex="-1"><p class="dim">Loading…</p></main>
 
   <footer>
+    <div class="fgrid">
+      <div>
+        <div class="fbrand"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Locate</div>
+        <div>Stock-token lending and spot shorting on Robinhood Chain, settled on Morpho Blue. Chainlink stock feeds pause from Friday 20:00 ET to Sunday 20:00 ET while DEX pools keep trading, so positions are re-marked at the Sunday reopen. Not investment advice.</div>
+      </div>
+      <div class="fcol">
+        <h4>Protocol</h4>
+        <a href="https://robinhoodchain.blockscout.com/address/0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010" target="_blank" rel="noopener">Morpho Blue on Robinhood Chain</a>
+        <a href="https://robinhoodchain.blockscout.com" target="_blank" rel="noopener">Block explorer</a>
+        <a href="https://github.com/13V/experiments/tree/claude/token-launch-industry-ideas-ayfwur/locate" target="_blank" rel="noopener">Contracts and source</a>
+      </div>
+      <div class="fcol">
+        <h4>Data</h4>
+        <a href="https://api.robinhood.com/rhj/assets" target="_blank" rel="noopener">Robinhood token registry</a>
+        <a href="https://dexscreener.com/robinhood" target="_blank" rel="noopener">DexScreener, Robinhood Chain</a>
+        <a href="https://data.chain.link/" target="_blank" rel="noopener">Chainlink feeds</a>
+      </div>
+      <div class="fcol">
+        <h4>Desk</h4>
+        <a href="#/markets">Markets</a>
+        <a href="#/lend">Lend</a>
+        <a href="#/short">Short</a>
+        <a href="#/premium">Premiums</a>
+      </div>
+    </div>
     <div class="fstatus">
       <span id="s-chain">Robinhood Chain</span>
       <span id="s-block">block —</span>
       <span id="s-feed">quotes —</span>
     </div>
-    <div>Locate lends stock tokens through Morpho Blue. Chainlink stock feeds pause from Friday 20:00 ET to Sunday 20:00 ET while DEX pools keep trading, so positions are re-marked at the Sunday reopen. Not investment advice.</div>
   </footer>
 
 </div>

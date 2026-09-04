@@ -59,10 +59,62 @@
   /** A cell value. `cls` maps to a tone: dim, pos, neg. */
   const TONE = { dim: 'dim', green: 'pos', red: 'neg', yellow: '' };
   const tile = (text, cls) => h('span', { class: ('v ' + (TONE[cls] ?? cls ?? '')).trim() }, text);
-  function setTile(td, text) {
+  const skel = () => h('span', { class: 'v skel' });
+  /** Sets a cell's value (and an optional numeric sort key). */
+  function setTile(td, text, sortValue) {
     let t = td.querySelector('.v');
     if (!t) { clear(td); t = tile(''); td.appendChild(t); }
+    t.classList.remove('skel');
     if (t.textContent !== text) t.textContent = text;
+    if (sortValue !== undefined && sortValue !== null && !Number.isNaN(sortValue)) td.dataset.v = String(sortValue);
+  }
+  /** Stock logo with a monogram fallback. */
+  function avatar(symbol) {
+    const el = h('span', { class: 'avatar', 'aria-hidden': 'true' }, h('span', { class: 'mono' }, symbol.slice(0, 2)));
+    const img = h('img', { alt: '', loading: 'lazy', src: `https://financialmodelingprep.com/image-stock/${encodeURIComponent(symbol)}.png` });
+    img.addEventListener('load', () => el.classList.add('has-img'));
+    img.addEventListener('error', () => img.remove());
+    el.appendChild(img);
+    return el;
+  }
+  const symCell = (symbol, name) => h('td', { class: 'sym' }, h('div', { class: 'symwrap' }, avatar(symbol), h('div', {}, h('div', { class: 'ticker' }, symbol), h('div', { class: 'name' }, name))));
+  const stat = (label, valueEl, sub) => h('div', { class: 'stat' }, h('div', { class: 'label' }, label), valueEl, sub ? h('div', { class: 'sub' }, sub) : null);
+  /** Click a column heading to sort; cells sort by data-v when present, else by their text. */
+  function makeSortable(table) {
+    const ths = Array.from(table.querySelectorAll('thead th'));
+    ths.forEach((th, i) => {
+      if (th.dataset.nosort !== undefined) return;
+      th.classList.add('sortable');
+      th.setAttribute('tabindex', '0');
+      th.setAttribute('role', 'button');
+      const key = (tr) => {
+        const td = tr.children[i];
+        if (!td) return null;
+        if (td.dataset.v !== undefined && td.dataset.v !== '') return Number(td.dataset.v);
+        const t = td.textContent.trim();
+        const n = Number(t.replace(/[^0-9.+-]/g, ''));
+        return /\d/.test(t) && !Number.isNaN(n) ? n : (t || null);
+      };
+      const go = () => {
+        const dir = th.dataset.dir === 'desc' ? 'asc' : 'desc';
+        ths.forEach((o) => o.removeAttribute('data-dir'));
+        th.dataset.dir = dir;
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.children);
+        rows.sort((a, b) => {
+          const ka = key(a), kb = key(b);
+          if (ka === kb) return 0;
+          if (ka === null) return 1;
+          if (kb === null) return -1;
+          if (typeof ka !== typeof kb) return typeof ka === 'number' ? -1 : 1;
+          if (typeof ka === 'number') return dir === 'asc' ? ka - kb : kb - ka;
+          return dir === 'asc' ? ka.localeCompare(kb) : kb.localeCompare(ka);
+        });
+        rows.forEach((r, n) => { tbody.appendChild(r); const idx = r.querySelector('td.idx'); if (idx) idx.textContent = String(n + 1); });
+      };
+      th.addEventListener('click', go);
+      th.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
   }
 
   // ================================================================== toasts
@@ -436,13 +488,23 @@
   function renderMarkets(view) {
     view.appendChild(viewHead('Markets', null,
       'Borrow a stock against USDG, or lend yours and earn the borrow rate. One Morpho market per name; on-chain columns fill in as each market opens.'));
+    const totalCap = STATE.markets.reduce((a, m) => a + (m.initialCapUsd || 0), 0);
+    const widestEl = h('div', { class: 'value skel' });
+    const quotesEl = h('div', { class: 'value skel' });
+    view.appendChild(h('div', { class: 'stats' },
+      stat('Lending caps at launch', h('div', { class: 'value' }, fmtUsd(totalCap, 0)), 'across ten stocks, adjustable by the vault owner'),
+      stat('Markets', h('div', { class: 'value' }, String(STATE.markets.length)), 'loan is the stock, collateral is USDG'),
+      stat('Widest premium', widestEl, 'DEX price against Robinhood\'s quote, these ten'),
+      stat('Robinhood quotes', quotesEl, '24/5 feed, paused at weekends')
+    ));
     const wrap = h('div', { class: 'table-wrap' });
     const table = h('table', { class: 'markets' });
     table.appendChild(h('thead', {}, h('tr', {},
-      h('th', { class: 'idx' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'LLTV'), h('th', { class: 'num' }, 'Cap'),
-      h('th', { class: 'num' }, 'Supply APY'), h('th', { class: 'num' }, 'Borrow APY'), h('th', {}, 'Utilisation'),
+      h('th', { class: 'idx', 'data-nosort': '' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'LLTV'), h('th', { class: 'num' }, 'Cap'),
+      h('th', { class: 'num' }, 'Supply APY'), h('th', { class: 'num' }, 'Borrow APY'), h('th', { class: 'num' }, 'Utilisation'),
       h('th', { class: 'num' }, 'Available'), h('th', { class: 'num' }, 'RH quote'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Premium'), h('th', {}, 'Status')
     )));
+    makeSortable(table);
     const foot = h('td', { colspan: '12' }, 'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener. Premium is DEX over quote. Select a row to short or lend it.');
     table.appendChild(h('tfoot', {}, h('tr', {}, foot)));
     const tbody = h('tbody');
@@ -456,15 +518,15 @@
       const borrowC = h('td', { class: 'num soon' }, tile('—'));
       const utilC = h('td', { class: 'num soon' }, tile('—'));
       const availC = h('td', { class: 'num soon' }, tile('—'));
-      const quoteC = h('td', { class: 'num' }, tile('…'));
-      const dexC = h('td', { class: 'num' }, tile('…'));
-      const premC = h('td', { class: 'num' }, tile('…'));
-      const statusC = h('td', {}, tile(isDeployed(m) ? 'Open' : 'Opens soon', isDeployed(m) ? '' : 'dim'));
+      const quoteC = h('td', { class: 'num' }, skel());
+      const dexC = h('td', { class: 'num' }, skel());
+      const premC = h('td', { class: 'num' }, skel());
+      const statusC = h('td', {}, h('span', { class: 'pill' + (isDeployed(m) ? ' open' : '') }, isDeployed(m) ? 'Open' : 'Opens soon'));
       const tr = h('tr', { class: 'link', tabindex: '0', role: 'link', onclick: () => { location.hash = `#/short?s=${m.symbol}`; }, onkeydown: (e) => { if (e.key === 'Enter') location.hash = `#/short?s=${m.symbol}`; } },
         h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
-        h('td', { class: 'sym' }, tile(m.symbol, 'yellow'), h('span', { class: 'name' }, m.name)),
-        h('td', { class: 'num' }, tile((m.lltvBps / 100).toFixed(1) + '%')),
-        h('td', { class: 'num' }, tile(fmtUsd(m.initialCapUsd, 0), 'dim')),
+        symCell(m.symbol, m.name),
+        h('td', { class: 'num', 'data-v': String(m.lltvBps) }, tile((m.lltvBps / 100).toFixed(1) + '%')),
+        h('td', { class: 'num', 'data-v': String(m.initialCapUsd) }, tile(fmtUsd(m.initialCapUsd, 0), 'dim')),
         supplyC, borrowC, utilC, availC, quoteC, dexC, premC, statusC
       );
       tbody.appendChild(tr);
@@ -481,29 +543,41 @@
       const dex = await ensureDexData(addrs);
       if (cancelled) return;
 
+      let widest = null;
       for (const m of STATE.markets) {
         const r = rows.get(m.symbol);
         const q = quoteFor(m.symbol);
-        setTile(r.quoteC, q ? fmtUsd(q.mid) : '—');
-        if (q && q.halted) { setTile(r.statusC, 'Halted'); r.statusC.querySelector('.v').className = 'v neg'; }
+        setTile(r.quoteC, q ? fmtUsd(q.mid) : '—', q ? q.mid : undefined);
+        if (q && q.halted) { const pill = r.statusC.querySelector('.pill'); pill.textContent = 'Halted'; pill.className = 'pill halt'; }
         const d = dex.get(m.token.toLowerCase());
-        setTile(r.dexC, d ? fmtUsd(d.priceUsd) : (d === null ? 'no pool' : '—'));
+        setTile(r.dexC, d ? fmtUsd(d.priceUsd) : (d === null ? 'no pool' : '—'), d ? d.priceUsd : undefined);
         if (q && d) {
           const prem = (d.priceUsd - q.mid) / q.mid;
-          setTile(r.premC, (prem >= 0 ? '+' : '') + fmtPct(prem));
+          setTile(r.premC, (prem >= 0 ? '+' : '') + fmtPct(prem), prem);
           r.premC.className = premClass(prem);
+          if (!widest || Math.abs(prem) > Math.abs(widest.prem)) widest = { symbol: m.symbol, prem };
         } else {
           setTile(r.premC, '—');
         }
+      }
+      widestEl.classList.remove('skel');
+      if (widest) { widestEl.textContent = `${widest.symbol} ${widest.prem >= 0 ? '+' : ''}${fmtPct(widest.prem)}`; widestEl.classList.add(widest.prem >= 0 ? 'pos' : 'neg'); }
+      else widestEl.textContent = '—';
+      quotesEl.classList.remove('skel');
+      quotesEl.textContent = STATE.quotesUnavailable || !STATE.quotesTs ? 'Unavailable' : `${Math.max(0, Math.round(Date.now() / 1000 - STATE.quotesTs))}s ago`;
+      for (const m of STATE.markets) {
+        const r = rows.get(m.symbol);
+        const q = quoteFor(m.symbol);
+        const d = dex.get(m.token.toLowerCase());
         if (isDeployed(m)) {
           loadMarketOnchain(m).then((d2) => {
             if (cancelled || !d2) return;
             const price = d ? d.priceUsd : (q ? q.mid : d2.usdgPerStock);
-            setTile(r.supplyC, fmtPct(d2.supplyApy)); r.supplyC.classList.remove('soon');
-            setTile(r.borrowC, fmtPct(d2.borrowApy)); r.borrowC.classList.remove('soon');
-            setTile(r.utilC, fmtPct(d2.utilisation)); r.utilC.classList.remove('soon');
+            setTile(r.supplyC, fmtPct(d2.supplyApy), d2.supplyApy); r.supplyC.classList.remove('soon');
+            setTile(r.borrowC, fmtPct(d2.borrowApy), d2.borrowApy); r.borrowC.classList.remove('soon');
+            setTile(r.utilC, fmtPct(d2.utilisation), d2.utilisation); r.utilC.classList.remove('soon');
             const availTokens = Number(d2.availableRaw) / 1e18;
-            setTile(r.availC, `${fmtNum(availTokens, 1)} (${fmtUsd(availTokens * price)})`);
+            setTile(r.availC, `${fmtNum(availTokens, 1)} (${fmtUsd(availTokens * price)})`, availTokens * price);
             r.availC.classList.remove('soon');
           });
         }
@@ -846,9 +920,11 @@
     const wrap = h('div', { class: 'table-wrap hidden' });
     const table = h('table', { class: 'premium' });
     table.appendChild(h('thead', {}, h('tr', {},
-      h('th', { class: 'idx' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Quote'),
-      h('th', { class: 'num' }, 'Premium'), h('th', { class: 'num' }, '24h'), h('th', { class: 'num' }, 'Volume 24h'), h('th', {}, 'Status'), h('th', {}, '')
+      h('th', { class: 'idx', 'data-nosort': '' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Quote'),
+      h('th', { class: 'num' }, 'Premium'), h('th', { class: 'num' }, '24h'), h('th', { class: 'num' }, 'Volume 24h'), h('th', {}, 'Status'), h('th', { 'data-nosort': '' }, '')
     )));
+    makeSortable(table);
+    let totalTokens = 0;
     filter.addEventListener('input', () => {
       const q = filter.value.trim().toLowerCase();
       for (const tr of table.querySelectorAll('tbody tr')) tr.hidden = q !== '' && !(tr.dataset.k || '').includes(q);
@@ -891,7 +967,7 @@
         const d = dex.get(info.addr.toLowerCase());
         if (d) rows.push({ symbol, name: info.name, addr: info.addr, dex: d });
       }
-      status.textContent = `${rows.length} of ${bySymbolAddr.size} tokens have a pool`;
+      totalTokens = bySymbolAddr.size;
       paintRows(rows);
     })();
 
@@ -904,17 +980,23 @@
         return { ...r, q, prem };
       });
       withPrem.sort((a, b) => Math.abs(b.prem ?? 0) - Math.abs(a.prem ?? 0));
+      const gaps = withPrem.filter((r) => r.prem !== null).map((r) => Math.abs(r.prem)).sort((a, b) => a - b);
+      const median = gaps.length ? gaps[Math.floor(gaps.length / 2)] : null;
+      const over = gaps.filter((g) => g > 0.05).length;
+      status.textContent = totalTokens
+        ? `${rows.length} of ${totalTokens} tokens have a pool` + (median !== null ? ` · median gap ${fmtPct(median)} · ${over} wider than 5%` : '')
+        : `${rows.length} markets`;
       for (const r of withPrem) {
         const c = r.dex.chg24;
         const tr = h('tr', { 'data-k': (r.symbol + ' ' + r.name).toLowerCase() },
           h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
-          h('td', { class: 'sym' }, r.symbol, h('span', { class: 'name' }, r.name)),
-          h('td', { class: 'num' }, fmtUsd(r.dex.priceUsd)),
-          h('td', { class: 'num' }, r.q ? fmtUsd(r.q.mid) : '—'),
-          h('td', { class: premClass(r.prem) }, r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—'),
-          h('td', { class: 'num' + (c > 0 ? ' pos' : c < 0 ? ' neg' : '') }, c === null || Number.isNaN(c) ? '—' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'),
-          h('td', { class: 'num dim' }, fmtUsd(r.dex.vol24, 0)),
-          h('td', {}, r.q?.halted ? h('span', { class: 'badge halt' }, 'Halted') : h('span', { class: 'badge live' }, 'Trading')),
+          symCell(r.symbol, r.name),
+          h('td', { class: 'num', 'data-v': String(r.dex.priceUsd) }, fmtUsd(r.dex.priceUsd)),
+          h('td', { class: 'num', 'data-v': r.q ? String(r.q.mid) : '' }, r.q ? fmtUsd(r.q.mid) : '—'),
+          h('td', { class: premClass(r.prem), 'data-v': r.prem !== null ? String(r.prem) : '' }, r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—'),
+          h('td', { class: 'num' + (c > 0 ? ' pos' : c < 0 ? ' neg' : ''), 'data-v': c === null || Number.isNaN(c) ? '' : String(c) }, c === null || Number.isNaN(c) ? '—' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'),
+          h('td', { class: 'num dim', 'data-v': String(r.dex.vol24 || 0) }, fmtUsd(r.dex.vol24, 0)),
+          h('td', {}, h('span', { class: 'pill' + (r.q?.halted ? ' halt' : ' open') }, r.q?.halted ? 'Halted' : 'Trading')),
           h('td', {}, h('a', { class: 'v', href: r.dex.url, target: '_blank', rel: 'noopener' }, 'View pool'))
         );
         tbody.appendChild(tr);

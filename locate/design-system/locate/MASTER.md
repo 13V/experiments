@@ -237,20 +237,21 @@ Before delivering any UI code, verify:
 ## Decisions taken for Locate (overrides the generated sections above)
 
 The generator was run with density 9, motion 2, variance 5 for "DeFi lending trading terminal fintech
-professional dense data". Two earlier passes (an amber terminal, then a split-flap departure board)
-were rejected as hard to read and as looking generated. What shipped is deliberately plain: the
-conventions of the lending apps people already use, executed carefully.
+professional dense data". Three passes were rejected on the way here: an amber terminal (hard to
+read), a split-flap departure board (a gimmick), and a bare white page (boring). What shipped is the
+grammar of the lending apps people already use, executed carefully.
 
 | Area | Generated | Shipped | Reason |
 |---|---|---|---|
-| Pattern | Enterprise Gateway (hero, solutions, logos) | No landing page. Markets table first; a row opens that market's Short page | A tool, not a brochure. |
-| Style | Dark Mode (OLED), navy | White `#fff`, ink `#111`, secondary `#6f6f6f`, hairlines `#e7e7e7`, green `#128a4b` and red `#c8321f` for signed values only. No accent colour, no chips, no tiles | Readability and restraint. Colour means sign, nothing else. |
-| Typography | Fira Code / Fira Sans | Inter, tabular numerals, 15px body, 26px headings, normal case everywhere | One family; numbers align; nothing shouts. |
-| Spacing | 8–32px dense scale | 54px table rows, 44px inputs and buttons, 8px radius on controls, 10px on cards | Comfortable density; matches Morpho and Aave rows. |
-| Motion | GSAP scroll reveal | None beyond 120ms hover and focus transitions; reduced motion respected | Motion 2. |
-| KPI cards | Stat grid | Label-left, value-right rows inside cards | The convention people read fastest. |
-| Navigation | Mega menu | Four text links in the header; on phones the nav becomes its own row under the wordmark | Nothing to learn. |
-| Affordances | — | Markets rows link to the Short page with the stock preselected; the Premiums board has a text filter and a 24h change column; chain, block and quote age live in the footer | Real controls instead of decoration. |
+| Pattern | Enterprise Gateway (hero, solutions, logos) | No landing page. Markets first, with a four-card stats strip above the table; a row opens that market's Short page | A tool, not a brochure; the stats strip is what every protocol front page has. |
+| Style | Dark Mode (OLED), navy | Soft grey ground `#f5f6f8`, white cards with 1px `#e4e7ec` borders, 12px radius and a 1–3px shadow; one accent `#2f5bea` for actions, links, focus and the logo mark; green `#158a4e` and red `#c93b2b` for signed values only | Readable, familiar, calm. Colour carries meaning: action or sign. |
+| Typography | Fira Code / Fira Sans | Inter with tabular numerals; 15px body, 28px page titles, 22px stat values, 12px column headings | One family; aligned figures; nothing shouts. |
+| Identity | — | A reticle logo mark, the wordmark, a "Robinhood Chain" network pill with a live dot | A product has a mark and says which network it is on. |
+| Tables | — | 58px rows, stock logo with monogram fallback, sortable headings with a caret, skeleton shimmer while loading, status pills, a footnote row | The conventions of Morpho, Aave and Kraken tables. |
+| Motion | GSAP scroll reveal | Skeleton shimmer and 120ms hover transitions only; reduced motion respected | Motion 2. |
+| KPI cards | Stat grid | Label-left, value-right rows inside cards for calculators and positions | Fast to read. |
+| Affordances | — | Markets rows link to the Short page with the stock preselected; the Premiums board has a text filter, a 24h change column and a median-gap summary; footer carries protocol, data and desk links plus chain, block and quote age | Real controls, not decoration. |
+| Phones | — | Header wraps to two rows; stats go two-up; tables keep stock, DEX and premium | Four columns are legible on a phone; twelve are not. |
 | Copy | Marketing sections | One heading and one or two plain sentences per page; notices written for users, never file paths | Must not read as generated. |
 
 Tokens live in `locate/site/style.css` `:root`.
