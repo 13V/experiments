@@ -844,7 +844,7 @@
       const bySymbolAddr = new Map();
       for (const a of assets) {
         const dep = (a.deployments || []).find((d) => d.chainId === STATE.addresses.chainId);
-        if (dep) bySymbolAddr.set(a.tokenSymbol, { addr: dep.contractAddress, name: a.tokenName });
+        if (dep) bySymbolAddr.set(a.tokenSymbol, { addr: dep.contractAddress, name: String(a.tokenName || '').replace(/\s*[•·-]\s*Robinhood Token\s*$/i, '') });
       }
       const addrList = [...bySymbolAddr.values()].map((v) => v.addr);
       const dex = await ensureDexData(addrList, {
