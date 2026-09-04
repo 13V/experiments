@@ -68,7 +68,7 @@ Lenders deposit the stock token and receive vault shares. The vault supplies the
 
 ```solidity
 constructor(address morpho, address asset, string memory name, string memory symbol, address owner, address feeRecipient, uint96 performanceFeeBps); // fee <= 5000
-// ERC-20 + ERC-4626 surface: name, symbol, decimals (= asset decimals), totalSupply, balanceOf, transfer, approve, transferFrom, allowance,
+// ERC-20 + ERC-4626 surface: name, symbol, decimals (= asset decimals + 6, see share pricing below), totalSupply, balanceOf, transfer, approve, transferFrom, allowance,
 // asset(), totalAssets(), convertToShares, convertToAssets, maxDeposit, previewDeposit, deposit(assets, receiver), maxMint, previewMint, mint(shares, receiver),
 // maxWithdraw(owner), previewWithdraw, withdraw(assets, receiver, owner), maxRedeem(owner), previewRedeem, redeem(shares, receiver, owner)
 function setMarket(MarketParams calldata mp, uint256 cap) external;          // onlyOwner; mp.loanToken must equal asset(); cap in asset units; cap 0 disables new supply; appends to the queues if new
@@ -87,10 +87,12 @@ event MarketSet(Id indexed id, uint256 cap); event MarketRemoved(Id indexed id);
 event FeeSet(uint96 bps, address recipient); event FeeAccrued(uint256 assets, uint256 shares);
 ```
 Behaviour:
+- Share pricing uses a decimals offset of 6 (OpenZeppelin ERC-4626 style) to blunt first-depositor inflation: `decimals() = asset decimals + 6`, `convertToShares(a) = a * (totalSupply + 1e6) / (totalAssets + 1)` rounding down, `convertToAssets(s) = s * (totalAssets + 1) / (totalSupply + 1e6)` rounding down; `previewMint` and `previewWithdraw` round up.
 - `deposit`: accrue, pull assets, mint shares at the pre-deposit rate, then supply to markets in `supplyQueue` order up to each cap; anything left stays idle.
 - `withdraw`/`redeem`: accrue, burn, pay from idle first, then pull from markets in `withdrawQueue` order; if the markets cannot provide (utilisation), revert `InsufficientLiquidity()`. `maxWithdraw(owner)` = min(owner's assets, `liquidity()`).
 - `totalAssets()` = idle + Σ supplied (using current stored market totals; may be a little stale between accruals; every state-changing call accrues first).
-- Fee: on `accrue()`, `yield = totalAssets - lastTotalAssets` (if positive); mint `feeShares` to `feeRecipient` so they are worth `yield * fee / 10000` at the post-accrual rate (MetaMorpho's formula). Update `lastTotalAssets` after every accrue/deposit/withdraw.
+- Fee: on `accrue()`, `yield = totalAssets - lastTotalAssets` (if positive); `feeAssets = yield * fee / 10000`; mint `feeShares = feeAssets * (totalSupply + 1e6) / (totalAssets - feeAssets + 1)` to `feeRecipient` (MetaMorpho's formula, so the fee shares are worth `feeAssets` at the post-accrual rate). Update `lastTotalAssets` after every accrue/deposit/mint/withdraw/redeem/reallocate.
+- Morpho is approved for exactly the amount being supplied, every time. No infinite approvals.
 - Caps are a lender-side safety valve: they bound how much of a stock can be borrowed. Owner-only, no timelock in this version; state that in the README.
 
 ### 3.2 `LocateRouter` (stateless; the one-transaction short)
@@ -101,7 +103,7 @@ function openShort(MarketParams calldata mp, uint256 collateralAssets, uint256 b
 function addCollateral(MarketParams calldata mp, uint256 assets) external;                                                 // pull and supplyCollateral on behalf of msg.sender
 function repay(MarketParams calldata mp, uint256 assets, uint256 shares) external;                                         // pull exactly what is needed (shares path: accrue, compute assets up) and repay on behalf of msg.sender; returns nothing; refunds nothing because it pulls exactly
 function closeShort(MarketParams calldata mp, uint256 repayShares, uint256 withdrawCollateralAssets, address receiver) external; // repay (by shares, 0 = all of the caller's borrow shares) then withdrawCollateral on behalf of msg.sender to receiver (0 = all collateral)
-function positionOf(MarketParams calldata mp, address user) external view returns (uint256 collateral, uint256 borrowAssets, uint256 maxBorrow, uint256 healthFactorWad, uint256 liquidationPrice); // liquidationPrice = the loan-token USD price (1e8 scaled if the oracle has 8-decimal feeds; document what you return) at which hf hits 1, or 0 when no borrow
+function positionOf(MarketParams calldata mp, address user) external view returns (uint256 collateral, uint256 borrowAssets, uint256 maxBorrow, uint256 healthFactorWad, uint256 liquidationPrice); // liquidationPrice = the price of one loan token (one stock) in collateral units (USDG) as an 18-decimal fixed point (1e18 = 1 USDG), decimals-adjusted, at which hf hits 1; 0 when there is no borrow
 function quote(MarketParams calldata mp) external view returns (uint256 price);                                            // oracle price passthrough
 event ShortOpened(address indexed user, Id indexed id, uint256 collateral, uint256 borrowed, address receiver);
 event ShortClosed(address indexed user, Id indexed id, uint256 repaid, uint256 collateralOut);
@@ -136,7 +138,7 @@ Zero-dependency Node, reusing `scripts/keccak.js` and `scripts/secp256k1.js` fro
 
 ## 7. Site (`locate/site/`)
 
-Static, no build step, no dependencies, wallet through EIP-1193, reads through the public RPC, hand-rolled ABI (copy the pattern from `site/lib.js` in this repo). Pages: Markets (table: stock, supply APY, borrow APY, utilisation, available to borrow, DEX price vs Robinhood quote), Lend (deposit/withdraw into a vault), Short (authorize router once, approve USDG, open; then "sell on" links to the DEX pair; positions with health factor and liquidation price; add collateral / repay / close), Premium Board (every stock token with a pool: DEX price vs Robinhood quote, from DexScreener in the browser and Robinhood's quotes via a Vercel function `site/api/quotes.js` because Robinhood's API has no CORS). Design: not the Stonk Packs paper look and not a dark neon dashboard. Locate is a trading desk: dense, monospace numbers, a terminal-amber-on-black or ink-on-bone palette with real typographic character; pick one and commit. Deploy with a copy of `scripts/deploy-site.py` (root of the deployment = `locate/site`).
+Static, no build step, no dependencies, wallet through EIP-1193, reads through the public RPC, hand-rolled ABI (copy the pattern from `site/lib.js` in this repo). Pages: Markets (table: stock, supply APY, borrow APY, utilisation, available to borrow, DEX price vs Robinhood quote), Lend (deposit/withdraw into a vault), Short (authorize router once, approve USDG, open; then "sell on" links to the DEX pair; positions with health factor and liquidation price; add collateral / repay / close), Premium Board (every stock token with a pool: DEX price vs Robinhood quote, from DexScreener in the browser and Robinhood's quotes via a Vercel function `site/api/quotes.js` because Robinhood's API has no CORS). Design: not the Stonk Packs paper look and not a dark neon dashboard. Locate is a trading desk: dense, monospace numbers, a terminal-amber-on-black or ink-on-bone palette with real typographic character; pick one and commit. The page loads `./config/markets.json` and `./config/addresses.json`; `locate/site/config/` is a copy of `locate/config/` that `locate/deploy-site.py` (a copy of `scripts/deploy-site.py` with the deployment root = `locate/site`) refreshes before every upload. Robinhood's endpoints are proxied by the Vercel function `locate/site/api/quotes.js`. Before anything is deployed on-chain the site must still load: on-chain columns show an "opening soon" state, the Premium Board is fully live.
 
 ## 8. Conventions
 
