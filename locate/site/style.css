@@ -861,3 +861,67 @@ body.docked #dust { opacity: .55; }
 /* phosphor bleed on anything bright */
 .stat .value, .mkt-price .big, td.sym, thead th:first-child { text-shadow: 0 0 22px rgba(204, 220, 228, .18); }
 .pill.open, .badge.live { text-shadow: 0 0 14px rgba(61, 220, 132, .45); }
+
+/* ================================================================ the screens, literally
+   The monitors in the scene are not made of cards. They are black, with a cyan tab, an uppercase
+   label, rows of text, and a right-aligned percentage. Everything else on this page was furniture
+   the scene never had, so it comes off: panel fills, borders, stripes, header bars, tile boxes. */
+
+.card, .panel, .stat, .stats, .table-wrap, .mkt-stats, .chart, .notice, .how, .position {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* a section is a cyan tab, a label, and its rows */
+.panel > h3, .how h3, .position > h3, .chart .scr-bar {
+  margin: 0 0 12px !important; padding: 0 0 0 12px !important;
+  height: auto !important; line-height: 1.2 !important;
+  background: none !important; border: 0 !important;
+  border-left: 3px solid var(--accent) !important;
+  font-size: 12px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--ink);
+}
+.chart .scr-bar { display: flex; align-items: center; gap: 14px; }
+.chart .scr-glass { border: 0; border-top: 0; }
+.chart .cap { background: none !important; padding: 10px 0 0 !important; height: auto; }
+.chart .scr-led { margin: 8px 0 0; }
+
+/* the stat strip: labels over values on black, no boxes and no dividers */
+.stats { display: flex; gap: 46px; padding: 0; margin: 0 0 26px; }
+.stat { flex: 0 1 auto; padding: 0 !important; border: 0 !important; }
+.stat .label { font-size: 10px; letter-spacing: .14em; color: var(--ink-3); margin-bottom: 5px; }
+.stat .value { font-size: 22px; font-weight: 600; }
+.stat .sub { font-size: 11px; color: var(--ink-3); }
+
+/* the table is rows of text: dim uppercase column labels, a cyan tab on the first, nothing else */
+thead th {
+  background: none !important; box-shadow: none !important;
+  border-bottom: 0 !important; color: var(--ink-3) !important;
+  font-size: 10px; font-weight: 500; letter-spacing: .14em; height: 26px; padding: 0 12px !important;
+}
+thead th:first-child { box-shadow: inset 3px 0 0 var(--accent) !important; color: var(--ink) !important; }
+tbody td { background: none !important; background-image: none !important; height: 33px !important; font-size: 14px; font-weight: 400; border: 0 !important; }
+tbody tr:nth-child(even) td { background: none !important; }
+tbody tr:hover td { background: rgba(89, 228, 253, .06) !important; }
+td.sym { font-weight: 500; color: var(--ink); }
+td.sym .name { display: none; }        /* the scene's rows carry the ticker only */
+.symwrap { gap: 10px; }
+.avatar { display: none; }             /* no logos on those screens */
+tfoot td { background: none !important; color: var(--ink-3) !important; padding: 14px 12px 0 !important; }
+td.num { color: var(--ink-2); }
+td.num.pos, td.num.neg { font-weight: 500; }
+td.num.hasbar::before { opacity: .22; }
+
+/* the chassis keeps its bezel; its interior is the black of the screen */
+body.docked #app { background: #000 !important; }
+#masthead, footer { background: none !important; background-image: none !important; border-color: var(--line-2) !important; }
+.pill { background: none !important; border: 1px solid var(--line) !important; }
+.pill.open { border-color: rgba(61, 220, 132, .4) !important; }
+.launch { background: none !important; border-color: var(--line) !important; }
+.notice { border-left: 3px solid var(--accent) !important; padding-left: 12px !important; }
+.mkt-stats { display: flex; gap: 40px; }
+.mkt-stats .cell { border: 0 !important; padding: 0 !important; }
+.lrow { border-color: var(--line-2) !important; }
+.amt { background: none !important; border: 1px solid var(--line) !important; }
