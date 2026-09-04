@@ -370,3 +370,11 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   closes, so this needs a game nobody is touching.
 - Loot boxes containing securities are a regulated shape in most jurisdictions. That is out of
   scope of this repo and was parked deliberately.
+
+## Also in this repository
+
+- **[Locate](locate/README.md)**: stock-token lending and one-transaction spot shorting on
+  Robinhood Chain, built on Morpho Blue. Vault and router contracts tested against the vendored
+  Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
+  `locate/SPEC.md`.
+- **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
