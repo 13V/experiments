@@ -319,6 +319,7 @@
   let dexApiAvailable = true; // false after a 404: plain static hosting without the Vercel function
   async function fetchDexViaApi(addrs, onProgress) {
     const result = new Map();
+    if (!addrs.length) return result;   // an empty address list is a 400 from the function
     const chunks = [];
     for (let i = 0; i < addrs.length; i += 60) chunks.push(addrs.slice(i, i + 60));
     let done = 0;
@@ -337,6 +338,7 @@
     return result;
   }
   async function fetchDexForAddresses(addrs, opts = {}) {
+    if (!addrs || !addrs.length) return new Map();
     if (dexApiAvailable) {
       try { return await fetchDexViaApi(addrs, opts.onProgress); }
       catch (e) { if (dexApiAvailable) console.warn('[locate] /api/dex failed, falling back to direct DexScreener calls', e); }
@@ -495,8 +497,55 @@
   }
 
   // ================================================================== router
+  /** Fills the hero's live counter and hands the scene real prices, whichever route you land on. */
+  async function primeLive() {
+    try {
+      await fetchQuotes();
+      const dex = await ensureDexData(STATE.markets.map((m) => m.token));
+      const rows = [];
+      for (const m of STATE.markets) {
+        const q = quoteFor(m.symbol), d = dex.get(m.token.toLowerCase());
+        if (q && d) rows.push({ symbol: m.symbol, name: m.name, quote: q.mid, dex: d.priceUsd, prem: (d.priceUsd - q.mid) / q.mid });
+      }
+      if (!rows.length) { const bar = document.getElementById('livebar'); if (bar) bar.style.display = 'none'; return; }
+      const board = rows.slice().sort((a, b) => Math.abs(b.prem) - Math.abs(a.prem));
+      if (window.LocateScene) window.LocateScene.setData(rows, board);
+      paintLiveBar(rows.length, board[0]);
+      primeFullBoard();   // the ten markets land immediately; the whole registry follows
+    } catch (e) { const bar = document.getElementById('livebar'); if (bar) bar.style.display = 'none'; }
+  }
+  function paintLiveBar(count, top) {
+    const n = document.getElementById('live-n'), w = document.getElementById('live-w');
+    if (n) n.textContent = String(count);
+    if (w && top) w.textContent = `${top.symbol} ${top.prem >= 0 ? '+' : ''}${fmtPct(top.prem)}`;
+  }
+  /** Every Robinhood token with a pool, fetched in the background so the hero can quote the real count. */
+  async function primeFullBoard() {
+    try {
+      const q = STATE.quotes || {};
+      const reg = [];
+      for (const a of q.assets || []) {
+        const dep = (a.deployments || []).find((x) => x.chainId === STATE.addresses.chainId);
+        if (dep) reg.push({ symbol: a.tokenSymbol, addr: dep.contractAddress.toLowerCase() });
+      }
+      if (reg.length < 20) return;
+      const dex = await ensureDexData(reg.map((r) => r.addr));
+      const board = [];
+      for (const r of reg) {
+        const d = dex.get(r.addr), qq = quoteFor(r.symbol);
+        if (d && qq) board.push({ symbol: r.symbol, quote: qq.mid, dex: d.priceUsd, prem: (d.priceUsd - qq.mid) / qq.mid });
+      }
+      if (board.length < 20) return;
+      board.sort((a, b) => Math.abs(b.prem) - Math.abs(a.prem));
+      if (window.LocateScene) window.LocateScene.setData(null, board);
+      paintLiveBar(board.length, board[0]);
+    } catch (e) { /* the ten-market number already shown is good enough */ }
+  }
+
   const ROUTES = ['markets', 'lend', 'short', 'premium', 'm'];
   let currentCleanup = null;
+  // which monitor each route lives on, so the camera lands somewhere that matches the content
+  const POSE_FOR = { markets: 'markets', premium: 'premium', lend: 'desk', short: 'desk', m: 'desk' };
   function setActiveTab(tab) {
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.route === tab));
   }
@@ -506,7 +555,16 @@
     const segs = hashParts[0].split('/');
     const raw = segs[0];
     STATE.query = new URLSearchParams(hashParts[1] || '');
+    // no route at all means the wide shot: the hero is a route, not a separate page
+    const hero = raw === '';
+    document.body.classList.toggle('docked', !hero);
     const route = ROUTES.includes(raw) ? raw : 'markets';
+    if (window.LocateScene) window.LocateScene.setPose(hero ? 'hero' : (POSE_FOR[route] || 'markets'));
+    if (hero) {
+      if (currentCleanup) { try { currentCleanup(); } catch (e) { /* noop */ } currentCleanup = null; }
+      setActiveTab(null);
+      return;
+    }
     STATE.route = route;
     STATE.param = segs[1] ? decodeURIComponent(segs[1]) : null;
     const mode = route === 'lend' ? 'lend' : route === 'short' ? 'short' : (STATE.query.get('mode') === 'lend' ? 'lend' : 'short');
@@ -628,6 +686,15 @@
       }
 
       volEl.classList.remove('skel'); volEl.textContent = vol > 0 ? fmtUsd(vol, 0) : '—';
+      // the monitors in the scene show the same numbers this table does
+      if (window.LocateScene) {
+        const rows = [];
+        for (const m of STATE.markets) {
+          const q = quoteFor(m.symbol), d = dex.get(m.token.toLowerCase());
+          if (q && d) rows.push({ symbol: m.symbol, name: m.name, quote: q.mid, dex: d.priceUsd });
+        }
+        window.LocateScene.setData(rows, rows.map((r) => ({ ...r, prem: (r.dex - r.quote) / r.quote })).sort((a, b) => Math.abs(b.prem) - Math.abs(a.prem)));
+      }
       widestEl.classList.remove('skel');
       if (widest) { widestEl.textContent = `${widest.symbol} ${widest.prem >= 0 ? '+' : ''}${fmtPct(widest.prem)}`; widestEl.classList.add(widest.prem >= 0 ? 'pos' : 'neg'); }
       else widestEl.textContent = '—';
@@ -1147,6 +1214,7 @@
       const gaps = withPrem.filter((r) => r.prem !== null).map((r) => Math.abs(r.prem)).sort((a, b) => a - b);
       const median = gaps.length ? gaps[Math.floor(gaps.length / 2)] : null;
       const over = gaps.filter((g) => g > 0.05).length;
+      if (window.LocateScene && withPrem.length) window.LocateScene.setData(null, withPrem.filter((r) => r.q).map((r) => ({ symbol: r.symbol, quote: r.q.mid, dex: r.dex.priceUsd, prem: r.prem })));
       status.textContent = totalTokens
         ? `${rows.length} of ${totalTokens} tokens have a pool` + (median !== null ? ` · median gap ${fmtPct(median)} · ${over} wider than 5%` : '')
         : `${rows.length} markets`;
@@ -1233,6 +1301,7 @@
     chainSeg.appendChild(h('span', {}, 'Robinhood Chain ', h('b', {}, String(STATE.addresses.chainId))));
 
     document.getElementById('btn-connect').addEventListener('click', connectWallet);
+    primeLive();
     wireWalletEvents();
     startBlockPoller();
     startFeedTicker();

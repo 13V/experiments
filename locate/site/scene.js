@@ -1,0 +1,517 @@
+
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ------------------------------------------------------------------ data (live when the API is there, demo otherwise)
+const DEMO = [
+  { symbol: 'NVDA', name: 'NVIDIA', quote: 230.12, dex: 230.15 }, { symbol: 'TSLA', name: 'Tesla', quote: 369.8, dex: 356.24 },
+  { symbol: 'GME', name: 'GameStop', quote: 19.34, dex: 19.63 }, { symbol: 'SPY', name: 'S&P 500', quote: 773.85, dex: 772.07 },
+  { symbol: 'MSTR', name: 'Strategy', quote: 143.53, dex: 142.45 }, { symbol: 'AAPL', name: 'Apple', quote: 328.23, dex: 328.28 },
+  { symbol: 'META', name: 'Meta', quote: 614.32, dex: 615.22 }, { symbol: 'AMZN', name: 'Amazon', quote: 259.77, dex: 259.61 },
+  { symbol: 'GOOGL', name: 'Alphabet', quote: 343.4, dex: 343.33 }, { symbol: 'QQQ', name: 'Nasdaq 100', quote: 719.34, dex: 718.8 },
+];
+let STOCKS = DEMO.slice();
+let BOARD = DEMO.map((s) => ({ symbol: s.symbol, quote: s.quote, dex: s.dex, prem: (s.dex - s.quote) / s.quote }));
+/** The app fetches quotes and pool prices once; it hands them here so nothing is fetched twice. */
+function setData(stocks, board) {
+  if (stocks && stocks.length >= 6) STOCKS = stocks;
+  if (board && board.length) BOARD = board;
+  let i = 0;
+  for (const s of screens) { if (s.data) s.data = STOCKS[i++ % STOCKS.length]; s.paintedAt = -99; }
+}
+
+// ------------------------------------------------------------------ screen painters (16:9 canvases, a modern dark trading UI)
+const W = 768, H = 432;   // painters draw here and the texture is the same size: no rescale, no waste
+const UP = '#3ddc84', DOWN = '#ff5c6a', CY = '#57e6ff', INK = '#dbe6ec', DIM = 'rgba(219,230,236,.55)', GRID = 'rgba(120,160,180,.12)';
+const fmt = (n, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+function chrome(ctx, title, right) {
+  ctx.fillStyle = '#070c11'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fillRect(0, 0, W, 34);
+  ctx.fillStyle = CY; ctx.fillRect(0, 0, 4, 34);
+  ctx.font = '600 15px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillStyle = INK; ctx.fillText(title, 16, 17);
+  if (right) { ctx.textAlign = 'right'; ctx.fillStyle = DIM; ctx.fillText(right, W - 14, 17); ctx.textAlign = 'left'; }
+}
+// price series per symbol: a random walk anchored on the live price
+const series = new Map();
+function getSeries(s, t) {
+  let S = series.get(s.symbol);
+  if (!S) { S = { candles: [], last: s.dex, t0: -1 }; let p = s.dex * (1 - 0.012 * Math.random()); for (let i = 0; i < 64; i++) { const o = p; p *= 1 + (Math.random() - 0.5) * 0.006; S.candles.push({ o, c: p, h: Math.max(o, p) * (1 + Math.random() * 0.002), l: Math.min(o, p) * (1 - Math.random() * 0.002), v: 0.3 + Math.random() }); } series.set(s.symbol, S); }
+  const step = Math.floor(t / 1.6);
+  if (step !== S.t0) { S.t0 = step; const prev = S.candles[S.candles.length - 1].c; const c = prev * (1 + (Math.random() - 0.5) * 0.004); S.candles.push({ o: prev, c, h: Math.max(prev, c) * (1 + Math.random() * 0.0015), l: Math.min(prev, c) * (1 - Math.random() * 0.0015), v: 0.3 + Math.random() }); if (S.candles.length > 64) S.candles.shift(); }
+  const cur = S.candles[S.candles.length - 1]; cur.c = cur.o * (1 + Math.sin(t * 3.1) * 0.0015 + Math.sin(t * 7.7) * 0.0006); cur.h = Math.max(cur.h, cur.c); cur.l = Math.min(cur.l, cur.c);
+  return S;
+}
+const painters = {
+  candles(ctx, t, s) {
+    const S = getSeries(s, t); const c = S.candles; const last = c[c.length - 1].c; const first = c[0].o; const chg = (last - first) / first;
+    chrome(ctx, `${s.symbol} · ${s.name.toUpperCase()}`, 'RH CHAIN · USDG POOL · 1m');
+    ctx.font = '600 30px "Chakra Petch", sans-serif'; ctx.fillStyle = INK; ctx.textBaseline = 'top'; ctx.fillText(`$${fmt(last)}`, 16, 46);
+    ctx.font = '500 18px "Chakra Petch", sans-serif'; ctx.fillStyle = chg >= 0 ? UP : DOWN; ctx.fillText(`${chg >= 0 ? '+' : ''}${(chg * 100).toFixed(2)}%`, 16 + ctx.measureText(`$${fmt(last)}`).width + 70, 54);
+    const x0 = 16, x1 = W - 74, y0 = 92, y1 = H - 60;
+    let hi = -Infinity, lo = Infinity;
+    for (let i = 0; i < c.length; i++) { if (c[i].h > hi) hi = c[i].h; if (c[i].l < lo) lo = c[i].l; }
+    const Y = (p) => y1 - ((p - lo) / (hi - lo || 1)) * (y1 - y0);
+    ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.font = '400 12px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM;
+    for (let i = 0; i <= 4; i++) { const y = y0 + (y1 - y0) * i / 4; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.fillText(fmt(hi - (hi - lo) * i / 4), x1 + 8, y - 6); }
+    const cw = (x1 - x0) / c.length;
+    c.forEach((k, i) => { const x = x0 + i * cw + cw / 2; const up = k.c >= k.o; ctx.strokeStyle = ctx.fillStyle = up ? UP : DOWN; ctx.beginPath(); ctx.moveTo(x, Y(k.h)); ctx.lineTo(x, Y(k.l)); ctx.stroke(); const top = Y(Math.max(k.o, k.c)), bot = Y(Math.min(k.o, k.c)); ctx.fillRect(x - cw * 0.32, top, cw * 0.64, Math.max(1.5, bot - top)); });
+    // moving average
+    // running mean over a 9-candle window: no per-candle slice or reduce
+    ctx.strokeStyle = 'rgba(87,230,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath();
+    let sum = 0;
+    for (let i = 0; i < c.length; i++) {
+      sum += c[i].c; if (i > 8) sum -= c[i - 9].c;
+      const m = sum / Math.min(i + 1, 9), x = x0 + i * cw + cw / 2;
+      i ? ctx.lineTo(x, Y(m)) : ctx.moveTo(x, Y(m));
+    }
+    ctx.stroke();
+    // volume
+    c.forEach((k, i) => { const x = x0 + i * cw; ctx.fillStyle = k.c >= k.o ? 'rgba(61,220,132,.35)' : 'rgba(255,92,106,.35)'; ctx.fillRect(x + 1, H - 16 - k.v * 34, cw - 2, k.v * 34); });
+    // last price line
+    ctx.strokeStyle = 'rgba(219,230,236,.5)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(x0, Y(last)); ctx.lineTo(x1, Y(last)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = chg >= 0 ? UP : DOWN; ctx.fillRect(x1 + 2, Y(last) - 10, 68, 20); ctx.fillStyle = '#04070a'; ctx.font = '600 12px "Chakra Petch", sans-serif'; ctx.fillText(fmt(last), x1 + 8, Y(last) - 6);
+  },
+  book(ctx, t, s) {
+    chrome(ctx, `${s.symbol} ORDER BOOK`, 'DEPTH · USDG');
+    const mid = s.dex; const rows = 11; const rowH = 32; const y0 = 44;
+    ctx.font = '500 15px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    const col = (x, txt, color, align = 'left') => { ctx.textAlign = align; ctx.fillStyle = color; ctx.fillText(txt, x, 0); };
+    for (let i = 0; i < rows; i++) {
+      const y = y0 + i * rowH + rowH / 2; const ask = mid * (1 + (rows - i) * 0.0009); const bid = mid * (1 - (i + 1) * 0.0009);
+      const sa = 20 + 140 * Math.abs(Math.sin(t * 0.9 + i * 1.7)), sb = 20 + 140 * Math.abs(Math.cos(t * 0.7 + i * 1.3));
+      ctx.fillStyle = 'rgba(255,92,106,.16)'; ctx.fillRect(W / 2 - 6 - sa, y - 12, sa, 24);
+      ctx.fillStyle = 'rgba(61,220,132,.16)'; ctx.fillRect(W / 2 + 6, y - 12, sb, 24);
+      ctx.save(); ctx.translate(0, y); col(W / 2 - 16, fmt(ask), DOWN, 'right'); col(W / 2 - 200, fmt(sa / 40, 3), DIM, 'right'); col(W / 2 + 16, fmt(bid), UP); col(W / 2 + 200, fmt(sb / 40, 3), DIM); ctx.restore();
+    }
+    ctx.textAlign = 'center'; ctx.fillStyle = INK; ctx.font = '600 16px "Chakra Petch", sans-serif'; ctx.fillText(`MID ${fmt(mid)} · SPREAD ${(0.09).toFixed(2)}%`, W / 2, H - 22); ctx.textAlign = 'left';
+  },
+  board(ctx, t) {
+    chrome(ctx, 'PREMIUM BOARD', 'DEX VS ROBINHOOD · SORTED BY GAP');
+    const rows = BOARD.slice(0, 11); ctx.font = '500 16px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    rows.forEach((r, i) => {
+      const y = 52 + i * 33; const blink = i === 0 && Math.sin(t * 4) > 0;
+      ctx.fillStyle = blink ? 'rgba(87,230,255,.08)' : (i % 2 ? 'rgba(255,255,255,.025)' : 'transparent'); ctx.fillRect(8, y - 14, W - 16, 30);
+      ctx.textAlign = 'left'; ctx.fillStyle = INK; ctx.fillText(r.symbol, 20, y);
+      ctx.fillStyle = DIM; ctx.fillText(`$${fmt(r.quote)}`, 130, y); ctx.fillText(`$${fmt(r.dex)}`, 250, y);
+      const w = Math.min(220, Math.abs(r.prem) * 1800); ctx.fillStyle = r.prem >= 0 ? 'rgba(61,220,132,.35)' : 'rgba(255,92,106,.35)'; ctx.fillRect(380, y - 7, w, 14);
+      ctx.textAlign = 'right'; ctx.fillStyle = r.prem >= 0 ? UP : DOWN; ctx.fillText(`${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(2)}%`, W - 20, y);
+    });
+    ctx.textAlign = 'left';
+  },
+  heat(ctx, t) {
+    chrome(ctx, 'MARKET MAP · PREMIUM', `${BOARD.length} TOKENS WITH POOLS`);
+    const items = BOARD.slice(0, 24); const cols = 6, rows = 4; const gw = (W - 24) / cols, gh = (H - 52) / rows;
+    items.forEach((r, i) => {
+      const x = 12 + (i % cols) * gw, y = 42 + Math.floor(i / cols) * gh; const a = Math.min(1, Math.abs(r.prem) * 12 + 0.12);
+      ctx.fillStyle = r.prem >= 0 ? `rgba(61,220,132,${a * 0.55})` : `rgba(255,92,106,${a * 0.55})`; ctx.fillRect(x + 2, y + 2, gw - 4, gh - 4);
+      ctx.fillStyle = INK; ctx.font = '600 17px "Chakra Petch", sans-serif'; ctx.textBaseline = 'top'; ctx.fillText(r.symbol, x + 10, y + 10);
+      ctx.font = '500 14px "Chakra Petch", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(`${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(1)}%`, x + 10, y + gh - 26);
+    });
+  },
+  position(ctx, t, s) {
+    chrome(ctx, 'POSITIONS · LOCATE', 'MORPHO BLUE · CHAIN 4663');
+    const hf = 1.63 + 0.12 * Math.sin(t * 0.5);
+    ctx.font = '500 14px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM; ctx.textBaseline = 'top'; ctx.fillText('HEALTH FACTOR', 20, 48);
+    ctx.font = '700 64px "Chakra Petch", sans-serif'; ctx.fillStyle = hf < 1.2 ? DOWN : INK; ctx.fillText(hf.toFixed(2), 16, 66);
+    // gauge
+    const cx = W - 120, cy = 118, R = 62; ctx.lineWidth = 12; ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * 0.75, Math.PI * 2.25); ctx.stroke();
+    ctx.strokeStyle = hf < 1.2 ? DOWN : hf < 1.5 ? '#ffd23f' : UP; ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * 0.75, Math.PI * 0.75 + Math.PI * 1.5 * Math.min(1, (hf - 1) / 2)); ctx.stroke();
+    ctx.font = '500 13px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.fillText('LIQ AT', cx, cy - 12); ctx.fillStyle = INK; ctx.font = '600 16px "Chakra Petch", sans-serif'; ctx.fillText(`+${((hf - 1) * 100).toFixed(0)}%`, cx, cy + 6); ctx.textAlign = 'left';
+    const rows = [[`SHORT ${STOCKS[0].symbol}`, `${fmt(2000 / STOCKS[0].dex, 3)}`, `$${fmt(STOCKS[0].dex * 1.6)}`, UP], [`SHORT ${STOCKS[1].symbol}`, `${fmt(1200 / STOCKS[1].dex, 3)}`, `$${fmt(STOCKS[1].dex * 1.42)}`, DOWN], [`LEND ${STOCKS[2].symbol}`, `${fmt(4000 / STOCKS[2].dex, 2)}`, `${(6.4 + Math.sin(t) * 0.2).toFixed(2)}% APY`, CY]];
+    ctx.font = '500 15px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    ['POSITION', 'SIZE', 'LIQ PRICE / APY'].forEach((h, i) => { ctx.fillStyle = DIM; ctx.fillText(h, [20, 260, 440][i], 214); });
+    rows.forEach((r, i) => { const y = 250 + i * 40; ctx.fillStyle = 'rgba(255,255,255,.03)'; ctx.fillRect(10, y - 16, W - 20, 32); ctx.fillStyle = INK; ctx.fillText(r[0], 20, y); ctx.fillStyle = DIM; ctx.fillText(r[1], 260, y); ctx.fillStyle = r[3]; ctx.fillText(r[2], 440, y); });
+    ctx.fillStyle = DIM; ctx.font = '500 13px "Chakra Petch", sans-serif'; ctx.fillText('FEEDS PAUSE FRI 20:00 ET → SUN 20:00 ET · SIZE FOR THE REOPEN', 20, H - 22);
+  },
+  tape(ctx, t) {
+    chrome(ctx, 'ROBINHOOD 24/5 QUOTES', 'ALL TOKENS');
+    const rows = BOARD; ctx.font = '500 16px "Chakra Petch", sans-serif'; ctx.textBaseline = 'middle';
+    const lh = 33, n = Math.max(rows.length, 1); const off = (t * 22) % (n * lh);
+    for (let i = -1; i < 13; i++) {
+      const idx = ((Math.floor(off / lh) + i) % n + n) % n; const r = rows[idx]; if (!r) continue; const y = 52 + i * lh - (off % lh);
+      if (y < 40 || y > H - 8) continue;
+      ctx.textAlign = 'left'; ctx.fillStyle = INK; ctx.fillText(r.symbol, 20, y); ctx.fillStyle = DIM; ctx.fillText(`$${fmt(r.quote)}`, 150, y); ctx.fillText(`DEX $${fmt(r.dex)}`, 300, y);
+      ctx.textAlign = 'right'; ctx.fillStyle = r.prem >= 0 ? UP : DOWN; ctx.fillText(`${r.prem >= 0 ? '+' : ''}${(r.prem * 100).toFixed(2)}%`, W - 20, y);
+      ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.beginPath(); ctx.moveTo(14, y + 16); ctx.lineTo(W - 14, y + 16); ctx.stroke();
+    }
+    ctx.textAlign = 'left';
+  },
+};
+
+// ------------------------------------------------------------------ scene
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
+const scene = new THREE.Scene();
+const bgc = document.createElement('canvas'); bgc.width = 4; bgc.height = 256; const bgx = bgc.getContext('2d');
+const grd = bgx.createLinearGradient(0, 0, 0, 256); grd.addColorStop(0, '#0a1620'); grd.addColorStop(0.5, '#071019'); grd.addColorStop(1, '#03060a');
+bgx.fillStyle = grd; bgx.fillRect(0, 0, 4, 256);
+const bgTex = new THREE.CanvasTexture(bgc); bgTex.colorSpace = THREE.SRGBColorSpace; scene.background = bgTex;
+scene.fog = new THREE.FogExp2(0x06111a, 0.045);
+// Equirectangular sketch of the room, convolved by PMREM: dark walls, a cool band where the
+// monitors sit, a warm blob for the desk lamp. Every metal and glossy surface reflects this.
+(function buildEnv() {
+  const ec = document.createElement('canvas'); ec.width = 512; ec.height = 256; const ex = ec.getContext('2d');
+  const g = ex.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#0a1a26'); g.addColorStop(0.42, '#0c1b24'); g.addColorStop(0.55, '#070d12'); g.addColorStop(1, '#020406');
+  ex.fillStyle = g; ex.fillRect(0, 0, 512, 256);
+  const blob = (x, y, r, col, a) => { const rg = ex.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); ex.globalAlpha = a; ex.fillStyle = rg; ex.fillRect(x - r, y - r, r * 2, r * 2); ex.globalAlpha = 1; };
+  blob(256, 132, 150, 'rgba(120, 200, 255, 1)', .85);   // the monitor wall
+  blob(150, 140, 70, 'rgba(90, 240, 170, 1)', .5);      // green screens
+  blob(360, 140, 70, 'rgba(255, 120, 130, 1)', .45);    // red screens
+  blob(120, 120, 46, 'rgba(255, 179, 92, 1)', .7);      // desk lamp
+  blob(256, 22, 190, 'rgba(70, 110, 140, 1)', .35);     // ceiling strip
+  const etex = new THREE.CanvasTexture(ec); etex.mapping = THREE.EquirectangularReflectionMapping; etex.colorSpace = THREE.SRGBColorSpace;
+  const pmrem = new THREE.PMREMGenerator(renderer); pmrem.compileEquirectangularShader();
+  scene.environment = pmrem.fromEquirectangular(etex).texture;
+  pmrem.dispose(); etex.dispose();
+})();
+const camera = new THREE.PerspectiveCamera(36, 1, 0.05, 100);
+camera.position.set(0.30, 1.72, 7.1);
+
+const bezelMat = new THREE.MeshStandardMaterial({ color: 0x0e1318, roughness: 0.3, metalness: 0.7, envMapIntensity: 0.95 });
+const armMat = new THREE.MeshStandardMaterial({ color: 0x191f25, roughness: 0.24, metalness: 0.9, envMapIntensity: 1.25 });
+const deskMat = new THREE.MeshStandardMaterial({ color: 0x0a0e12, roughness: 0.1, metalness: 0.6, envMapIntensity: 1.5 });
+// one radial sprite reused for every soft glow in the scene
+const softSprite = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,.42)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const glowPlane = (w, h, color, opacity) => new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+  new THREE.MeshBasicMaterial({ map: softSprite, color: new THREE.Color(color), transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
+const screens = [];
+/** A gently curved panel: a plane whose edges bend away, so UVs stay exact. */
+function curvedPanel(w, h, bend) {
+  const geo = new THREE.PlaneGeometry(w, h, 28, 2), pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) { const px = pos.getX(i); pos.setZ(i, -px * px * bend); }
+  geo.computeVertexNormals(); return geo;
+}
+// diagonal sheen across the glass, so a screen reads as glass rather than a lit rectangle
+const sheenTex = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 144; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 144, 256, 0);
+  g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.46, 'rgba(190,225,255,.05)'); g.addColorStop(0.53, 'rgba(215,238,255,.085)');
+  g.addColorStop(0.60, 'rgba(190,225,255,.02)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 144);
+  return new THREE.CanvasTexture(c);
+})();
+function monitor({ painter, data, x, y, z, ry = 0, rx = 0, w = 1.62, h = 0.91, tint, rate }) {
+  const g = new THREE.Group();
+  const bezel = new THREE.Mesh(new RoundedBoxGeometry(w + 0.055, h + 0.055, 0.05, 3, 0.014), bezelMat); bezel.position.z = -0.03; g.add(bezel);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  // A screen texture is re-uploaded many times a second. Mipmaps would be rebuilt on every one of
+  // those uploads, so they are off; the panels sit close to screen-size on screen anyway.
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+  const bend = 0.028;
+  const scr = new THREE.Mesh(curvedPanel(w, h, bend), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false }));
+  scr.position.z = 0.028; g.add(scr);
+  // the toed-in wings read as softly out of focus; applied once to the context, not per frame
+  if (ry) ctx.filter = 'blur(0.6px)';
+  const sheen = new THREE.Mesh(curvedPanel(w, h, bend), new THREE.MeshBasicMaterial({ map: sheenTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false, opacity: 0.5 }));
+  sheen.position.z = 0.032; sheen.renderOrder = 2; g.add(sheen);
+  // haze: the screen's light hanging in the air around it
+  const haze = glowPlane(w * 1.8, h * 2.0, tint || '#7fd6ff', 0.05); haze.position.z = -0.06; haze.renderOrder = 1; g.add(haze);
+  // anamorphic streak
+  const streak = glowPlane(w * 2.2, h * 0.055, tint || '#7fd6ff', 0.03); streak.position.z = 0.07; streak.renderOrder = 3; g.add(streak);
+  const led = new THREE.Mesh(new THREE.BoxGeometry(w * 0.72, 0.007, 0.012), new THREE.MeshBasicMaterial({ color: 0x57e6ff, toneMapped: false })); led.position.set(0, -h / 2 - 0.032, -0.005); g.add(led);
+  const glow = new THREE.PointLight(new THREE.Color(tint || '#7fd6ff'), 2.4, 3.4, 2); glow.position.set(0, 0, 0.55); g.add(glow);
+  g.position.set(x, y, z); g.rotation.set(rx, ry, 0);
+  scene.add(g);
+  // pool of that screen's light on the desk below it
+  const pool = glowPlane(w * 1.5, 1.15, tint || '#7fd6ff', 0.16);
+  pool.rotation.x = -Math.PI / 2; pool.position.set(x * 0.82, 0.096, 0.72); pool.renderOrder = 1; scene.add(pool);
+  screens.push({ ctx, tex, painter, data, glow, streak, phase: Math.random() * 10, rate: rate || 9, paintedAt: -99, overdue: 0 });
+  return g;
+}
+function build() {
+  const s = (i) => STOCKS[i % STOCKS.length];
+  // six screens, three across, two high, the wings toed in
+  const yB = 0.62, yT = 1.58, dx = 1.68;
+  monitor({ painter: 'candles', data: s(0), x: 0, y: yB, z: 0, tint: '#5fb8ff', rate: 12 });
+  monitor({ painter: 'book', data: s(0), x: -dx, y: yB, z: 0.26, ry: 0.32, tint: '#3ddc84', rate: 10 });
+  monitor({ painter: 'board', x: dx, y: yB, z: 0.26, ry: -0.32, tint: '#ff8a8a', rate: 4 });
+  monitor({ painter: 'heat', x: 0, y: yT, z: -0.02, rx: 0.16, tint: '#57e6ff', rate: 3 });
+  monitor({ painter: 'position', data: s(1), x: -dx, y: yT, z: 0.24, ry: 0.32, rx: 0.16, tint: '#ffd23f', rate: 6 });
+  monitor({ painter: 'tape', x: dx, y: yT, z: 0.24, ry: -0.32, rx: 0.16, tint: '#5fb8ff', rate: 14 });
+  // arms and a spine
+  for (const x of [-dx, 0, dx]) { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.0, 0.06), armMat); arm.position.set(x * 0.98, 1.05, -0.12 + (x ? 0.2 : 0)); scene.add(arm); }
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.05, 0.05), armMat); bar.position.set(0, 1.08, -0.16); scene.add(bar);
+  // desk
+  const desk = new THREE.Mesh(new RoundedBoxGeometry(4.6, 0.06, 1.7, 2, 0.02), deskMat); desk.position.set(0, 0.06, 0.55); scene.add(desk);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.008, 0.022), new THREE.MeshBasicMaterial({ color: 0x57e6ff, toneMapped: false })); edge.position.set(0, 0.034, 1.4); scene.add(edge);
+  const edgeGlow = glowPlane(5.2, 0.9, '#57e6ff', 0.1); edgeGlow.rotation.x = -Math.PI / 2; edgeGlow.position.set(0, 0.1, 1.28); scene.add(edgeGlow);
+  // keyboard, mouse, mug, phone
+  const kb = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.025, 0.3, 2, 0.01), new THREE.MeshStandardMaterial({ color: 0x0c1014, roughness: 0.5 })); kb.position.set(0.05, 0.1, 0.95); scene.add(kb);
+  const kbl = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.24), new THREE.MeshBasicMaterial({ color: 0x1f6f8a, toneMapped: false, transparent: true, opacity: 0.55 })); kbl.rotation.x = -Math.PI / 2; kbl.position.set(0.05, 0.114, 0.95); scene.add(kbl);
+  const mouse = new THREE.Mesh(new RoundedBoxGeometry(0.11, 0.05, 0.17, 3, 0.03), new THREE.MeshStandardMaterial({ color: 0x0c1014, roughness: 0.45 })); mouse.position.set(0.72, 0.11, 0.98); scene.add(mouse);
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.16, 24), new THREE.MeshStandardMaterial({ color: 0xe8e2d6, roughness: 0.4 })); mug.position.set(-1.2, 0.17, 1.0); scene.add(mug);
+  const phone = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.012, 0.28, 2, 0.006), new THREE.MeshStandardMaterial({ color: 0x0a0d10, roughness: 0.3, metalness: 0.4 })); phone.position.set(1.1, 0.1, 1.05); phone.rotation.y = 0.3; scene.add(phone);
+  const phoneScr = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.25), new THREE.MeshBasicMaterial({ color: 0x1a3b4a, toneMapped: false })); phoneScr.rotation.x = -Math.PI / 2; phoneScr.rotation.z = 0.3; phoneScr.position.set(1.1, 0.107, 1.05); scene.add(phoneScr);
+  // paper, a pen, a stack of notes: the things that make a desk look used
+  const paperMat = new THREE.MeshStandardMaterial({ color: 0x2b3038, roughness: 0.95, metalness: 0 });
+  for (let i = 0; i < 3; i++) { const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.004, 0.42), paperMat); sheet.position.set(1.62 + i * 0.012, 0.095 + i * 0.005, 0.82 + i * 0.01); sheet.rotation.y = -0.25 + i * 0.04; scene.add(sheet); }
+  const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0x11161b, roughness: 0.3, metalness: 0.6 })); pen.rotation.set(0, 0.5, Math.PI / 2); pen.position.set(1.58, 0.106, 0.66); scene.add(pen);
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.006, 0.52), new THREE.MeshStandardMaterial({ color: 0x080b0e, roughness: 0.9, metalness: 0 })); pad.position.set(0.18, 0.094, 0.95); scene.add(pad);
+  const cable = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.008, 6, 20, Math.PI * 1.4), new THREE.MeshStandardMaterial({ color: 0x0b0f13, roughness: 0.6 })); cable.rotation.x = -Math.PI / 2; cable.position.set(-0.9, 0.096, 0.5); scene.add(cable);
+  // window wall behind: mullions and city bokeh
+  const mull = new THREE.MeshStandardMaterial({ color: 0x0b1116, roughness: 0.7 });
+  for (const x of [-3.2, -1.1, 1.1, 3.2]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 6, 0.08), mull); m.position.set(x, 2.2, -2.6); scene.add(m); }
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(9, 0.1, 0.3), mull); sill.position.set(0, 0.0, -2.6); scene.add(sill);
+  const N = 420; const pos = new Float32Array(N * 3); const col = new Float32Array(N * 3); const palette = [[1, .72, .42], [1, .9, .7], [.5, .75, 1], [.9, .95, 1], [1, .45, .4], [.4, .9, .8]];
+  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - .5) * 26; pos[i * 3 + 1] = Math.random() * 6 - 0.5; pos[i * 3 + 2] = -7 - Math.random() * 12; const c = palette[Math.floor(Math.random() * palette.length)]; col.set(c, i * 3); }
+  const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const sc = document.createElement('canvas'); sc.width = sc.height = 64; const sx = sc.getContext('2d'); const rg = sx.createRadialGradient(32, 32, 2, 32, 32, 30); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.35, 'rgba(255,255,255,.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sx.fillStyle = rg; sx.fillRect(0, 0, 64, 64);
+  const spr = new THREE.CanvasTexture(sc);
+  const city = new THREE.Points(bg, new THREE.PointsMaterial({ size: 0.42, map: spr, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })); city.userData.mat = city.material; scene.add(city); scene.userData.city = city;
+  // room shell: floor, ceiling with a recessed strip, side walls
+  const shellMat = new THREE.MeshStandardMaterial({ color: 0x030507, roughness: 0.5, metalness: 0.3, envMapIntensity: 0.4 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), shellMat); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.7; scene.add(floor);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(24, 20), new THREE.MeshStandardMaterial({ color: 0x070b0f, roughness: 0.85, metalness: 0.1 })); ceil.rotation.x = Math.PI / 2; ceil.position.set(0, 3.5, -1); scene.add(ceil);
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.04, 0.14), new THREE.MeshBasicMaterial({ color: 0x9fd8ff, toneMapped: false })); strip.position.set(0, 3.44, 0.4); scene.add(strip);
+  const stripGlow = glowPlane(9, 1.6, '#8fcaff', 0.07); stripGlow.rotation.x = Math.PI / 2; stripGlow.position.set(0, 3.36, 0.4); scene.add(stripGlow);
+  const stripLight = new THREE.PointLight(0x9fd8ff, 2.6, 8, 2); stripLight.position.set(0, 3.2, 0.5); scene.add(stripLight);
+  for (const sx of [-6.4, 6.4]) { const wall = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), shellMat); wall.rotation.y = sx > 0 ? -Math.PI / 2 : Math.PI / 2; wall.position.set(sx, 2, -1); scene.add(wall); }
+  // lights: cool from the screens, warm desk lamp on the left
+  scene.add(new THREE.AmbientLight(0x22323d, 1.0));
+  const lamp = new THREE.PointLight(0xffb35c, 6, 4, 2); lamp.position.set(-1.9, 1.3, 0.9); scene.add(lamp);
+  const lampBody = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.06, 16), new THREE.MeshBasicMaterial({ color: 0xffc98a, toneMapped: false })); lampBody.position.set(-1.9, 1.3, 0.9); scene.add(lampBody);
+  const rim = new THREE.DirectionalLight(0x5f7fff, 0.8); rim.position.set(3, 4, -4); scene.add(rim);
+  // the trader: an out-of-focus silhouette in the foreground, parented to the camera
+  // Silhouette drawn once at 1024², then blurred: it occludes the bright screens, which is what
+  // makes it read as a person. Rim light on the screen-facing edge, warm bounce from the lamp side.
+  const SZ = 1024;
+  const shape = document.createElement('canvas'); shape.width = shape.height = SZ; const sh = shape.getContext('2d');
+  function body(cx) {
+    cx.beginPath();
+    cx.moveTo(40, SZ);                                        // left hem
+    cx.bezierCurveTo(60, 720, 210, 610, 340, 585);            // left arm/shoulder
+    cx.bezierCurveTo(392, 560, 404, 520, 400, 470);           // trapezius into neck
+    cx.bezierCurveTo(398, 300, 452, 214, 540, 214);           // left of skull
+    cx.bezierCurveTo(632, 214, 686, 300, 684, 470);           // right of skull
+    cx.bezierCurveTo(680, 520, 692, 560, 744, 585);           // neck into right shoulder
+    cx.bezierCurveTo(874, 610, 1024, 720, 1044, SZ);          // right arm/hem
+    cx.closePath();
+  }
+  // chair back behind the body
+  sh.fillStyle = '#000'; sh.beginPath(); sh.roundRect(120, 690, 840, 400, 70); sh.fill();
+  // headset band + cup
+  sh.lineWidth = 26; sh.strokeStyle = '#000'; sh.beginPath(); sh.arc(542, 330, 156, Math.PI * 1.06, Math.PI * 1.94); sh.stroke();
+  sh.beginPath(); sh.ellipse(392, 372, 40, 58, -0.12, 0, Math.PI * 2); sh.fill();
+  body(sh); sh.fill();
+  // rim: stroke the same outline in a cool screen-lit tone, then a warm pass offset toward the lamp
+  sh.globalCompositeOperation = 'source-atop';
+  sh.lineWidth = 8; sh.strokeStyle = 'rgba(150, 226, 255, 1)'; body(sh); sh.stroke();
+  sh.save(); sh.translate(-6, -3); sh.lineWidth = 5; sh.strokeStyle = 'rgba(255, 179, 92, .85)'; body(sh); sh.stroke(); sh.restore();
+  sh.globalCompositeOperation = 'source-over';
+  const pc = document.createElement('canvas'); pc.width = pc.height = SZ; const px = pc.getContext('2d');
+  px.filter = 'blur(7px)'; px.drawImage(shape, 0, 0);
+  const ptex = new THREE.CanvasTexture(pc); ptex.colorSpace = THREE.SRGBColorSpace;
+  const person = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.98), new THREE.MeshBasicMaterial({ map: ptex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+  person.position.set(-0.44, -0.44, -1.70); camera.add(person); scene.add(camera); scene.userData.person = person;
+}
+build();
+
+// ------------------------------------------------------------------ post: bloom + film grade
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+// BokehPass used to sit here. It re-rendered every object a second time into a depth target -
+// doubling the draw calls - for a blur radius too small to see. The soft focus now comes from
+// blurring the off-axis screen canvases directly, which costs nothing per frame.
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.72, 0.6, 0.68);
+composer.addPass(bloom);
+const Grade = {
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uRes; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+    void main(){
+      vec2 c = vUv - 0.5; float r2 = dot(c, c); vec2 uv = 0.5 + c * (1.0 + 0.035 * r2);
+      float ca = 0.006 * r2;
+      vec3 col = vec3(texture2D(tDiffuse, uv + c * ca).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - c * ca).b);
+      col = max(col - 0.004, 0.0);                       // black point
+      col = clamp((col - 0.5) * 1.07 + 0.5, 0.0, 4.0);    // contrast
+      float g = hash(uv * uRes.xy * 0.5 + fract(uTime) * 100.0) - 0.5; col += g * 0.05;
+      float vig = smoothstep(0.98, 0.3, length(c) * 1.2); col *= mix(0.3, 1.0, vig);
+      col = mix(col, col * vec3(0.94, 1.0, 1.06), 0.5);
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+};
+const grade = new ShaderPass(Grade); composer.addPass(grade);
+composer.addPass(new OutputPass());
+
+// ---------------------------------------------------------------- adaptive quality
+// The scene has to survive a laptop on integrated graphics and a sandboxed iframe with no GPU at
+// all. Detect software rendering up front, then keep watching the frame time and step the tier
+// down when it slips - with hysteresis, so it settles instead of oscillating.
+const TIERS = [
+  { name: 'minimal', dpr: 0.6, bloom: false, paint: 1, rateScale: 0.25 },
+  { name: 'low',     dpr: 0.85, bloom: false, paint: 1, rateScale: 0.5 },
+  { name: 'medium',  dpr: 1.0, bloom: true,  paint: 1, rateScale: 0.8 },
+  { name: 'high',    dpr: 1.35, bloom: true,  paint: 2, rateScale: 1 },
+];
+let rendererName = 'unknown';
+const softwareRenderer = (() => {
+  try {
+    const gl = renderer.getContext();
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    rendererName = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : 'hidden';
+    return /swiftshader|llvmpipe|software|basic render|microsoft basic/i.test(rendererName);
+  } catch (e) { return false; }
+})();
+// add ?debug to the URL to see which tier and which GPU the browser actually gave this page
+const dbgEl = /(\?|&)debug\b/.test(location.search) ? (() => {
+  const d = document.createElement('div'); d.className = 'hud dbg'; document.body.appendChild(d); return d;
+})() : null;
+let tier = softwareRenderer ? 0 : 2;
+let Q = TIERS[tier];
+function applyTier() {
+  Q = TIERS[tier];
+  composer.setPixelRatio(Math.min(devicePixelRatio || 1, Q.dpr));
+  bloom.enabled = Q.bloom;
+  resize();
+}
+// Frame-time watcher. Everything here is measured in MILLISECONDS, not frames: a machine that is
+// already struggling produces frames so rarely that a frame-counted cooldown would take a minute to
+// react, which is exactly when reacting matters most.
+const samples = new Array(30).fill(16); let si = 0, filled = 0, settleUntil = 0;
+let frozen = false;
+function median() {
+  const a = samples.slice(0, filled).sort((x, y) => x - y);
+  return a[Math.floor(a.length / 2)];
+}
+function watchFrame(dt, now) {
+  samples[si = (si + 1) % samples.length] = dt;
+  if (filled < samples.length) filled++;
+  if (filled < 10 || now < settleUntil) return;
+  const med = median();
+  if (med > 30 && tier > 0) { tier--; applyTier(); settleUntil = now + 1500; return; }
+  if (med < 13 && tier < TIERS.length - 1) { tier++; applyTier(); settleUntil = now + 4000; return; }
+  // Cheapest tier and still slower than ~11fps: this machine cannot animate the scene. Hold the last
+  // frame. A still desk reads as a photograph; a stuttering one reads as broken.
+  if (tier === 0 && med > 90) freeze();
+}
+function freeze() {
+  if (frozen) return;
+  frozen = true;
+  document.body.classList.add('still');
+  const el = document.getElementById('fps'); if (el) el.textContent = 'still · tap to retry';
+}
+addEventListener('pointerdown', () => { if (frozen) { frozen = false; document.body.classList.remove('still'); filled = 0; settleUntil = performance.now() + 4000; requestAnimationFrame(frame); } });
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, Q.dpr));
+  renderer.setSize(w, h, false); composer.setSize(w, h);
+  camera.aspect = w / h; camera.fov = w < 720 ? 46 : 34; camera.updateProjectionMatrix();
+  grade.uniforms.uRes.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
+  if (scene.userData.person) { const p = scene.userData.person; p.position.x = w < 720 ? -0.20 : -0.44; p.position.y = w < 720 ? -0.60 : -0.44; p.scale.setScalar(w < 720 ? 1.25 : 1); }
+}
+addEventListener('resize', resize); resize();
+
+// ------------------------------------------------------------------ HUD + loop
+const fpsEl = document.getElementById('fps'), tcEl = document.getElementById('tc'), dateEl = document.getElementById('date');
+const d0 = new Date(); if (dateEl) dateEl.textContent = `[ ${String(d0.getMonth() + 1).padStart(2, '0')} / ${String(d0.getDate()).padStart(2, '0')} / ${String(d0.getFullYear()).slice(2)} ]`;
+let frames = 0, fpsT = performance.now(), lastFrameAt = fpsT;
+const mouse = { x: 0, y: 0 };
+addEventListener('pointermove', (e) => { mouse.x = (e.clientX / innerWidth - 0.5) * 2; mouse.y = (e.clientY / innerHeight - 0.5) * 2; });
+const clock = new THREE.Clock();
+let booted = false;
+function frame() {
+  const t = clock.getElapsedTime();
+  if (dbgEl) dbgEl.textContent = `${TIERS[tier].name} · dpr ${renderer.getPixelRatio().toFixed(2)} · ${rendererName}`;
+  // Repaint at most `Q.paint` screens per frame, most overdue first. The old code asked each screen
+  // "is it my turn by the clock?" independently, so the moment the frame rate fell below a screen's
+  // own rate that screen repainted every frame - and once every screen was in that state the cost
+  // could never come back down. A shared budget makes a slow frame cheaper, not more expensive.
+  let due = null;
+  for (const s of screens) {
+    s.streak.material.opacity = 0.022 + 0.012 * Math.sin(t * 1.7 + s.phase);
+    const overdue = t - s.paintedAt - 1 / (s.rate * Q.rateScale);
+    if (overdue < 0) continue;
+    (due || (due = [])).push(s); s.overdue = overdue;
+  }
+  if (due) {
+    if (due.length > Q.paint) { due.sort((a, b) => b.overdue - a.overdue); due.length = Q.paint; }
+    for (const s of due) { painters[s.painter](s.ctx, t + s.phase, s.data); s.tex.needsUpdate = true; s.paintedAt = t; }
+  }
+  updateCamera(t);
+  const p = scene.userData.person; const py = innerWidth < 720 ? -0.60 : -0.44;
+  p.position.y = py + Math.sin(t * 0.9) * 0.005; p.position.x += (((innerWidth < 720 ? -0.20 : -0.44) - mouse.x * 0.04) - p.position.x) * 0.05;
+  scene.userData.city.material.size = 0.42 + Math.sin(t * 0.8) * 0.02;
+  grade.uniforms.uTime.value = t;
+  composer.render();
+  frames++; const now = performance.now();
+  watchFrame(now - lastFrameAt, now); lastFrameAt = now;
+  if (now - fpsT > 500) {
+    if (!frozen && fpsEl) fpsEl.textContent = `${Math.round(frames * 1000 / (now - fpsT))} fps`;
+    if (tcEl) tcEl.textContent = new Date().toISOString().slice(11, 19) + ' UTC';
+    frames = 0; fpsT = now;
+  }
+  if (!booted && t > 0.4) { booted = true; const b = document.getElementById('boot'); if (b) b.classList.add('gone'); }
+  if (!frozen) requestAnimationFrame(frame);
+}
+
+// ------------------------------------------------------------------ camera poses
+// The scene never unmounts. Routing flies the camera between a wide "hero" framing and a "docked"
+// framing squared onto one monitor, and the app's UI resolves on that monitor's glass.
+const POSES = {
+  hero:    { pos: [0.30, 1.72, 7.10],  look: [0.05, 1.06, 0.00],  drift: 1 },
+  markets: { pos: [0.00, 0.62, 1.72],  look: [0.00, 0.62, 0.00],  drift: 0.16 },
+  premium: { pos: [1.14, 0.62, 1.89],  look: [1.68, 0.62, 0.26],  drift: 0.16 },
+  desk:    { pos: [-1.14, 1.58, 1.87], look: [-1.68, 1.58, 0.24], drift: 0.16 },
+};
+const fromP = new THREE.Vector3(), fromL = new THREE.Vector3();
+const toP = new THREE.Vector3(), toL = new THREE.Vector3();
+const curP = new THREE.Vector3(), curL = new THREE.Vector3();
+let poseName = null, flightStart = -1, flightMs = 0, drift = 1, docked = false;
+const easeInOut = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+
+function setPose(name, ms) {
+  const p = POSES[name] || POSES.hero;
+  if (name === poseName) return;
+  const first = poseName === null;
+  poseName = name; docked = name !== 'hero'; drift = p.drift;
+  toP.fromArray(p.pos); toL.fromArray(p.look);
+  if (first) {
+    curP.copy(toP); curL.copy(toL);
+    camera.position.copy(curP); camera.lookAt(curL);
+  } else {
+    fromP.copy(curP); fromL.copy(curL);
+    flightMs = ms === undefined ? 1150 : ms;
+    flightStart = performance.now();
+  }
+  // a docked scene is background: one screen repaint per frame, and it stops chasing the pointer
+  Q.paint = docked ? 1 : TIERS[tier].paint;
+  if (frozen) { frozen = false; document.body.classList.remove('still'); requestAnimationFrame(frame); }
+}
+function updateCamera(t) {
+  if (flightStart >= 0) {
+    const u = Math.min(1, (performance.now() - flightStart) / flightMs), e = easeInOut(u);
+    curP.lerpVectors(fromP, toP, e); curL.lerpVectors(fromL, toL, e);
+    if (u >= 1) flightStart = -1;
+  }
+  const k = flightStart >= 0 ? 0.22 : 0.06;
+  camera.position.x += (curP.x + (Math.sin(t * 0.15) * 0.16 + mouse.x * 0.28) * drift - camera.position.x) * k;
+  camera.position.y += (curP.y + (Math.cos(t * 0.11) * 0.06 - mouse.y * 0.14) * drift - camera.position.y) * k;
+  camera.position.z += (curP.z - camera.position.z) * k;
+  camera.lookAt(curL);
+}
+
+setPose('hero', 0);
+document.fonts.ready.then(() => { for (const s of screens) s.paintedAt = -99; frame(); });
+
+window.LocateScene = {
+  setPose, setData,
+  isSoftware: () => softwareRenderer,
+  rendererName: () => rendererName,
+  tier: () => TIERS[tier].name,
+};

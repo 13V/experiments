@@ -13,10 +13,32 @@
 </head>
 <body>
 <a class="skip" href="#view">Skip to content</a>
-<div id="app">
 
-  <header id="masthead">
-    <a class="brand" href="#/markets" aria-label="Locate home">
+<canvas id="gl"></canvas>
+<div id="scrim"></div>
+
+<section id="hero" aria-label="Locate">
+  <div class="hframe"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+  <div class="hhud tl" id="fps">— fps</div>
+  <div class="hhud tr"><i></i>Live</div>
+  <div class="hhud bl" id="date">[ -- / -- / -- ]</div>
+  <div class="hhud br" id="tc">--:--:-- UTC</div>
+  <div class="htop">
+    <h1><span>Borrow the stock,</span><span>not the dollars.</span></h1>
+  </div>
+  <div class="hbot">
+    <p class="hlive" id="livebar">Live · <b id="live-n">—</b> Robinhood stocks · widest gap <b id="live-w">—</b></p>
+    <p class="hsub">Lend a stock and earn what shorts pay, or post USDG, take the stock out and sell it into the pool. Settled on Morpho Blue, Robinhood Chain.</p>
+    <div class="hbtns">
+      <a class="p" href="#/markets">Open the desk</a>
+      <a class="s" href="#/premium">Premium board</a>
+    </div>
+  </div>
+</section>
+
+<div id="app">
+<header id="masthead">
+    <a class="brand" href="#/" aria-label="Back to the desk">
       <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       <span>Locate</span>
     </a>
@@ -70,6 +92,10 @@
 
 <div id="toasts" aria-live="polite"></div>
 
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+<script type="module" src="./scene.js"></script>
 <script src="./lib.js"></script>
 <script src="./app.js"></script>
 </body>
