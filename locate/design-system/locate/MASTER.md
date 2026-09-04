@@ -237,20 +237,20 @@ Before delivering any UI code, verify:
 ## Decisions taken for Locate (overrides the generated sections above)
 
 The generator was run with density 9, motion 2, variance 5 for "DeFi lending trading terminal fintech
-professional dense data". What shipped, and why it differs from the literal output:
+professional dense data". A first pass kept a dark terminal look; it read as hard on the eyes, so the
+shipped design commits to one idea instead: **a split-flap departure board.** Prose sits on a light
+station wall; every price is a black flip tile; the masthead carries a station clock.
 
 | Area | Generated | Shipped | Reason |
 |---|---|---|---|
-| Pattern | Enterprise Gateway (hero, solutions, client logos) | No landing page. The desk opens on the Markets table. | Locate is a tool, not a brochure. The data is the page. |
-| Style | Dark Mode (OLED), navy | Near-black `#0a0a09`, amber `#f5b301` primary, bone `#d9d0b8` text | The fintech/crypto palette search returned gold-on-slate; amber is that gold on a warmer black. One accent, no gradients, no glow, hairlines only. |
-| Positive / negative | Green positive indicators | `--green #5fd38a` for positive premium, `--red #ff5a4f` for negative, bold past ±5% | Skill rule `color-not-only`: the sign is always printed too. |
-| Typography | Fira Code / Fira Sans | IBM Plex Mono for figures and labels, IBM Plex Sans for prose | "Financial Trust" pairing (IBM Plex) is the finance recommendation; one family keeps labels and figures cohesive, as the Fira pairing intends. Sizes 11/12/13/14/16/20 only. |
-| Spacing | 8–32 px dense scale | `--s1..--s6` = 4/8/12/16/24/32 px; table rows 38 px; panels 12/16 px | Density 9. |
-| Motion | GSAP scroll reveal | None. 150 ms colour transitions on hover only; `prefers-reduced-motion` disables them. | Motion 2; a desk should not animate. |
-| KPI cards | Stat grid | Ledger rows: label, dotted leader, value (`dl.ledger > .lrow`) | Reads as a term sheet, not a dashboard template. |
-| Navigation | Mega menu | Four tabs with `1–4` hotkeys, `kbd` hints, skip link, 44 px targets on phones | Skill checklist: keyboard nav, touch targets, focus visible. |
-| Copy | Marketing sections | Kicker + one memo sentence per view; notices written as desk notes, never file paths | The user-facing page must not read as generated. |
+| Pattern | Enterprise Gateway (hero, solutions, logos) | No landing page; the site opens on the Markets board | Locate is a tool. The board is the page. |
+| Style | Dark Mode (OLED), navy | Light wall `#ebe8e1` for prose, black boards `#101010` with tiles `#1f1f1f`, signage yellow `#ffd23f`, green `#3ddc84` and red `#ff5c5c` for signed premiums, gold tile past ±5% | Readability first: dark-on-light prose at 15:1, light-on-black figures at 13:1+. The sign is always printed, never colour alone. |
+| Typography | Fira Code / Fira Sans | Barlow Semi Condensed on tiles, headings and the clock; Barlow for prose. Base 16px, tiles 21px, headings 40px | Barlow descends from highway and railway signage, which is the board's world. Condensed figures stay large without widening the board. |
+| Spacing | 8–32px dense scale | 44px board rows, 48px inputs and buttons, 20–28px section gaps | Density 9 on the board, room to breathe on the wall. |
+| Motion | GSAP scroll reveal | Rows fade in with a 35ms stagger (capped at 24 rows); a tile flips (`rotateX`) when its value changes; `prefers-reduced-motion` disables both | Motion 2. The flip is the only animation and it carries meaning: a number changed. |
+| KPI cards | Stat grid | Ledger rows: label, dotted leader, black value tile | Reads as a ticket, not a dashboard. |
+| Navigation | Mega menu | Four platform-sign tabs, active one on a yellow block, `1–4` hotkeys with `kbd` hints, skip link, 48px targets | Skill checklist: keyboard nav, touch targets, visible focus. |
+| Phones | — | Boards drop to symbol, quote, DEX, premium; names and index hidden | A phone carries four columns legibly, not twelve. |
+| Copy | Marketing sections | Kicker plus one memo sentence per view; notices written as desk notes | The page must not read as generated. |
 
-Tokens live in `locate/site/style.css` `:root`. Contrast: bone-2 `#8d8573` on the background is 5.4:1,
-amber 10.7:1, green 10.5:1, red 6.4:1. `--rule #5d574b` is decorative only (leaders, hints) and is not
-used for body text.
+Tokens live in `locate/site/style.css` `:root`.

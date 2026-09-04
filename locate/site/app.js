@@ -56,6 +56,18 @@
     return h('span', { class: 'ubar' }, '▮'.repeat(n) + '▯'.repeat(10 - n), h('b', {}, fmtPct(u)));
   }
   const premClass = (p) => 'num' + (p === null || p === undefined ? '' : (p > 0 ? ' pos' : p < 0 ? ' neg' : '') + (Math.abs(p) > 0.05 ? ' hot' : ''));
+  /** One split-flap tile. */
+  const tile = (text, cls) => h('span', { class: 'tile' + (cls ? ' ' + cls : '') }, text);
+  /** Sets a cell's tile text; a changed value flips the tile. */
+  function setTile(td, text) {
+    let t = td.querySelector('.tile');
+    if (!t) { clear(td); t = tile(''); td.appendChild(t); }
+    if (t.textContent === text) return;
+    t.textContent = text;
+    t.classList.remove('flip');
+    void t.offsetWidth;
+    t.classList.add('flip');
+  }
 
   // ================================================================== toasts
   let toastSeq = 0;
@@ -427,13 +439,13 @@
     view.appendChild(viewHead('Markets', `${STATE.markets.length} listed · caps ${fmtUsd(totalCap, 0)} · loan = stock, collateral = USDG`,
       'One Morpho market per name. Lenders supply the stock through a vault; shorts post USDG and borrow it out. On-chain columns fill in as each market is created.'));
     const wrap = h('div', { class: 'table-wrap' });
-    const table = h('table');
+    const table = h('table', { class: 'markets' });
     table.appendChild(h('thead', {}, h('tr', {},
       h('th', { class: 'idx' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'LLTV'), h('th', { class: 'num' }, 'Cap'),
       h('th', { class: 'num' }, 'Supply APY'), h('th', { class: 'num' }, 'Borrow APY'), h('th', {}, 'Utilisation'),
-      h('th', { class: 'num' }, 'Available'), h('th', { class: 'num' }, 'RH quote'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Premium')
+      h('th', { class: 'num' }, 'Available'), h('th', { class: 'num' }, 'RH quote'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Premium'), h('th', {}, 'Status')
     )));
-    const foot = h('td', { colspan: '11' }, 'quotes: Robinhood 24/5 · dex: DexScreener, Robinhood Chain pools · premium = dex / quote − 1 · red or green past ±5% is bold');
+    const foot = h('td', { colspan: '12' }, 'quotes: Robinhood 24/5 · dex: DexScreener, Robinhood Chain pools · premium = dex / quote − 1 · past ±5% the tile turns gold');
     table.appendChild(h('tfoot', {}, h('tr', {}, foot)));
     const tbody = h('tbody');
     table.appendChild(tbody);
@@ -442,22 +454,23 @@
 
     const rows = new Map();
     for (const m of STATE.markets) {
-      const supplyC = h('td', { class: 'num soon' }, '—');
-      const borrowC = h('td', { class: 'num soon' }, '—');
-      const utilC = h('td', { class: 'num soon' }, '—');
-      const availC = h('td', { class: 'num soon' }, '—');
-      const quoteC = h('td', { class: 'num' }, '…');
-      const dexC = h('td', { class: 'num' }, '…');
-      const premC = h('td', { class: 'num' }, '…');
-      const tr = h('tr', {},
+      const supplyC = h('td', { class: 'num soon' }, tile('—'));
+      const borrowC = h('td', { class: 'num soon' }, tile('—'));
+      const utilC = h('td', { class: 'num soon' }, tile('—'));
+      const availC = h('td', { class: 'num soon' }, tile('—'));
+      const quoteC = h('td', { class: 'num' }, tile('…'));
+      const dexC = h('td', { class: 'num' }, tile('…'));
+      const premC = h('td', { class: 'num' }, tile('…'));
+      const statusC = h('td', {}, tile(isDeployed(m) ? 'Open' : 'Soon', isDeployed(m) ? 'green' : 'dim'));
+      const tr = h('tr', { style: `--i:${tbody.childElementCount}` },
         h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
-        h('td', { class: 'sym' }, m.symbol, h('span', { class: 'name' }, m.name)),
-        h('td', { class: 'num' }, (m.lltvBps / 100).toFixed(1) + '%'),
-        h('td', { class: 'num dim' }, fmtUsd(m.initialCapUsd, 0)),
-        supplyC, borrowC, utilC, availC, quoteC, dexC, premC
+        h('td', { class: 'sym' }, tile(m.symbol, 'yellow'), h('span', { class: 'name' }, m.name)),
+        h('td', { class: 'num' }, tile((m.lltvBps / 100).toFixed(1) + '%')),
+        h('td', { class: 'num' }, tile(fmtUsd(m.initialCapUsd, 0), 'dim')),
+        supplyC, borrowC, utilC, availC, quoteC, dexC, premC, statusC
       );
       tbody.appendChild(tr);
-      rows.set(m.symbol, { supplyC, borrowC, utilC, availC, quoteC, dexC, premC });
+      rows.set(m.symbol, { supplyC, borrowC, utilC, availC, quoteC, dexC, premC, statusC });
     }
 
     let cancelled = false;
@@ -473,25 +486,26 @@
       for (const m of STATE.markets) {
         const r = rows.get(m.symbol);
         const q = quoteFor(m.symbol);
-        r.quoteC.textContent = q ? fmtUsd(q.mid) : '—';
+        setTile(r.quoteC, q ? fmtUsd(q.mid) : '—');
+        if (q && q.halted) { setTile(r.statusC, 'Halted'); r.statusC.querySelector('.tile').className = 'tile red'; }
         const d = dex.get(m.token.toLowerCase());
-        r.dexC.textContent = d ? fmtUsd(d.priceUsd) : (d === null ? 'no pool' : '—');
+        setTile(r.dexC, d ? fmtUsd(d.priceUsd) : (d === null ? 'no pool' : '—'));
         if (q && d) {
           const prem = (d.priceUsd - q.mid) / q.mid;
-          r.premC.textContent = (prem >= 0 ? '+' : '') + fmtPct(prem);
+          setTile(r.premC, (prem >= 0 ? '+' : '') + fmtPct(prem));
           r.premC.className = premClass(prem);
         } else {
-          r.premC.textContent = '—';
+          setTile(r.premC, '—');
         }
         if (isDeployed(m)) {
           loadMarketOnchain(m).then((d2) => {
             if (cancelled || !d2) return;
             const price = d ? d.priceUsd : (q ? q.mid : d2.usdgPerStock);
-            r.supplyC.textContent = fmtPct(d2.supplyApy); r.supplyC.classList.remove('soon');
-            r.borrowC.textContent = fmtPct(d2.borrowApy); r.borrowC.classList.remove('soon');
-            clear(r.utilC); r.utilC.appendChild(ubar(d2.utilisation)); r.utilC.classList.remove('soon');
+            setTile(r.supplyC, fmtPct(d2.supplyApy)); r.supplyC.classList.remove('soon');
+            setTile(r.borrowC, fmtPct(d2.borrowApy)); r.borrowC.classList.remove('soon');
+            setTile(r.utilC, fmtPct(d2.utilisation)); r.utilC.classList.remove('soon');
             const availTokens = Number(d2.availableRaw) / 1e18;
-            r.availC.textContent = `${fmtNum(availTokens, 1)} (${fmtUsd(availTokens * price)})`;
+            setTile(r.availC, `${fmtNum(availTokens, 1)} (${fmtUsd(availTokens * price)})`);
             r.availC.classList.remove('soon');
           });
         }
@@ -644,7 +658,7 @@
       clear(body);
       const m = STATE.markets.find((x) => x.symbol === symbol);
       const deployed = isDeployed(m);
-      const priceLine = h('div', { class: 'dim', style: 'margin-bottom:10px;font-size:12px' }, 'reference price: …');
+      const priceLine = h('div', { class: 'dim', style: 'margin:-4px 0 14px;font-size:15px' }, 'reference price: …');
       body.appendChild(priceLine);
 
       let refPrice = null;
@@ -756,7 +770,7 @@
             lrow('Borrowed', h('div', { class: 'value small' }, fmtToken(pos.borrowAssets, STOCK_DECIMALS, 4) + ' ' + symbol)),
             lrow('Health factor', h('div', { class: `value${pos.healthFactorWad < (12n * 10n ** 17n) ? ' red' : ''}` }, fmtHf(pos.healthFactorWad)))
           ));
-          posBody.appendChild(h('div', { class: 'dim', style: 'margin:8px 0;font-size:11px' }, `Max borrow ${fmtToken(pos.maxBorrow, STOCK_DECIMALS, 4)} ${symbol} · liquidation price ${fmtUsd(Number(pos.liquidationPrice) / 1e18)} USDG/share`));
+          posBody.appendChild(h('div', { class: 'dim', style: 'margin:8px 0;font-size:15px' }, `Max borrow ${fmtToken(pos.maxBorrow, STOCK_DECIMALS, 4)} ${symbol} · liquidation price ${fmtUsd(Number(pos.liquidationPrice) / 1e18)} USDG/share`));
           if (pairUrl) posBody.appendChild(h('div', { style: 'margin-bottom:10px' }, h('a', { href: pairUrl, target: '_blank', rel: 'noopener' }, `sell / buy back ${symbol} on DEX →`)));
 
           const addIn = h('input', { type: 'text', placeholder: '0.0' });
@@ -810,10 +824,10 @@
   function renderPremium(view) {
     view.appendChild(viewHead('Premium board', 'DEX price vs Robinhood 24/5 quote · sorted by |premium|',
       'Every Robinhood stock token with a pool. Robinhood mints and burns only while the exchange is open, so the pool drifts from the quote; the drift is what a short here captures.'));
-    const status = h('div', { class: 'dim', style: 'margin-bottom:10px;font-size:12px' }, 'loading…');
+    const status = h('div', { class: 'dim', style: 'margin:-4px 0 12px;font-size:15px' }, 'loading…');
     view.appendChild(status);
     const wrap = h('div', { class: 'table-wrap hidden' });
-    const table = h('table');
+    const table = h('table', { class: 'premium' });
     table.appendChild(h('thead', {}, h('tr', {},
       h('th', { class: 'idx' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'RH quote'),
       h('th', { class: 'num' }, 'Premium'), h('th', { class: 'num' }, '24h DEX vol'), h('th', {}, 'Status'), h('th', {}, '')
@@ -871,15 +885,15 @@
       });
       withPrem.sort((a, b) => Math.abs(b.prem ?? 0) - Math.abs(a.prem ?? 0));
       for (const r of withPrem) {
-        const tr = h('tr', {},
+        const tr = h('tr', { style: `--i:${tbody.childElementCount}` },
           h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
-          h('td', { class: 'sym' }, r.symbol, h('span', { class: 'name' }, r.name)),
-          h('td', { class: 'num' }, fmtUsd(r.dex.priceUsd)),
-          h('td', { class: 'num' }, r.q ? fmtUsd(r.q.mid) : '—'),
-          h('td', { class: premClass(r.prem) }, r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—'),
-          h('td', { class: 'num' }, fmtUsd(r.dex.vol24, 0)),
-          h('td', {}, r.q?.halted ? h('span', { class: 'badge halt' }, 'HALTED') : h('span', { class: 'badge live' }, 'live')),
-          h('td', {}, h('a', { href: r.dex.url, target: '_blank', rel: 'noopener' }, 'pair →'))
+          h('td', { class: 'sym' }, tile(r.symbol, 'yellow'), h('span', { class: 'name' }, r.name)),
+          h('td', { class: 'num' }, tile(fmtUsd(r.dex.priceUsd))),
+          h('td', { class: 'num' }, tile(r.q ? fmtUsd(r.q.mid) : '—', r.q ? '' : 'dim')),
+          h('td', { class: premClass(r.prem) }, tile(r.prem !== null ? (r.prem >= 0 ? '+' : '') + fmtPct(r.prem) : '—')),
+          h('td', { class: 'num' }, tile(fmtUsd(r.dex.vol24, 0), 'dim')),
+          h('td', {}, tile(r.q?.halted ? 'Halted' : 'Open', r.q?.halted ? 'red' : 'green')),
+          h('td', {}, h('a', { class: 'tile', href: r.dex.url, target: '_blank', rel: 'noopener' }, 'Pair ↗'))
         );
         tbody.appendChild(tr);
       }
@@ -893,7 +907,7 @@
     async function tick() {
       try {
         const bn = await rpc(STATE.addresses.rpc, 'eth_blockNumber', []);
-        clear(el); el.appendChild(h('span', {}, 'blk ', h('b', {}, BigInt(bn).toLocaleString('en-US'))));
+        clear(el); el.appendChild(h('span', {}, 'block ', h('b', {}, BigInt(bn).toLocaleString('en-US'))));
       } catch { clear(el); el.appendChild(h('span', { class: 'dim' }, 'block —')); }
     }
     tick();
@@ -915,7 +929,7 @@
   function startClock() {
     const el = document.getElementById('s-clock');
     if (!el) return;
-    const tick = () => { clear(el); el.appendChild(h('b', {}, new Date().toISOString().slice(11, 19))); el.appendChild(document.createTextNode(' utc')); };
+    const tick = () => { clear(el); el.appendChild(h('b', {}, new Date().toISOString().slice(11, 19))); el.appendChild(h('small', {}, 'UTC')); };
     tick();
     setInterval(tick, 1000);
   }

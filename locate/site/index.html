@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Locate — stock lending desk, Robinhood Chain</title>
+<title>Locate — the borrow board, Robinhood Chain</title>
 <meta name="description" content="Borrow the stock, not the dollars. Lend stock tokens, or post USDG and short them spot, on Robinhood Chain.">
-<meta name="theme-color" content="#0a0a09">
+<meta name="theme-color" content="#101010">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -16,17 +16,17 @@
 <div id="app">
 
   <header id="masthead">
-    <div class="brand"><span class="wordmark">LOCATE</span><span class="sub">stock lending desk</span></div>
+    <div class="brand"><span class="wordmark">LOCATE</span><span class="sub">The borrow board · Robinhood Chain</span></div>
+    <div class="clock" id="s-clock"><b>--:--:--</b><small>UTC</small></div>
+    <div class="wallet" id="s-wallet"><button id="btn-connect">Connect wallet</button></div>
     <div class="strip">
       <span class="seg seg-extra" id="s-chain">chain <b>—</b></span>
-      <span class="seg" id="s-block">blk <b>—</b></span>
+      <span class="seg" id="s-block">block <b>—</b></span>
       <span class="seg seg-extra" id="s-feed">quotes <b>—</b></span>
-      <span class="seg seg-extra" id="s-clock"><b>--:--:--</b> utc</span>
     </div>
-    <div class="wallet" id="s-wallet"><button id="btn-connect" class="ghost">connect wallet</button></div>
   </header>
 
-  <nav id="tabs" aria-label="Desk">
+  <nav id="tabs" aria-label="Desks">
     <a href="#/markets" data-route="markets"><kbd>1</kbd>Markets</a>
     <a href="#/lend" data-route="lend"><kbd>2</kbd>Lend</a>
     <a href="#/short" data-route="short"><kbd>3</kbd>Short</a>
