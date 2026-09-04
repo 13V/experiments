@@ -526,101 +526,131 @@
 
   // ================================================================== Markets view
   function renderMarkets(view) {
-    view.appendChild(viewHead('Markets', null,
-      'Borrow a stock against USDG, or lend yours and earn the borrow rate. One Morpho market per name; on-chain columns fill in as each market opens.'));
+    const anyOpen = STATE.markets.some(isDeployed);
     const totalCap = STATE.markets.reduce((a, m) => a + (m.initialCapUsd || 0), 0);
+
+    view.appendChild(h('div', { class: 'page-head' },
+      h('div', {},
+        h('h2', {}, 'Markets'),
+        h('p', { class: 'memo' }, 'Borrow a stock against USDG, or lend yours and earn the borrow rate. Prices and premiums are live; select a row to open its market.')),
+      anyOpen ? null : h('div', { class: 'launch' }, h('span', { class: 'pill' }, 'Opens soon'), h('span', {}, `${STATE.markets.length} markets · ${fmtUsd(totalCap, 0)} in lending caps at launch`))
+    ));
+
+    const volEl = h('div', { class: 'value skel' });
     const widestEl = h('div', { class: 'value skel' });
+    const medianEl = h('div', { class: 'value skel' });
     const quotesEl = h('div', { class: 'value skel' });
     view.appendChild(h('div', { class: 'stats' },
-      stat('Lending caps at launch', h('div', { class: 'value' }, fmtUsd(totalCap, 0)), 'across ten stocks, adjustable by the vault owner'),
-      stat('Markets', h('div', { class: 'value' }, String(STATE.markets.length)), 'loan is the stock, collateral is USDG'),
-      stat('Widest premium', widestEl, 'DEX price against Robinhood\'s quote, these ten'),
+      stat('DEX volume, 24h', volEl, 'across these ten pools'),
+      stat('Widest premium', widestEl, 'DEX price against Robinhood\'s quote'),
+      stat('Median premium', medianEl, 'the typical gap right now'),
       stat('Robinhood quotes', quotesEl, '24/5 feed, paused at weekends')
     ));
+
+    const notice = h('div', { class: 'notice hidden' }, h('strong', {}, 'Quotes unavailable. '), 'This is a local copy without the /api/quotes function; DEX prices still load.');
+    view.appendChild(notice);
+
     const wrap = h('div', { class: 'table-wrap' });
-    const table = h('table', { class: 'markets' });
-    table.appendChild(h('thead', {}, h('tr', {},
-      h('th', { class: 'idx', 'data-nosort': '' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'LLTV'), h('th', { class: 'num' }, 'Cap'),
-      h('th', { class: 'num' }, 'Supply APY'), h('th', { class: 'num' }, 'Borrow APY'), h('th', { class: 'num' }, 'Utilisation'),
-      h('th', { class: 'num' }, 'Available'), h('th', { class: 'num' }, 'RH quote'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Premium'), h('th', {}, 'Status')
-    )));
-    makeSortable(table);
-    const foot = h('td', { colspan: '12' }, 'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener. Premium is DEX over quote. Select a row to open the market.');
-    table.appendChild(h('tfoot', {}, h('tr', {}, foot)));
+    const table = h('table', { class: 'markets' + (anyOpen ? ' open' : '') });
+    const cols = [
+      ['Stock', ''], ['Quote', 'num'], ['DEX', 'num'], ['Premium', 'num'], ['24h', 'num'], ['Volume 24h', 'num'], ['LLTV', 'num'], [anyOpen ? 'Cap' : 'Cap at launch', 'num'],
+      ...(anyOpen ? [['Borrow APY', 'num'], ['Supply APY', 'num'], ['Available', 'num'], ['Status', '']] : []),
+    ];
+    table.appendChild(h('thead', {}, h('tr', {}, ...cols.map(([t, c]) => h('th', { class: c }, t)))));
     const tbody = h('tbody');
     table.appendChild(tbody);
+    table.appendChild(h('tfoot', {}, h('tr', {}, h('td', { colspan: String(cols.length) },
+      'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener; 24h and volume are that pool\'s. Premium is DEX over quote.'))));
     wrap.appendChild(table);
     view.appendChild(wrap);
+    makeSortable(table);
 
     const rows = new Map();
     for (const m of STATE.markets) {
-      const supplyC = h('td', { class: 'num soon' }, tile('—'));
-      const borrowC = h('td', { class: 'num soon' }, tile('—'));
-      const utilC = h('td', { class: 'num soon' }, tile('—'));
-      const availC = h('td', { class: 'num soon' }, tile('—'));
-      const quoteC = h('td', { class: 'num' }, skel());
-      const dexC = h('td', { class: 'num' }, skel());
-      const premC = h('td', { class: 'num' }, skel());
-      const statusC = h('td', {}, h('span', { class: 'pill' + (isDeployed(m) ? ' open' : '') }, isDeployed(m) ? 'Open' : 'Opens soon'));
-      const tr = h('tr', { class: 'link', tabindex: '0', role: 'link', onclick: () => { location.hash = `#/m/${m.symbol}`; }, onkeydown: (e) => { if (e.key === 'Enter') location.hash = `#/m/${m.symbol}`; } },
-        h('td', { class: 'idx' }, String(tbody.childElementCount + 1)),
-        symCell(m.symbol, m.name),
+      const go = () => { location.hash = `#/m/${m.symbol}`; };
+      const r = {
+        quoteC: h('td', { class: 'num' }, skel()),
+        dexC: h('td', { class: 'num' }, skel()),
+        premC: h('td', { class: 'num' }, skel()),
+        chgC: h('td', { class: 'num' }, skel()),
+        volC: h('td', { class: 'num' }, skel()),
+      };
+      const cells = [
+        symCell(m.symbol, m.name), r.quoteC, r.dexC, r.premC, r.chgC, r.volC,
         h('td', { class: 'num', 'data-v': String(m.lltvBps) }, tile((m.lltvBps / 100).toFixed(1) + '%')),
         h('td', { class: 'num', 'data-v': String(m.initialCapUsd) }, tile(fmtUsd(m.initialCapUsd, 0), 'dim')),
-        supplyC, borrowC, utilC, availC, quoteC, dexC, premC, statusC
-      );
+      ];
+      if (anyOpen) {
+        const dep = isDeployed(m);
+        r.borrowC = h('td', { class: 'num' }, dep ? skel() : tile('—', 'dim'));
+        r.supplyC = h('td', { class: 'num' }, dep ? skel() : tile('—', 'dim'));
+        r.availC = h('td', { class: 'num' }, dep ? skel() : tile('—', 'dim'));
+        r.statusC = h('td', {}, h('span', { class: 'pill' + (dep ? ' open' : '') }, dep ? 'Open' : 'Opens soon'));
+        cells.push(r.borrowC, r.supplyC, r.availC, r.statusC);
+      }
+      const tr = h('tr', { class: 'link', tabindex: '0', role: 'link', onclick: go, onkeydown: (e) => { if (e.key === 'Enter') go(); } }, ...cells);
       tbody.appendChild(tr);
-      rows.set(m.symbol, { supplyC, borrowC, utilC, availC, quoteC, dexC, premC, statusC });
+      rows.set(m.symbol, r);
     }
 
     let cancelled = false;
     (async () => {
-      const quotes = await fetchQuotes();
-      if (STATE.quotesUnavailable) {
-        view.insertBefore(h('div', { class: 'notice' }, h('strong', {}, 'Quotes unavailable. '), 'This looks like a local server without the /api/quotes function (Vercel only). DEX prices below are still live.'), view.firstChild.nextSibling);
-      }
-      const addrs = STATE.markets.map((m) => m.token);
-      const dex = await ensureDexData(addrs);
+      await fetchQuotes();
+      if (STATE.quotesUnavailable) notice.classList.remove('hidden');
+      const dex = await ensureDexData(STATE.markets.map((m) => m.token));
       if (cancelled) return;
 
       let widest = null;
+      const prems = [];
+      let vol = 0;
       for (const m of STATE.markets) {
         const r = rows.get(m.symbol);
         const q = quoteFor(m.symbol);
-        setTile(r.quoteC, q ? fmtUsd(q.mid) : '—', q ? q.mid : undefined);
-        if (q && q.halted) { const pill = r.statusC.querySelector('.pill'); pill.textContent = 'Halted'; pill.className = 'pill halt'; }
         const d = dex.get(m.token.toLowerCase());
-        setTile(r.dexC, d ? fmtUsd(d.priceUsd) : (d === null ? 'no pool' : '—'), d ? d.priceUsd : undefined);
+        setTile(r.quoteC, q ? fmtUsd(q.mid) : '—', q ? q.mid : undefined);
+        setTile(r.dexC, d ? fmtUsd(d.priceUsd) : (d === null ? 'No pool' : '—'), d ? d.priceUsd : undefined);
+        const c = d && d.chg24 !== null && d.chg24 !== undefined && !Number.isNaN(d.chg24) ? d.chg24 : null;
+        setTile(r.chgC, c === null ? '—' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%', c === null ? undefined : c);
+        r.chgC.className = 'num' + (c > 0 ? ' pos' : c < 0 ? ' neg' : '');
+        setTile(r.volC, d ? fmtUsd(d.vol24, 0) : '—', d ? d.vol24 : undefined);
+        r.volC.classList.add('dim');
+        if (d) vol += d.vol24 || 0;
         if (q && d) {
           const prem = (d.priceUsd - q.mid) / q.mid;
+          prems.push(Math.abs(prem));
           setTile(r.premC, (prem >= 0 ? '+' : '') + fmtPct(prem), prem);
           r.premC.className = premClass(prem);
           if (!widest || Math.abs(prem) > Math.abs(widest.prem)) widest = { symbol: m.symbol, prem };
         } else {
           setTile(r.premC, '—');
         }
+        if (q && q.halted && r.statusC) { const pill = r.statusC.querySelector('.pill'); pill.textContent = 'Halted'; pill.className = 'pill halt'; }
       }
+
+      volEl.classList.remove('skel'); volEl.textContent = vol > 0 ? fmtUsd(vol, 0) : '—';
       widestEl.classList.remove('skel');
       if (widest) { widestEl.textContent = `${widest.symbol} ${widest.prem >= 0 ? '+' : ''}${fmtPct(widest.prem)}`; widestEl.classList.add(widest.prem >= 0 ? 'pos' : 'neg'); }
       else widestEl.textContent = '—';
+      medianEl.classList.remove('skel');
+      if (prems.length) { prems.sort((a, b) => a - b); medianEl.textContent = fmtPct(prems[Math.floor(prems.length / 2)]); }
+      else medianEl.textContent = '—';
       quotesEl.classList.remove('skel');
       quotesEl.textContent = STATE.quotesUnavailable || !STATE.quotesTs ? 'Unavailable' : `${Math.max(0, Math.round(Date.now() / 1000 - STATE.quotesTs))}s ago`;
+
+      if (!anyOpen) return;
       for (const m of STATE.markets) {
+        if (!isDeployed(m)) continue;
         const r = rows.get(m.symbol);
         const q = quoteFor(m.symbol);
         const d = dex.get(m.token.toLowerCase());
-        if (isDeployed(m)) {
-          loadMarketOnchain(m).then((d2) => {
-            if (cancelled || !d2) return;
-            const price = d ? d.priceUsd : (q ? q.mid : d2.usdgPerStock);
-            setTile(r.supplyC, fmtPct(d2.supplyApy), d2.supplyApy); r.supplyC.classList.remove('soon');
-            setTile(r.borrowC, fmtPct(d2.borrowApy), d2.borrowApy); r.borrowC.classList.remove('soon');
-            setTile(r.utilC, fmtPct(d2.utilisation), d2.utilisation); r.utilC.classList.remove('soon');
-            const availTokens = Number(d2.availableRaw) / 1e18;
-            setTile(r.availC, `${fmtNum(availTokens, 1)} (${fmtUsd(availTokens * price)})`, availTokens * price);
-            r.availC.classList.remove('soon');
-          });
-        }
+        loadMarketOnchain(m).then((d2) => {
+          if (cancelled || !d2) return;
+          const price = d ? d.priceUsd : (q ? q.mid : d2.usdgPerStock);
+          setTile(r.borrowC, fmtPct(d2.borrowApy), d2.borrowApy);
+          setTile(r.supplyC, fmtPct(d2.supplyApy), d2.supplyApy);
+          const availTokens = Number(d2.availableRaw) / 1e18;
+          setTile(r.availC, `${fmtNum(availTokens, 1)} ${m.symbol} · ${fmtUsd(availTokens * price, 0)}`, availTokens * price);
+        });
       }
     })();
     return () => { cancelled = true; };

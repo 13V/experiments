@@ -77,6 +77,10 @@ main:focus { outline: none; }
 #view > .field { max-width: 560px; }
 
 .vh { margin-bottom: 22px; max-width: 70ch; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 22px; flex-wrap: wrap; }
+.page-head h2 { font-size: 28px; line-height: 1.2; margin-bottom: 6px; }
+.page-head .memo { color: var(--ink-2); font-size: 15px; max-width: 60ch; }
+.launch { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px 5px 6px; white-space: nowrap; box-shadow: var(--shadow); }
 .vh h2 { font-size: 28px; line-height: 1.2; margin-bottom: 6px; }
 .vh .meta { display: block; font-size: 14px; color: var(--ink-2); margin-bottom: 4px; }
 .vh .memo { color: var(--ink-2); font-size: 15px; }
@@ -112,7 +116,7 @@ dl.ledger { margin: 6px 0 4px; padding: 0; }
 
 .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; min-width: 960px; }
-table.markets .idx { display: none; }
+table.markets tbody td { height: 60px; }
 table.tight { min-width: 0; }
 
 thead th {
@@ -254,7 +258,8 @@ footer .fstatus .red { color: var(--down); }
   .stat { padding: 12px 14px; }
   .stat .value { font-size: 18px; }
   table.markets, table.premium { min-width: 0; }
-  table.markets th:nth-child(n+3):nth-child(-n+9), table.markets td:nth-child(n+3):nth-child(-n+9), table.markets th:nth-child(12), table.markets td:nth-child(12) { display: none; }
+  table.markets th:nth-child(2), table.markets td:nth-child(2), table.markets th:nth-child(n+5), table.markets td:nth-child(n+5) { display: none; }
+  .launch { white-space: normal; border-radius: 12px; }
   table.premium th:nth-child(7), table.premium td:nth-child(7), table.premium th:nth-child(8), table.premium td:nth-child(8), table.premium th:nth-child(9), table.premium td:nth-child(9) { display: none; }
   th.idx, td.idx { display: none; }
   thead th { padding: 10px 10px; }
