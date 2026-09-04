@@ -3,18 +3,18 @@
    green and red reserved for signed numbers. Chakra Petch throughout, Big Shoulders for titles. */
 
 :root {
-  --bg: #04070a;
-  --bg-2: #070c11;
-  --panel: #0a1017;
-  --panel-2: #0d151d;
-  --line: #223140;
-  --line-2: #18232e;
-  --ink: #f2f7fa;
-  --ink-2: #adc0cc;
-  --ink-3: #8497a4;
-  --accent: #57e6ff;
-  --accent-2: #2bb8d6;
-  --accent-tint: rgba(87, 230, 255, .11);
+  --bg: #060606;
+  --bg-2: #0a0b0c;
+  --panel: #0c0e0f;
+  --panel-2: #101213;
+  --line: #1d2224;
+  --line-2: #16191b;
+  --ink: #dae2e6;
+  --ink-2: #97a3a9;
+  --ink-3: #6d787d;
+  --accent: #59e4fd;
+  --accent-2: #2fa6c2;
+  --accent-tint: rgba(89, 228, 253, .10);
   --up: #3ddc84;
   --up-tint: rgba(61, 220, 132, .12);
   --down: #ff5c6a;
@@ -472,7 +472,7 @@ footer .fstatus .red { color: var(--down); }
   position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
   transition: opacity .7s ease;
   background:
-    radial-gradient(140% 115% at 50% 42%, rgba(3,6,10,.34) 0%, rgba(3,6,10,.26) 55%, rgba(3,6,10,.10) 100%);
+    radial-gradient(140% 115% at 50% 42%, rgba(6,6,6,.36) 0%, rgba(6,6,6,.28) 55%, rgba(6,6,6,.10) 100%);
 }
 body.docked #scrim { opacity: 1; }
 
@@ -583,10 +583,10 @@ body.docked .back { opacity: 1; pointer-events: auto; }
 #masthead .net i { animation: blink 2.4s steps(1) infinite; }
 
 /* the display face from the hero, kept for the one number each page is actually about */
-.mkt-price .big { font-size: 34px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; text-shadow: 0 0 30px rgba(120, 200, 235, .3); }
-.stat .value { font-size: 25px; font-weight: 600; letter-spacing: -0.01em; text-shadow: 0 0 26px rgba(120, 200, 235, .28); }
+.mkt-price .big { font-size: 34px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; text-shadow: 0 0 30px rgba(200, 218, 226, .22); }
+.stat .value { font-size: 25px; font-weight: 600; letter-spacing: -0.01em; text-shadow: 0 0 26px rgba(200, 218, 226, .20); }
 .stat .value.skel { height: 22px; }
-.mkt-stats .val { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; text-shadow: 0 0 20px rgba(120, 200, 235, .2); }
+.mkt-stats .val { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; text-shadow: 0 0 20px rgba(200, 218, 226, .16); }
 
 /* token marks: an inset chip rather than a white dot punched in a dark page */
 .avatar.has-img { background: rgba(224, 235, 242, .92); box-shadow: 0 0 0 1px rgba(120, 190, 220, .18), 0 0 14px rgba(87, 230, 255, .1); }
@@ -651,14 +651,14 @@ body.docked #app {
   width: min(93vw, 1580px); margin-inline: auto;
   overflow-y: auto; overflow-x: hidden;
   border-radius: 14px;
-  border: 1px solid #2c3d4c;
+  border: 1px solid #262b2d;
   background: linear-gradient(180deg, rgba(6, 11, 16, .96), rgba(3, 7, 11, .98));
   box-shadow:
     0 0 0 7px #0a1219,            /* the bezel */
     0 0 0 8px #1d2a36,            /* its lit edge */
     0 42px 130px rgba(0, 0, 0, .8),
-    0 0 160px rgba(87, 230, 255, .16),
-    0 0 400px rgba(40, 130, 190, .10);
+    0 0 160px rgba(89, 228, 253, .13),
+    0 0 400px rgba(60, 150, 175, .07);
   scrollbar-width: thin; scrollbar-color: #2c3d4c transparent;
 }
 body.docked #app::-webkit-scrollbar { width: 9px; }
@@ -706,7 +706,7 @@ body.zooming #glass, body.zooming #led { transform-origin: var(--dock-x, 50%) va
    dim meta right-aligned, ~33px rows striped rather than ruled, square corners, no shadows.
    The app is one of those screens, so it is built from the same parts. */
 
-:root { --scr-bg: #0e1a24; --scr-head: rgba(255, 255, 255, .055); --scr-stripe: rgba(255, 255, 255, .032); }
+:root { --scr-bg: #0b0d0e; --scr-head: rgba(255, 255, 255, .045); --scr-stripe: rgba(255, 255, 255, .022); }
 
 .card, .panel, .stat, .table-wrap, .chart, .mkt-stats {
   background: var(--scr-bg) !important;
@@ -799,7 +799,7 @@ button, .btn, select, input[type=text], input[type=number], .amt, .notice, .pill
   background-color: var(--scr-bg) !important;
   background-image:
     /* uneven light: a hot corner and a dead one, never a flat wash */
-    radial-gradient(120% 130% at 8% -14%, rgba(140, 215, 250, .17), transparent 52%),
+    radial-gradient(120% 130% at 8% -14%, rgba(206, 222, 230, .10), transparent 52%),
     radial-gradient(80% 85% at 112% 118%, rgba(0, 0, 0, .78), transparent 58%),
     radial-gradient(60% 70% at 88% 6%, rgba(0, 0, 0, .45), transparent 60%),
     var(--scan),
@@ -807,7 +807,7 @@ button, .btn, select, input[type=text], input[type=number], .amt, .notice, .pill
   background-blend-mode: screen, multiply, multiply, normal, overlay !important;
   background-size: auto, auto, auto, auto, 220px 220px !important;
 }
-#masthead, footer { background-color: rgba(6, 11, 16, .97) !important; }
+#masthead, footer { background-color: rgba(8, 9, 10, .97) !important; }
 
 /* rows carry the scan too, so the table surface is textured all the way down */
 tbody tr:nth-child(even) td { background-image: var(--scan); }
@@ -816,19 +816,19 @@ tbody td { background-image: var(--scan); background-blend-mode: multiply; }
 /* inside the chassis: light bleeding from the top edge, dirt pooling in the corners */
 body.docked #app {
   box-shadow:
-    0 0 0 7px #0a1219,
-    0 0 0 8px #1d2a36,
+    0 0 0 7px #0b0c0d,
+    0 0 0 8px #1e2325,
     0 42px 130px rgba(0, 0, 0, .8),
-    0 0 160px rgba(87, 230, 255, .16),
-    0 0 400px rgba(40, 130, 190, .10),
-    inset 0 42px 90px -60px rgba(140, 215, 250, .40),
+    0 0 160px rgba(89, 228, 253, .13),
+    0 0 400px rgba(60, 150, 175, .07),
+    inset 0 42px 90px -60px rgba(200, 218, 226, .34),
     inset 0 0 150px rgba(0, 0, 0, .75) !important;
 }
 
 /* the panel edges catch light unevenly, the way a real bezel does */
 .card, .panel, .stat, .table-wrap, .chart {
-  border-color: #1d2a35 !important;
-  box-shadow: inset 0 1px 0 rgba(150, 215, 255, .09), inset 0 -18px 40px -30px rgba(0, 0, 0, .9) !important;
+  border-color: #1d2224 !important;
+  box-shadow: inset 0 1px 0 rgba(196, 214, 222, .07), inset 0 -18px 40px -30px rgba(0, 0, 0, .92) !important;
 }
 
 /* a last, light pass of grain over the whole picture - enough to sit on the type without eating it */
@@ -859,5 +859,5 @@ body.docked #dust { opacity: .55; }
 #topgrain { animation: none; } }
 
 /* phosphor bleed on anything bright */
-.stat .value, .mkt-price .big, td.sym, thead th:first-child { text-shadow: 0 0 22px rgba(130, 205, 240, .22); }
+.stat .value, .mkt-price .big, td.sym, thead th:first-child { text-shadow: 0 0 22px rgba(204, 220, 228, .18); }
 .pill.open, .badge.live { text-shadow: 0 0 14px rgba(61, 220, 132, .45); }
