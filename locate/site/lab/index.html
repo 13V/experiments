@@ -28,8 +28,10 @@
   .hud.tr i { width: 8px; height: 8px; border-radius: 50%; background: #ff4a4a; box-shadow: 0 0 10px #ff4a4a; animation: blink 1.2s steps(1) infinite; }
   .hud.bl { left: 32px; bottom: 28px; }
   .hud.br { right: 32px; bottom: 28px; }
+  .hud.dbg { left: 32px; bottom: 52px; font-size: 11px; color: var(--accent); max-width: 70vw; }
+  body.still .hud.tr i { animation: none; opacity: .35; }
   @keyframes blink { 50% { opacity: .15; } }
-  nav { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.07); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.12); }
+  nav { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(12,18,24,.74); border: 1px solid rgba(255,255,255,.12); }
   nav a { color: #e6eef2; text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: .02em; padding: 8px 16px; border-radius: 9px; transition: background .15s; }
   nav a:hover { background: rgba(255,255,255,.14); }
   .hero { position: fixed; left: 50%; top: 8%; transform: translateX(-50%); z-index: 7; text-align: center; pointer-events: none; width: min(92vw, 1100px); }
@@ -42,7 +44,7 @@
   .cta .btns { display: flex; gap: 12px; justify-content: center; }
   .cta a { display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: 6px; font-size: 15px; font-weight: 600; text-decoration: none; letter-spacing: .02em; transition: transform .15s; }
   .cta a.p { background: rgba(236, 242, 246, .94); color: #07111a; }
-  .cta a.s { background: rgba(255,255,255,.08); color: #e6eef2; border: 1px solid rgba(255,255,255,.35); backdrop-filter: blur(8px); }
+  .cta a.s { background: rgba(12,18,24,.74); color: #e6eef2; border: 1px solid rgba(255,255,255,.35); }
   .cta a:hover { transform: translateY(-1px); }
   #boot { position: fixed; inset: 0; z-index: 20; background: #04070a; display: flex; align-items: center; justify-content: center; color: var(--hud-dim); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; transition: opacity .6s; }
   #boot.gone { opacity: 0; pointer-events: none; }
@@ -86,7 +88,6 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 
 // ------------------------------------------------------------------ data (live when the API is there, demo otherwise)
 const DEMO = [
@@ -124,8 +125,7 @@ async function loadLive() {
 }
 
 // ------------------------------------------------------------------ screen painters (16:9 canvases, a modern dark trading UI)
-const W = 768, H = 432;          // design space every painter draws in
-const TW = 1440, TH = 810;      // texture size: the same layout, rendered sharper
+const W = 768, H = 432;   // painters draw here and the texture is the same size: no rescale, no waste
 const UP = '#3ddc84', DOWN = '#ff5c6a', CY = '#57e6ff', INK = '#dbe6ec', DIM = 'rgba(219,230,236,.55)', GRID = 'rgba(120,160,180,.12)';
 const fmt = (n, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 function chrome(ctx, title, right) {
@@ -152,15 +152,24 @@ const painters = {
     chrome(ctx, `${s.symbol} · ${s.name.toUpperCase()}`, 'RH CHAIN · USDG POOL · 1m');
     ctx.font = '600 30px "Chakra Petch", sans-serif'; ctx.fillStyle = INK; ctx.textBaseline = 'top'; ctx.fillText(`$${fmt(last)}`, 16, 46);
     ctx.font = '500 18px "Chakra Petch", sans-serif'; ctx.fillStyle = chg >= 0 ? UP : DOWN; ctx.fillText(`${chg >= 0 ? '+' : ''}${(chg * 100).toFixed(2)}%`, 16 + ctx.measureText(`$${fmt(last)}`).width + 70, 54);
-    const x0 = 16, x1 = W - 74, y0 = 92, y1 = H - 60; const hi = Math.max(...c.map((k) => k.h)), lo = Math.min(...c.map((k) => k.l));
+    const x0 = 16, x1 = W - 74, y0 = 92, y1 = H - 60;
+    let hi = -Infinity, lo = Infinity;
+    for (let i = 0; i < c.length; i++) { if (c[i].h > hi) hi = c[i].h; if (c[i].l < lo) lo = c[i].l; }
     const Y = (p) => y1 - ((p - lo) / (hi - lo || 1)) * (y1 - y0);
     ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.font = '400 12px "Chakra Petch", sans-serif'; ctx.fillStyle = DIM;
     for (let i = 0; i <= 4; i++) { const y = y0 + (y1 - y0) * i / 4; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.fillText(fmt(hi - (hi - lo) * i / 4), x1 + 8, y - 6); }
     const cw = (x1 - x0) / c.length;
     c.forEach((k, i) => { const x = x0 + i * cw + cw / 2; const up = k.c >= k.o; ctx.strokeStyle = ctx.fillStyle = up ? UP : DOWN; ctx.beginPath(); ctx.moveTo(x, Y(k.h)); ctx.lineTo(x, Y(k.l)); ctx.stroke(); const top = Y(Math.max(k.o, k.c)), bot = Y(Math.min(k.o, k.c)); ctx.fillRect(x - cw * 0.32, top, cw * 0.64, Math.max(1.5, bot - top)); });
     // moving average
+    // running mean over a 9-candle window: no per-candle slice or reduce
     ctx.strokeStyle = 'rgba(87,230,255,.8)'; ctx.lineWidth = 1.5; ctx.beginPath();
-    c.forEach((k, i) => { const w = c.slice(Math.max(0, i - 8), i + 1); const m = w.reduce((a, b) => a + b.c, 0) / w.length; const x = x0 + i * cw + cw / 2; i ? ctx.lineTo(x, Y(m)) : ctx.moveTo(x, Y(m)); }); ctx.stroke();
+    let sum = 0;
+    for (let i = 0; i < c.length; i++) {
+      sum += c[i].c; if (i > 8) sum -= c[i - 9].c;
+      const m = sum / Math.min(i + 1, 9), x = x0 + i * cw + cw / 2;
+      i ? ctx.lineTo(x, Y(m)) : ctx.moveTo(x, Y(m));
+    }
+    ctx.stroke();
     // volume
     c.forEach((k, i) => { const x = x0 + i * cw; ctx.fillStyle = k.c >= k.o ? 'rgba(61,220,132,.35)' : 'rgba(255,92,106,.35)'; ctx.fillRect(x + 1, H - 16 - k.v * 34, cw - 2, k.v * 34); });
     // last price line
@@ -237,7 +246,6 @@ const painters = {
 // ------------------------------------------------------------------ scene
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
 const scene = new THREE.Scene();
 const bgc = document.createElement('canvas'); bgc.width = 4; bgc.height = 256; const bgx = bgc.getContext('2d');
@@ -296,12 +304,16 @@ const sheenTex = (() => {
 function monitor({ painter, data, x, y, z, ry = 0, rx = 0, w = 1.62, h = 0.91, tint, rate }) {
   const g = new THREE.Group();
   const bezel = new THREE.Mesh(new RoundedBoxGeometry(w + 0.055, h + 0.055, 0.05, 3, 0.014), bezelMat); bezel.position.z = -0.03; g.add(bezel);
-  const cv = document.createElement('canvas'); cv.width = TW; cv.height = TH; const ctx = cv.getContext('2d');
-  ctx.setTransform(TW / W, 0, 0, TH / H, 0, 0);
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  // A screen texture is re-uploaded many times a second. Mipmaps would be rebuilt on every one of
+  // those uploads, so they are off; the panels sit close to screen-size on screen anyway.
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
   const bend = 0.028;
   const scr = new THREE.Mesh(curvedPanel(w, h, bend), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false }));
   scr.position.z = 0.028; g.add(scr);
+  // the toed-in wings read as softly out of focus; applied once to the context, not per frame
+  if (ry) ctx.filter = 'blur(0.6px)';
   const sheen = new THREE.Mesh(curvedPanel(w, h, bend), new THREE.MeshBasicMaterial({ map: sheenTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false, opacity: 0.5 }));
   sheen.position.z = 0.032; sheen.renderOrder = 2; g.add(sheen);
   // haze: the screen's light hanging in the air around it
@@ -315,7 +327,7 @@ function monitor({ painter, data, x, y, z, ry = 0, rx = 0, w = 1.62, h = 0.91, t
   // pool of that screen's light on the desk below it
   const pool = glowPlane(w * 1.5, 1.15, tint || '#7fd6ff', 0.16);
   pool.rotation.x = -Math.PI / 2; pool.position.set(x * 0.82, 0.096, 0.72); pool.renderOrder = 1; scene.add(pool);
-  screens.push({ ctx, tex, painter, data, glow, streak, phase: Math.random() * 10, rate: rate || 9, last: -1 });
+  screens.push({ ctx, tex, painter, data, glow, streak, phase: Math.random() * 10, rate: rate || 9, paintedAt: -99, overdue: 0 });
   return g;
 }
 function build() {
@@ -409,10 +421,11 @@ build();
 // ------------------------------------------------------------------ post: bloom + film grade
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-// shallow focus on the centre monitor: the wings and the foreground figure fall off
-const bokeh = new BokehPass(scene, camera, { focus: 7.05, aperture: 0.00010, maxblur: 0.0022 });
-composer.addPass(bokeh);
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.72, 0.6, 0.68));
+// BokehPass used to sit here. It re-rendered every object a second time into a depth target -
+// doubling the draw calls - for a blur radius too small to see. The soft focus now comes from
+// blurring the off-axis screen canvases directly, which costs nothing per frame.
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.72, 0.6, 0.68);
+composer.addPass(bloom);
 const Grade = {
   uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -434,8 +447,68 @@ const Grade = {
 const grade = new ShaderPass(Grade); composer.addPass(grade);
 composer.addPass(new OutputPass());
 
+// ---------------------------------------------------------------- adaptive quality
+// The scene has to survive a laptop on integrated graphics and a sandboxed iframe with no GPU at
+// all. Detect software rendering up front, then keep watching the frame time and step the tier
+// down when it slips - with hysteresis, so it settles instead of oscillating.
+const TIERS = [
+  { name: 'minimal', dpr: 0.6, bloom: false, paint: 1, rateScale: 0.25 },
+  { name: 'low',     dpr: 0.85, bloom: false, paint: 1, rateScale: 0.5 },
+  { name: 'medium',  dpr: 1.0, bloom: true,  paint: 1, rateScale: 0.8 },
+  { name: 'high',    dpr: 1.35, bloom: true,  paint: 2, rateScale: 1 },
+];
+let rendererName = 'unknown';
+const softwareRenderer = (() => {
+  try {
+    const gl = renderer.getContext();
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    rendererName = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : 'hidden';
+    return /swiftshader|llvmpipe|software|basic render|microsoft basic/i.test(rendererName);
+  } catch (e) { return false; }
+})();
+// add ?debug to the URL to see which tier and which GPU the browser actually gave this page
+const dbgEl = /(\?|&)debug\b/.test(location.search) ? (() => {
+  const d = document.createElement('div'); d.className = 'hud dbg'; document.body.appendChild(d); return d;
+})() : null;
+let tier = softwareRenderer ? 0 : 2;
+let Q = TIERS[tier];
+function applyTier() {
+  Q = TIERS[tier];
+  composer.setPixelRatio(Math.min(devicePixelRatio || 1, Q.dpr));
+  bloom.enabled = Q.bloom;
+  resize();
+}
+// Frame-time watcher. Everything here is measured in MILLISECONDS, not frames: a machine that is
+// already struggling produces frames so rarely that a frame-counted cooldown would take a minute to
+// react, which is exactly when reacting matters most.
+const samples = new Array(30).fill(16); let si = 0, filled = 0, settleUntil = 0;
+let frozen = false;
+function median() {
+  const a = samples.slice(0, filled).sort((x, y) => x - y);
+  return a[Math.floor(a.length / 2)];
+}
+function watchFrame(dt, now) {
+  samples[si = (si + 1) % samples.length] = dt;
+  if (filled < samples.length) filled++;
+  if (filled < 10 || now < settleUntil) return;
+  const med = median();
+  if (med > 30 && tier > 0) { tier--; applyTier(); settleUntil = now + 1500; return; }
+  if (med < 13 && tier < TIERS.length - 1) { tier++; applyTier(); settleUntil = now + 4000; return; }
+  // Cheapest tier and still slower than ~11fps: this machine cannot animate the scene. Hold the last
+  // frame. A still desk reads as a photograph; a stuttering one reads as broken.
+  if (tier === 0 && med > 90) freeze();
+}
+function freeze() {
+  if (frozen) return;
+  frozen = true;
+  document.body.classList.add('still');
+  const el = document.getElementById('fps'); if (el) el.textContent = 'still · tap to retry';
+}
+addEventListener('pointerdown', () => { if (frozen) { frozen = false; document.body.classList.remove('still'); filled = 0; settleUntil = performance.now() + 4000; requestAnimationFrame(frame); } });
+
 function resize() {
   const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, Q.dpr));
   renderer.setSize(w, h, false); composer.setSize(w, h);
   camera.aspect = w / h; camera.fov = w < 720 ? 46 : 34; camera.updateProjectionMatrix();
   grade.uniforms.uRes.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
@@ -447,17 +520,28 @@ addEventListener('resize', resize); resize();
 // ------------------------------------------------------------------ HUD + loop
 const fpsEl = document.getElementById('fps'), tcEl = document.getElementById('tc'), dateEl = document.getElementById('date');
 const d0 = new Date(); dateEl.textContent = `[ ${String(d0.getMonth() + 1).padStart(2, '0')} / ${String(d0.getDate()).padStart(2, '0')} / ${String(d0.getFullYear()).slice(2)} ]`;
-let frames = 0, fpsT = performance.now();
+let frames = 0, fpsT = performance.now(), lastFrameAt = fpsT;
 const mouse = { x: 0, y: 0 };
 addEventListener('pointermove', (e) => { mouse.x = (e.clientX / innerWidth - 0.5) * 2; mouse.y = (e.clientY / innerHeight - 0.5) * 2; });
 const clock = new THREE.Clock();
 let booted = false;
 function frame() {
   const t = clock.getElapsedTime();
+  if (dbgEl) dbgEl.textContent = `${TIERS[tier].name} · dpr ${renderer.getPixelRatio().toFixed(2)} · ${rendererName}`;
+  // Repaint at most `Q.paint` screens per frame, most overdue first. The old code asked each screen
+  // "is it my turn by the clock?" independently, so the moment the frame rate fell below a screen's
+  // own rate that screen repainted every frame - and once every screen was in that state the cost
+  // could never come back down. A shared budget makes a slow frame cheaper, not more expensive.
+  let due = null;
   for (const s of screens) {
-    const step = Math.floor((t + s.phase) * s.rate);
-    if (step !== s.last) { s.last = step; painters[s.painter](s.ctx, t + s.phase, s.data); s.tex.needsUpdate = true; }
     s.streak.material.opacity = 0.022 + 0.012 * Math.sin(t * 1.7 + s.phase);
+    const overdue = t - s.paintedAt - 1 / (s.rate * Q.rateScale);
+    if (overdue < 0) continue;
+    (due || (due = [])).push(s); s.overdue = overdue;
+  }
+  if (due) {
+    if (due.length > Q.paint) { due.sort((a, b) => b.overdue - a.overdue); due.length = Q.paint; }
+    for (const s of due) { painters[s.painter](s.ctx, t + s.phase, s.data); s.tex.needsUpdate = true; s.paintedAt = t; }
   }
   const tx = 0.30 + Math.sin(t * 0.15) * 0.16 + mouse.x * 0.28, ty = 1.72 + Math.cos(t * 0.11) * 0.06 - mouse.y * 0.14;
   camera.position.x += (tx - camera.position.x) * 0.03; camera.position.y += (ty - camera.position.y) * 0.03; camera.position.z += ((camera.userData.z || 3.9) - camera.position.z) * 0.05;
@@ -468,12 +552,16 @@ function frame() {
   grade.uniforms.uTime.value = t;
   composer.render();
   frames++; const now = performance.now();
-  if (now - fpsT > 500) { fpsEl.textContent = `${Math.round(frames * 1000 / (now - fpsT))} fps`; frames = 0; fpsT = now; }
-  tcEl.textContent = new Date().toISOString().slice(11, 19) + ' UTC';
+  watchFrame(now - lastFrameAt, now); lastFrameAt = now;
+  if (now - fpsT > 500) {
+    if (!frozen) fpsEl.textContent = `${Math.round(frames * 1000 / (now - fpsT))} fps`;
+    tcEl.textContent = new Date().toISOString().slice(11, 19) + ' UTC';
+    frames = 0; fpsT = now;
+  }
   if (!booted && t > 0.4) { booted = true; document.getElementById('boot').classList.add('gone'); }
-  requestAnimationFrame(frame);
+  if (!frozen) requestAnimationFrame(frame);
 }
-document.fonts.ready.then(() => { loadLive().then(() => { for (const s of screens) s.last = -1; }); frame(); });
+document.fonts.ready.then(() => { loadLive().then(() => { for (const s of screens) s.paintedAt = -99; }); frame(); });
 </script>
 </body>
 </html>
