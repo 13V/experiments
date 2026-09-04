@@ -76,8 +76,7 @@ main { flex: 1 1 auto; width: 100%; max-width: 1360px; margin: 0 auto; padding: 
 main:focus { outline: none; }
 #view > .field { max-width: 560px; }
 
-.vh { margin-bottom: 22px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
-.vh > div:first-child { max-width: 64ch; }
+.vh { margin-bottom: 22px; max-width: 70ch; }
 .vh h2 { font-size: 28px; line-height: 1.2; margin-bottom: 6px; }
 .vh .meta { display: block; font-size: 14px; color: var(--ink-2); margin-bottom: 4px; }
 .vh .memo { color: var(--ink-2); font-size: 15px; }
