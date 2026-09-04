@@ -316,7 +316,34 @@
     const chg24 = best.priceChange && best.priceChange.h24 !== undefined ? Number(best.priceChange.h24) : null;
     return { priceUsd: Number(best.priceUsd), liqUsd: best.liquidity?.usd || 0, vol24, chg24, dexId: best.dexId, url: best.url, pairCount: mine.length };
   }
-  async function fetchDexForAddresses(addrs, { batchSize = 8, onProgress } = {}) {
+  let dexApiAvailable = true; // false after a 404: plain static hosting without the Vercel function
+  async function fetchDexViaApi(addrs, onProgress) {
+    const result = new Map();
+    const chunks = [];
+    for (let i = 0; i < addrs.length; i += 60) chunks.push(addrs.slice(i, i + 60));
+    let done = 0;
+    for (const chunk of chunks) {
+      const res = await fetch('/api/dex?addrs=' + chunk.map((a) => a.toLowerCase()).join(','));
+      if (res.status === 404) { dexApiAvailable = false; throw new Error('no /api/dex'); }
+      if (!res.ok) throw new Error('dex api HTTP ' + res.status);
+      const body = await res.json();
+      for (const addr of chunk) {
+        const key = addr.toLowerCase();
+        result.set(key, Object.prototype.hasOwnProperty.call(body.pools || {}, key) ? body.pools[key] : undefined);
+      }
+      done += chunk.length;
+      if (onProgress) onProgress(done, addrs.length);
+    }
+    return result;
+  }
+  async function fetchDexForAddresses(addrs, opts = {}) {
+    if (dexApiAvailable) {
+      try { return await fetchDexViaApi(addrs, opts.onProgress); }
+      catch (e) { if (dexApiAvailable) console.warn('[locate] /api/dex failed, falling back to direct DexScreener calls', e); }
+    }
+    return fetchDexDirect(addrs, opts);
+  }
+  async function fetchDexDirect(addrs, { batchSize = 8, onProgress } = {}) {
     const result = new Map();
     const batches = [];
     for (let i = 0; i < addrs.length; i += batchSize) batches.push(addrs.slice(i, i + batchSize));

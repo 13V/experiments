@@ -72,7 +72,7 @@ p { margin: 0; }
 
 /* ---------------------------------------------------------------- layout */
 
-main { flex: 1 1 auto; width: 100%; max-width: 1200px; margin: 0 auto; padding: 32px 32px 64px; }
+main { flex: 1 1 auto; width: 100%; max-width: 1360px; margin: 0 auto; padding: 32px 32px 64px; }
 main:focus { outline: none; }
 #view > .field { max-width: 560px; }
 
@@ -228,13 +228,13 @@ button.danger:hover:not(:disabled) { background: var(--down-tint); border-color:
 /* ---------------------------------------------------------------- footer */
 
 footer { background: var(--card); border-top: 1px solid var(--line); padding: 32px 32px 28px; font-size: 13px; color: var(--ink-2); }
-footer .fgrid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 28px; }
+footer .fgrid { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 28px; }
 footer .fbrand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; font-size: 15px; margin-bottom: 8px; }
 footer .fbrand svg { color: var(--accent); }
 footer .fcol h4 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--ink); }
 footer .fcol a { display: block; color: var(--ink-2); padding: 3px 0; }
 footer .fcol a:hover { color: var(--ink); }
-footer .fstatus { max-width: 1200px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid var(--line-2); display: flex; gap: 20px; flex-wrap: wrap; color: var(--ink-3); }
+footer .fstatus { max-width: 1360px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid var(--line-2); display: flex; gap: 20px; flex-wrap: wrap; color: var(--ink-3); }
 footer .fstatus b { font-weight: 500; color: var(--ink-2); }
 footer .fstatus .red { color: var(--down); }
 @media (max-width: 900px) { footer .fgrid { grid-template-columns: 1fr 1fr; } }
