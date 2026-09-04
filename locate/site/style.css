@@ -139,7 +139,7 @@ p { margin: 0; }
 
 /* ---------------------------------------------------------------- layout */
 
-main { flex: 1 1 auto; width: 100%; max-width: 1360px; margin: 0 auto; padding: 30px 30px 70px; }
+main { flex: 1 1 auto; width: 100%; max-width: 1420px; margin: 0 auto; padding: 28px 34px 64px; }
 main:focus { outline: none; }
 #view > .field { max-width: 560px; }
 
@@ -472,8 +472,7 @@ footer .fstatus .red { color: var(--down); }
   position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
   transition: opacity .7s ease;
   background:
-    radial-gradient(150% 120% at 50% 40%, rgba(3,6,10,.95) 0%, rgba(3,6,10,.90) 55%, rgba(3,6,10,.74) 100%),
-    linear-gradient(rgba(3,6,10,.86), rgba(3,6,10,.74) 40%, rgba(3,6,10,.92));
+    radial-gradient(140% 115% at 50% 42%, rgba(3,6,10,.34) 0%, rgba(3,6,10,.26) 55%, rgba(3,6,10,.10) 100%);
 }
 body.docked #scrim { opacity: 1; }
 
@@ -648,7 +647,8 @@ body.docked #app { transform: scale(1); }
 body.docked { overflow: hidden; }
 
 body.docked #app {
-  position: fixed; inset: 3vh 3.4vw;
+  position: fixed; top: 3.4vh; bottom: 3.4vh; left: 0; right: 0;
+  width: min(93vw, 1580px); margin-inline: auto;
   overflow-y: auto; overflow-x: hidden;
   border-radius: 14px;
   border: 1px solid #2c3d4c;
@@ -656,8 +656,9 @@ body.docked #app {
   box-shadow:
     0 0 0 7px #0a1219,            /* the bezel */
     0 0 0 8px #1d2a36,            /* its lit edge */
-    0 42px 110px rgba(0, 0, 0, .86),
-    0 0 120px rgba(87, 230, 255, .09);
+    0 42px 130px rgba(0, 0, 0, .8),
+    0 0 160px rgba(87, 230, 255, .16),
+    0 0 400px rgba(40, 130, 190, .10);
   scrollbar-width: thin; scrollbar-color: #2c3d4c transparent;
 }
 body.docked #app::-webkit-scrollbar { width: 9px; }
@@ -666,14 +667,16 @@ body.docked #app::-webkit-scrollbar-track { background: transparent; }
 
 /* glass over the picture, and the strip of light under the chassis */
 #glass {
-  position: fixed; inset: 3vh 3.4vw; z-index: 43; pointer-events: none; border-radius: 14px;
+  position: fixed; top: 3.4vh; bottom: 3.4vh; left: 0; right: 0;
+  width: min(93vw, 1580px); margin-inline: auto;
+  z-index: 43; pointer-events: none; border-radius: 14px;
   opacity: 0; transition: opacity .6s ease .25s;
   background: linear-gradient(203deg, transparent 43%, rgba(190, 225, 255, .045) 51%, transparent 60%);
   box-shadow: inset 0 1px 0 rgba(160, 220, 255, .14), inset 0 0 90px rgba(0, 0, 0, .55);
 }
 body.docked #glass { opacity: 1; }
 #led {
-  position: fixed; left: 50%; bottom: calc(3vh - 9px); width: 34vw; height: 2px; z-index: 42;
+  position: fixed; left: 50%; bottom: calc(3.4vh - 10px); width: min(30vw, 520px); height: 2px; z-index: 42;
   transform: translateX(-50%); pointer-events: none; opacity: 0; transition: opacity .6s ease .3s;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
   box-shadow: 0 0 22px rgba(87, 230, 255, .5);

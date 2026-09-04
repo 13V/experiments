@@ -463,11 +463,13 @@ function frame() {
 // ------------------------------------------------------------------ camera poses
 // The scene never unmounts. Routing flies the camera between a wide "hero" framing and a "docked"
 // framing squared onto one monitor, and the app's UI resolves on that monitor's glass.
+// Docked poses sit far enough back that the neighbouring screens frame the chassis on both sides -
+// close enough that the flight still reads as going INTO a monitor.
 const POSES = {
   hero:    { pos: [0.30, 1.72, 7.10],  look: [0.05, 1.06, 0.00],  drift: 1 },
-  markets: { pos: [0.00, 0.62, 1.72],  look: [0.00, 0.62, 0.00],  drift: 0.16 },
-  premium: { pos: [1.14, 0.62, 1.89],  look: [1.68, 0.62, 0.26],  drift: 0.16 },
-  desk:    { pos: [-1.14, 1.58, 1.87], look: [-1.68, 1.58, 0.24], drift: 0.16 },
+  markets: { pos: [0.00, 0.72, 3.05],  look: [0.00, 0.68, 0.00],  drift: 0.20 },
+  premium: { pos: [0.77, 0.72, 3.01],  look: [1.68, 0.62, 0.26],  drift: 0.20 },
+  desk:    { pos: [-0.77, 1.48, 2.99], look: [-1.68, 1.58, 0.24], drift: 0.20 },
 };
 const fromP = new THREE.Vector3(), fromL = new THREE.Vector3();
 const toP = new THREE.Vector3(), toL = new THREE.Vector3();
