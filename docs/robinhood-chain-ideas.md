@@ -655,6 +655,82 @@ Re-ranked with the earlier four: Stonk Packs with a token, then the hunt, then t
 that pays the dividend, then the chips as a single launch, then stock wars, the agent, and
 Locate's token; the weekend coin as a wildcard.
 
+## Products in Locate's shape
+
+Locate's shape: the missing side of a market that already exists, built by composing Morpho and
+the feeds instead of building a venue, one vault and one router, a desk for a site, and a fee on
+what the vault earns. Five more with that shape, ranked.
+
+### 20. Borrow the meme
+
+> Locate, pointed at the other 99% of the chain.
+
+The chain has 167,000 memecoins, a $232M one that is two days old, and no way to short any of
+them: Longbow takes memes as collateral but nobody lends them, and neither perp venue lists
+them. Locate's contracts do not change. New Morpho markets with `loanToken = meme`,
+`collateralToken = USDG`, LLTV 38.5% (the lowest this Morpho enables), small caps, and the one
+new contract: a Morpho oracle that reads a Uniswap v3 thirty-minute TWAP, which is what Longbow
+already trusts for meme collateral. Holders deposit the meme into the vault and earn the borrow
+rate; shorts post USDG and take the meme out. On a hot name the adaptive IRM will run the rate
+to hundreds of percent, which is what hard-to-borrow stocks cost off-chain, and the vault's
+performance fee on that interest is real revenue from day one.
+
+Only memes with deep v3 or v2 pools qualify, because v4 pools carry no oracle unless a hook
+records one: PONS, CASHCAT and STONKBROKER have $3M to $4M of v3 liquidity; this week's v4
+launches do not. Risks are the ones Locate's README already names, larger: a meme that triples
+in an hour liquidates every short, a meme that triples in a block leaves lenders with bad debt,
+and a thin TWAP can be leaned on, so caps and the market list are the product. The communities
+being shorted will make the marketing themselves. Token: the fee switch, on fees that exist.
+
+### 21. Pairs
+
+> Long NVDA, short AMD, one transaction, one health factor.
+
+Market-neutral pairs is the most common equity strategy there is and it has no on-chain home.
+A router that opens the long leg on Longbow's markets (USDG borrowed against the long stock)
+and the short leg on Locate's (stock borrowed against USDG) in one call, reports one combined
+health factor and one liquidation band, and closes both legs together. Both legs gap the same
+way at the Sunday reopen, so it is the one leveraged position that survives weekends by
+construction. The ex-date short lives here too: short the dividend payer, long its peer. It is
+the natural source of borrow demand Locate needs, and it is a router, not a venue.
+
+### 22. Guardian
+
+> Everyone hunts borrowers at the reopen. Nobody protects them.
+
+A contract a borrower authorises on Morpho, exactly as Locate's router is authorised, with a
+policy: below this health factor, repay from my reserve or add this collateral. Keepers run it.
+The chain-specific part is timing: Robinhood's own 24/7 quotes and the pools tell you on Sunday
+evening where the Monday print will land, so Guardian deleverages gently at 19:00 ET on Sunday
+instead of losing the first-come-first-served race to liquidators at 20:00. A fee per rescue
+and a reserve vault whose lenders earn it. Every Longbow, Locate and Morpho borrower is the
+customer, and the reopen is the weekly event.
+
+### 23. Depth
+
+> Earn the meme flow's fees without holding the stock.
+
+Stock/USDG pools turn over up to thirty times their liquidity a day when memecoins are quoted in
+the stock, and the fees go to whoever holds the inventory. A vault that borrows its stock
+inventory from Locate, pairs it with the depositors' USDG, provides the liquidity, and manages
+the health factor: fee yield with the stock exposure lent rather than owned. Short volatility,
+so it is for people who understand what they are selling, and it is Locate's second-largest
+borrower after Pairs.
+
+### 24. Stops
+
+> A stop-loss that fires at the reopen print.
+
+On-chain holders of stock tokens have no stops, limits or take-profits; app users do. An intents
+escrow plus keepers: the order names a trigger (a Chainlink print, or the first print after a
+closure, or a pool price) and a route (Uniswap or Arcus), keepers execute and take a fee. The
+weekend stop, which fires on the first Sunday print, is the one nobody else can offer. A feature
+more than a market, but it is composed of exactly Locate's parts.
+
+Ranked: borrow the meme, because it is Locate's code with a new market list and one oracle, the
+demand is the loudest on the chain, and the fees exist from the first day; then Pairs and
+Guardian, which both make Locate's borrow side real; then Depth; then Stops.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
