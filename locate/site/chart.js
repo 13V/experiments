@@ -42,13 +42,14 @@
     const hit = memo.get(key);
     if (hit && Date.now() - hit.ts < TTL[tf]) return hit.promise;
     const promise = (async () => {
+      // the function first (one cached answer for everyone); if it is missing or failing, the
+      // browser asks GeckoTerminal itself, which allows cross-origin reads
       if (apiAvailable) {
         try {
           const res = await fetch(`/api/ohlcv?pool=${pool}&tf=${tf}&limit=${limit}`);
           if (res.status === 404) apiAvailable = false;
           else if (res.ok) return (await res.json()).candles;
-          else throw new Error('ohlcv api HTTP ' + res.status);
-        } catch (e) { if (apiAvailable) throw e; }
+        } catch { /* fall through */ }
       }
       return direct(pool, tf, limit);
     })();
@@ -68,13 +69,15 @@
         else if (res.ok) {
           const body = await res.json();
           for (const p of want) if (Object.prototype.hasOwnProperty.call(body.series || {}, p)) out.set(p, body.series[p]);
-          return out;
+          if (out.size === want.length) return out;   // anything the function could not get, fetch direct below
         }
       } catch { /* fall through to direct */ }
     }
+    const missing = want.filter((p) => !out.has(p));
+    if (!missing.length) return out;
     let i = 0;   // three at a time: GeckoTerminal meters by IP and this is the visitor's own allowance
-    await Promise.all(Array.from({ length: Math.min(3, want.length) }, async () => {
-      while (i < want.length) { const p = want[i++]; try { out.set(p, await candles(p, tf, limit)); } catch { /* dash */ } }
+    await Promise.all(Array.from({ length: Math.min(3, missing.length) }, async () => {
+      while (i < missing.length) { const p = missing[i++]; try { out.set(p, await direct(p, tf, limit)); } catch { /* dash */ } }
     }));
     return out;
   }

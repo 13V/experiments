@@ -16,18 +16,18 @@
 
 /* ---------------------------------------------------------------- the ground and the window */
 body.docked #scrim {
+  /* the desk stays behind the window: a light dark wash so the glass reads against the monitors,
+     the room's own light still coming through */
   opacity: 1;
   background:
-    radial-gradient(120% 80% at 12% -10%, #b4a6f0 0%, rgba(180,166,240,0) 55%),
-    radial-gradient(90% 70% at 92% 8%, #6d5cc0 0%, rgba(109,92,192,0) 60%),
-    radial-gradient(110% 90% at 50% 110%, #2a1f5e 0%, rgba(42,31,94,0) 70%),
-    linear-gradient(160deg, #8d7fd6 0%, #6a5ab4 40%, #4b3c93 75%, #3a2d78 100%);
+    radial-gradient(120% 90% at 50% 40%, rgba(8, 10, 24, .42) 0%, rgba(8, 10, 24, .34) 55%, rgba(8, 10, 24, .22) 100%);
 }
-body.docked #glass, body.docked #led, body.docked #dust, body.docked #vig,
+body.docked #glass, body.docked #led,
 body.docked #topgrain, body.docked #finegrain, body.docked #lens { display: none !important; }
+body.docked #dust { opacity: .35; }
 
 body.docked #app {
-  top: 3.6vh; bottom: 3.6vh; width: min(94vw, 1560px);
+  top: 4.5vh; bottom: 4.5vh; width: min(91vw, 1520px);
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, .10);
   background: linear-gradient(180deg, var(--w-bg-1), var(--w-bg-2)) !important;

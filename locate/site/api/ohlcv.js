@@ -11,18 +11,21 @@
 
 const NETWORK = 'robinhood';
 const UA = 'Mozilla/5.0 (compatible; Locate/1.0; +https://robinhoodchain.blockscout.com)';
+// ttl is how long an answer is fresh; a stale one is still served when GeckoTerminal is
+// unreachable or rate-limiting, because an hour-old chart beats an error
 const TF = {
-  '15m': { path: 'minute?aggregate=15', ttl: 30, max: 300 },
-  '1h':  { path: 'hour?aggregate=1',    ttl: 60, max: 300 },
-  '1d':  { path: 'day?aggregate=1',     ttl: 300, max: 300 },
+  '15m': { path: 'minute?aggregate=15', ttl: 90, max: 300 },
+  '1h':  { path: 'hour?aggregate=1',    ttl: 120, max: 300 },
+  '1d':  { path: 'day?aggregate=1',     ttl: 600, max: 300 },
 };
+const STALE_MS = 6 * 3600 * 1000;
 const CONCURRENCY = 4;
 const memo = new Map(); // `${pool}|${tf}|${limit}` -> { ts, data }
 
 async function fetchCandles(pool, tf, limit, attempt = 0) {
   const url = `https://api.geckoterminal.com/api/v2/networks/${NETWORK}/pools/${pool}/ohlcv/${TF[tf].path}&limit=${limit}`;
   const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
-  if (res.status === 429 && attempt < 2) {
+  if ((res.status === 429 || res.status >= 500) && attempt < 2) {
     await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
     return fetchCandles(pool, tf, limit, attempt + 1);
   }
@@ -38,9 +41,14 @@ async function lookup(pool, tf, limit) {
   const key = `${pool}|${tf}|${limit}`;
   const hit = memo.get(key);
   if (hit && Date.now() - hit.ts < TF[tf].ttl * 1000) return hit.data;
-  const data = await fetchCandles(pool, tf, limit);
-  memo.set(key, { ts: Date.now(), data });
-  return data;
+  try {
+    const data = await fetchCandles(pool, tf, limit);
+    memo.set(key, { ts: Date.now(), data });
+    return data;
+  } catch (e) {
+    if (hit && Date.now() - hit.ts < STALE_MS) { lookup.stale = true; return hit.data; }
+    throw e;
+  }
 }
 
 const isPool = (p) => /^0x[0-9a-f]{40}$|^0x[0-9a-f]{64}$/.test(p);
@@ -68,17 +76,20 @@ export default async function handler(req, res) {
         try { series[p] = await lookup(p, tf, limit); } catch { failures++; }
       }
     }));
-    res.setHeader('Cache-Control', failures === 0 ? `s-maxage=${ttl}, stale-while-revalidate=${ttl * 3}` : 's-maxage=10, stale-while-revalidate=30');
-    res.status(200).json({ series, tf, failures, ts: Math.floor(Date.now() / 1000) });
+    const stale = lookup.stale; lookup.stale = false;
+    res.setHeader('Cache-Control', failures === 0 && !stale ? `s-maxage=${ttl}, stale-while-revalidate=${ttl * 3}` : 's-maxage=10, stale-while-revalidate=30');
+    res.status(200).json({ series, tf, failures, stale, ts: Math.floor(Date.now() / 1000) });
     return;
   }
 
   const pool = String(q.pool || '').trim().toLowerCase();
   if (!isPool(pool)) { res.setHeader('Cache-Control', 'no-store'); res.status(400).json({ error: 'pass ?pool=0x...' }); return; }
   try {
+    lookup.stale = false;
     const candles = await lookup(pool, tf, limit);
-    res.setHeader('Cache-Control', `s-maxage=${ttl}, stale-while-revalidate=${ttl * 3}`);
-    res.status(200).json({ candles, tf, pool, ts: Math.floor(Date.now() / 1000) });
+    const stale = lookup.stale; lookup.stale = false;
+    res.setHeader('Cache-Control', stale ? 's-maxage=10, stale-while-revalidate=30' : `s-maxage=${ttl}, stale-while-revalidate=${ttl * 3}`);
+    res.status(200).json({ candles, tf, pool, stale, ts: Math.floor(Date.now() / 1000) });
   } catch (e) {
     res.setHeader('Cache-Control', 'no-store');
     res.status(502).json({ error: String(e.message || e) });
