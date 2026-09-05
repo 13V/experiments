@@ -238,7 +238,7 @@
         if (dead || my !== seq) return;
         data = rows && rows.length ? rows : null; hover = -1;
         clearTimeout(slow);
-        if (!data) note.textContent = 'No candles for this pool yet';
+        note.textContent = data ? '' : 'No candles for this pool yet';   // the slow-note may already be up
       } catch (e) {
         clearTimeout(slow);
         if (dead || my !== seq) return; data = null;
