@@ -797,6 +797,84 @@ None of these should displace borrow the meme, which is a fortnight of work with
 already shouting. The oracle layer is the one that could absorb it: build the market first, and
 the oracle it needs is the first entry in the registry.
 
+## Fun ones with a job
+
+Meme-shaped by design, each with a mechanism underneath that does something real.
+
+### 30. Price-locked coins
+
+> You can buy NVDA500 today. You can sell it when NVIDIA prints $500.
+
+A token whose transfers to a pool revert until the stock's Chainlink feed has printed the
+target, and stay open forever after. Buying is allowed from the first block; selling is not,
+until the number on the tin appears on chain. The joke is that paper hands are impossible; the
+job is a commitment device with a treasury: the launch fee buys the stock the coin is named
+after, so the unlock is a party with real money in the room. Fully disclosed and provable, which
+is the difference between this and a honeypot. A transfer hook and a feed read.
+
+### 31. Graduation markets
+
+> Will it graduate? 1.1% do. Bet on it.
+
+Pons has launched more than 160,000 coins and about one in ninety reaches a pool. Create a
+prediction market automatically for every launch that crosses a volume threshold: yes or no on
+graduation by a deadline, settled by the launchpad's own contract state, no oracle, no
+committee. Thousands of markets a week, each one a scoreboard the coin's chat will link to. The
+job is price discovery on launches before they graduate, and a data feed on which launchers
+are worth following.
+
+### 32. Listing markets
+
+> Which stock does Robinhood tokenise next?
+
+A market per candidate ticker, settled when a token with that symbol, deployed on the issuer's
+template, receives its first mint into the issuer's mint wallet, which is the same wallet for
+every stock on the chain. Everyone with a Robinhood wishlist has an opinion, the resolution is
+one contract check, and the open interest is a live poll of what the chain wants listed, which
+Robinhood will read.
+
+### 33. The retail flow coin
+
+> Own what Robinhood users are buying this week.
+
+An ERC-4626 whose weights are set each Monday by a public rule from the tape: net creations per
+stock over the prior week, the issuer's own minting as the signal. Retail herding is one of the
+most studied effects in equity flow data, and this is the first place it has been on chain in
+real time. The joke is a coin that copies the crowd; the job is a rules-based index nobody can
+front-run because the rule and the data are both public.
+
+### 34. The people's chain token
+
+> The chain has no token. Here is the one the users made.
+
+Every chain's users are waiting for an airdrop that Robinhood has not promised. A coin earned by
+verifiable on-chain activity (swaps, mints, liquidity, all readable from events), distributed
+by Merkle drop, and redeemable for the one thing every user on this chain now pays for: gas,
+through a paymaster that accepts it, funded by partner protocols who want the users. Points
+with a job. Name it carefully; the brand is not yours.
+
+### 35. The earnings coin
+
+> It buys before the call and sells after.
+
+A treasury that runs one public rule from the earnings calendar: buy the stock token five days
+before earnings, sell the day after, sized by the feed's realised volatility, every position
+visible. Pre-earnings drift is a well-documented anomaly, and a rule you can read is a rule you
+can hold. The joke is a coin named after beating the number; the job is systematic exposure to
+an effect retail trades by hand and badly.
+
+### 36. Diamond hands, enforced
+
+> Paper hands get nothing.
+
+A fee-distribution rule rather than a coin: every launch above can pay its fees by time-weighted
+balance, so a holder who has held for a month earns thirty times a holder who bought this
+morning, and selling resets the clock. Three lines of accounting that make the community's
+favourite insult into the token's economics.
+
+Ranked for fun with a job: price-locked coins, the retail flow coin, graduation markets, the
+earnings coin, listing markets, then the people's chain token with its brand caveat.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket

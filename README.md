@@ -384,5 +384,5 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
 - **[The dividend leak](docs/dividend-leak.md)**: Robinhood stock tokens pay dividends to whoever holds them on
   the day of the multiplier update, split across that day's supply, after ~30% withholding. Ford holders got 2%
   of theirs, UPS holders 20%. `scripts/dividend-leak.js` reproduces it from the public RPC with no dependencies.
-- **[Ideas](docs/robinhood-chain-ideas.md)**: twenty-nine things to build on Robinhood Chain: seven that fill gaps in the DeFi map, nine that start from
+- **[Ideas](docs/robinhood-chain-ideas.md)**: thirty-six things to build on Robinhood Chain: seven that fill gaps in the DeFi map, nine that start from
   what the tokens and the audience actually are, and three read from the issuer's own plumbing on chain.
