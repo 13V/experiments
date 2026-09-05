@@ -301,3 +301,9 @@ body.docked #app::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); }
 @media (max-width: 860px) { body.docked #app { position: relative; z-index: 10; min-height: 100vh; } }
 @media (max-width: 760px) { #app #masthead nav { order: 5; } #app #masthead .wallet { margin-left: auto; } }
 @media (max-width: 900px) { #app .mkt-side { order: 0; } }
+@media (max-width: 760px) {
+  #app .cc-head { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px 16px 0; }
+  #app .cc-pair { flex-wrap: wrap; }
+  #app .cc-right { flex-direction: row; align-items: center; justify-content: space-between; }
+  #app .cd-wrap { padding-right: 4px; }
+}

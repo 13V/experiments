@@ -82,8 +82,10 @@
   // ------------------------------------------------------------------ drawing
   /** Fit a canvas to its CSS box at device resolution; returns the 2d context scaled to CSS px. */
   function fit(cv) {
-    const r = cv.getBoundingClientRect(); const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = Math.max(1, Math.round(r.width)), hgt = Math.max(1, Math.round(r.height));
+    // layout size, not the bounding rect: the window is transform-scaled while it docks, and a
+    // rect read mid-flight would size the backing store to the scaled box for good
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(1, cv.clientWidth), hgt = Math.max(1, cv.clientHeight);
     if (cv.width !== w * dpr || cv.height !== hgt * dpr) { cv.width = w * dpr; cv.height = hgt * dpr; }
     const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, w, h: hgt };
@@ -193,8 +195,8 @@
     const request = () => { if (!raf) raf = requestAnimationFrame(draw); };
     const idx = (ev) => {
       if (!data) return -1;
-      const r = cv.getBoundingClientRect(); const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
-      const x0 = 58, x1 = r.width - 18; if (px < x0 || px > x1) return -1;
+      const r = cv.getBoundingClientRect(); const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) * (cv.clientWidth / (r.width || 1));
+      const x0 = 58, x1 = cv.clientWidth - 18; if (px < x0 || px > x1) return -1;
       return Math.max(0, Math.min(data.length - 1, Math.floor((px - x0) / ((x1 - x0) / data.length))));
     };
     const onMove = (ev) => { const i = idx(ev); if (i !== hover) { hover = i; request(); } };
