@@ -462,6 +462,97 @@ on-chain dividend has a six-week window starting 18 September. The evidence, the
 fits it to three decimals, and the three things to build on it (a tracker, ex-date shorts in
 Locate, and a wrapper that does not leak) are in [`dividend-leak.md`](dividend-leak.md).
 
+## Read from the plumbing
+
+Saturday 5 September 2026. The dividend leak came from reading events instead of brainstorming,
+so this pass did the same for the rest of the market: who mints, who holds, when, and what
+Robinhood's own quote endpoint says while the exchange is closed. All of it is reproducible
+from the public RPC and two public Robinhood endpoints (`rhj/assets`, `rhj/prices`).
+
+**The whole primary market is one pipeline.** Every mint of SPY, NVDA, UPS and F (2,391 mints)
+lands in one wallet, `0xcfaece21…60a94`; every burn (385) leaves from one wallet,
+`0xa8553db0…e3c74`; both hand everything to and take everything from one distributor EOA,
+`0x1a18a8b9…aa4e7`, which holds nothing. Downstream of it there are two wholesale accounts:
+`0x9f736f87…cf1ae` (1,078 SPY transfers in two days, median 1.3 SPY, retail-sized) and
+`0xef5ca6b3…3cbd4` (24 transfers, median 52 SPY, block-sized). Redemptions come back through
+two EIP-1167 clones of the same 8.8 KB implementation, one per wholesale account. The
+retail-sized flow goes through an EIP-1967 proxy, `0x7ddbd395…2114a`, in order-sized parcels
+(692 transfers in two days, median 2.6 SPY) into a couple of custody contracts, not into user
+wallets. So Robinhood's stock-token order flow is public per order, in count, size, direction
+and time, even though the users are not.
+
+**The issuer does not create on weekends.** Across the four tokens, mints by weekday, Sunday to
+Saturday: 8, 960, 322, 526, 172, 389, 14. Two percent of SPY's tokens were minted on a weekend,
+none of UPS's or F's. Weekend demand is backfilled on Monday, which is why Monday has three
+times the mints of any other day. Meanwhile the pools on a quiet Saturday at 12:00 UTC sat
+within 0.4% of Friday's print on nine of Locate's ten markets (MSTR +1.1%), with $9.6M of SPY
+liquidity and $7.4M of NVDA. On a normal weekend the chain's pools are an orderly market.
+
+**Robinhood's own weekend quotes are not.** `rhj/prices` publishes a bid and ask per token,
+timestamped to the second, 24/7. At 12:06 UTC on Saturday:
+
+| | |
+|---|---|
+| Tokens quoted | 194 |
+| Median spread | 3.81% |
+| Spread over 2% / over 5% / over 20% | 143 / 86 / 23 tokens |
+| AAPL | bid 300.00, ask 320.10 (the pool: 320.75) |
+| META | bid 607.75, ask 623.86 (the pool: 613.09) |
+| GME | bid 18.88, ask 50.00 (the pool: 19.27) |
+| USO | bid 68.89, ask 236.68 |
+| AMZN, AVGO, GOOGL | 0.02% to 0.07%, tighter than the pools |
+
+Some market maker quotes a handful of names tightly all weekend and the rest are stubs. What
+the app actually executes against on a Saturday is not verifiable from outside; the published
+quote is. The same endpoint carries `mintBurnUsdVolume` per token ($42.8M across all tokens
+for the day) and a `dailyTradingVolume` that does not match the chain at all (PATH: $104M
+reported, $4k across its eight pools), so the trading figure is Robinhood's own venues, and if
+it means what it says, 56 dollars trade there for every dollar that is created or redeemed.
+
+**A third of some stocks' volume is memecoins priced in the stock.** DexScreener, 24h, share
+of a token's DEX volume that is a memecoin pair quoted in that stock: INTC 40%, AMC 36%, F 31%,
+UPS 27%, TSLA 20%; NVDA and SPY 0%. UPS turned over 30 times its pool liquidity in a day because
+PUPS, DOWNS and SEND are quoted in UPS. That is also why UPS's supply went from 5 tokens to
+4,327 in the week of its dividend update: the memecoin traders were paid UPS's dividend.
+
+### 17. The tape
+
+> Robinhood killed its popularity data in 2020. The chain republished it, per order.
+
+The plumbing above is a handful of addresses. Index them across all 194 tokens and you have
+the first public tape of a retail broker's stock order flow: orders per hour per stock, sizes,
+buys against sells, creations against redemptions, the Monday backlog, a "most bought this
+week" board (SPY tripled last week, F went from 53 tokens to 17,671), the weekend spread board
+above, the memecoin-quote share, and the dividend-leak forecast, which needs exactly this data.
+Comparables that made money on thinner data: Unusual Whales, Quiver, Arkham. Sell the API, keep
+the site free, and it becomes the chain's independent terminal, which is what every finding in
+this document has been pointing at. Robinhood can restructure its wallets; it cannot take the
+flows off the chain.
+
+### 18. The Saturday spread
+
+> The quote is worse than the chain. Publish it every fifteen minutes.
+
+A board that shows the app's published bid and ask against the best pool for every token,
+around the clock, and a router that fills on the chain when the chain is better. On the
+numbers above that is most tokens, most of the weekend. If the app already routes weekend
+orders to the pools, the board is a story about the quote; if it does not, it is a product
+that saves people money. Either way it is Locate's premium board with one more column, and
+the arbitrage it exposes (buy at an app ask below the pool, sell into the pool) is the retail
+version of the trade only the issuer's wholesale accounts can do today.
+
+### 19. The chips
+
+> The memecoin casino settles in Ford.
+
+Memecoin launches quoted in a stock token mint that stock, route through it, and turn its pools
+over dozens of times a day. Two ways to build on that. A liquidity vault for the stock/USDG
+pools that meme flow routes through, where fees ran to a percent of liquidity per day this
+week, with the risk that the flow leaves as fast as it came. Or the honest launchpad from
+"Backed memes" above, now with evidence: a v4 hook that takes every meme trade's fee in the
+quote stock into a treasury the meme is redeemable against, so the chips have a floor made of
+the stock they are priced in.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
