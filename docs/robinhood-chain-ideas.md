@@ -609,6 +609,52 @@ Everything else in this document (Gap Cover, options, the weekend exchange, priz
 agent accounts, baskets, the tape, the spread board) is infrastructure or data. Those tokens
 top out at BOW's scale and take months, and the data products should not have tokens at all.
 
+### Five more built for the $1M to $10M range
+
+**The hunt, as a launch.** Treasure Hunt is built: a prize escrow with no withdrawal path, a
+signature-bound claim a bot cannot steal, and keys hidden in the chain's own transaction
+history. Launch a token whose Uniswap v4 fee (0.9%, like every winner this week) flows into that
+escrow, so the buried prize grows with every trade and anyone can check the balance. Stages
+fall on a schedule; the grand prize is a whole share of something. The comparable is Freysa,
+whose fee-funded prize game took its token past nine figures in late 2024; the difference here
+is that the prize is provably unruggable and the puzzle is the token's own history. A skill
+contest, which is a better legal shape than a lottery. Days of work.
+
+**The treasury that pays the dividend.** Treasury-company tokens are a live genre (NetNet's
+treasury passed $4.5M in August). Do it with stock tokens: the v4 fee buys SPY into a treasury,
+NAV per token is printed on chain from the Chainlink feeds (Locate's oracle math), the treasury
+buys back below NAV and mints above it, and it runs the ex-date hedge so it captures the
+dividend Robinhood's token leaks. The dividend-leak exposé is the marketing, and SPY's first
+ex-date on 18 September is the clock. "The SPY that pays its dividend" is the line.
+
+**Stock wars.** Two memes quoted in rival stocks (NVDA against AMD, TSLA against F) sharing one
+hook. Every Friday the Chainlink prints decide which stock won the week and a slice of the
+loser's fee pool moves to the winner's. Stock-quoted memes are the hottest genre here; this
+gives them a weekly event, a side to pick, and a settlement nobody can argue with. Nobody has
+done it. Days of work per pair.
+
+**The agent you can own.** Robinhood's own agentic trading is the story of the year and it is
+US-only and off-chain; Virtuals has 4,500 agents on this chain doing $150M of volume. Launch one
+agent that trades stock tokens from a public wallet inside a policy account (idea 5: token
+allowlist, notional caps, drawdown stop, no trades while the feed sleeps), with a token that
+takes its performance fee into buybacks. Every trade is on chain, so the track record is the
+marketing. The comparable is the 2024 agent-token run. It lives or dies on performance, which is
+the honest part.
+
+**The weekend coin.** A v4 hook that only permits swaps while the Chainlink feed is silent: the
+token can be traded only when Wall Street is closed. A pure gimmick, technically real, cheap,
+and exactly the kind of thing this chain's traders repost. Fees from the weekend buy back on
+Monday morning, which is when the issuer mints and the chain wakes up.
+
+One that will happen and should not be yours: a meme whose fees buy a thin stock token (GME
+and HIMS have a few million dollars of float) to squeeze its on-chain price every weekend, the
+BONER-and-HIMS episode as a designed mechanic. It would trend, and it is engineered
+manipulation of a security's wrapper. Leave it.
+
+Re-ranked with the earlier four: Stonk Packs with a token, then the hunt, then the treasury
+that pays the dividend, then the chips as a single launch, then stock wars, the agent, and
+Locate's token; the weekend coin as a wildcard.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
