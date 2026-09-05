@@ -378,3 +378,5 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[Ideas](docs/robinhood-chain-ideas.md)**: seven more things to build on Robinhood Chain, ranked against
+  what is already deployed as of September 2026, and what to build first.
