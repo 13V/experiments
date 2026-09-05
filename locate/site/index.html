@@ -8,7 +8,11 @@
 <meta name="theme-color" content="#04070a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Inline+Display:wght@700;900&family=Chakra+Petch:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Chakra Petch is self-hosted: the scene paints its screens onto canvases, and a canvas silently
+     falls back to Helvetica if the face has not loaded, so the one typeface the desk is built on
+     does not get to depend on a third-party fetch. Big Shoulders is hero-title-only. -->
+<link href="fonts.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Inline+Display:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -63,6 +67,22 @@
     <div class="wallet" id="s-wallet"><button id="btn-connect">Connect wallet</button></div>
   </header>
 
+  <div id="cmdline" aria-hidden="true">
+    <div class="cl-l">
+      <span class="cl-prompt">locate<b>@</b><span id="s-chain">robinhood-chain</span></span>
+      <span class="cl-path" id="cl-path">~</span><i class="cl-caret"></i>
+    </div>
+    <div class="cl-r">
+      <span id="s-block">block —</span>
+      <span class="sep sep-bf">·</span>
+      <span id="s-feed">quotes —</span>
+      <span class="sep sep-fc">·</span>
+      <span id="s-clock">—</span>
+      <span class="sep sep-ck">·</span>
+      <span class="cl-keys" id="cmd-keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd>desks</span>
+    </div>
+  </div>
+
   <main id="view" tabindex="-1"><p class="dim">Loading…</p></main>
 
   <footer>
@@ -90,11 +110,6 @@
         <a href="#/short">Short</a>
         <a href="#/premium">Premiums</a>
       </div>
-    </div>
-    <div class="fstatus">
-      <span id="s-chain">Robinhood Chain</span>
-      <span id="s-block">block —</span>
-      <span id="s-feed">quotes —</span>
     </div>
   </footer>
 

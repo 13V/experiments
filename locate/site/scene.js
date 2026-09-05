@@ -509,7 +509,12 @@ function updateCamera(t) {
 }
 
 setPose('hero', 0);
-document.fonts.ready.then(() => { for (const s of screens) s.paintedAt = -99; frame(); });
+// A canvas never requests a webfont on its own - setting ctx.font to a face nothing in the DOM
+// has used yet just falls back silently. Ask for the weights the painters draw with, then repaint.
+Promise.all([400, 500, 600, 700].map((w) => document.fonts.load(`${w} 16px "Chakra Petch"`)))
+  .catch(() => {})
+  .then(() => document.fonts.ready)
+  .then(() => { for (const s of screens) s.paintedAt = -99; frame(); });
 
 window.LocateScene = {
   setPose, setData,

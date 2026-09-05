@@ -41,12 +41,26 @@
     return el;
   }
   const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); };
-  /** Desk view heading: title, a mono meta line beside it, and one memo sentence under it. */
-  function viewHead(title, meta, memo) {
-    return h('header', { class: 'vh' },
-      h('div', { class: 'kicker' }, h('h2', {}, title), meta ? h('span', { class: 'meta' }, meta) : null),
-      memo ? h('p', { class: 'memo' }, memo) : null
-    );
+  /**
+   * A monitor panel — the one kind of box the desk has. A 34px chrome bar (cyan tab, title,
+   * right-aligned meta) the way scene.js's own `chrome()` painter draws it, then whatever body
+   * content follows. `title`/`meta` are plain strings or nodes; extra args are appended as the
+   * panel's body verbatim, so a table, a stat row, or a form all live in the same shell.
+   */
+  function pnl(title, meta, ...body) {
+    const bar = h('div', { class: 'pnl-bar' },
+      h('span', { class: 'pnl-title' }, title),
+      (meta === null || meta === undefined) ? null : h('span', { class: 'pnl-meta' }, meta));
+    return h('section', { class: 'pnl' }, bar, ...body);
+  }
+  /** A padded content block inside a panel (tables and the chart pane manage their own insets). */
+  const pad = (...children) => h('div', { class: 'pnl-pad' }, ...children);
+  /** The dim, uppercase explainer line every screen prints at the foot of its panel. */
+  const foot = (...content) => h('div', { class: 'pnl-foot' }, ...content);
+  /** A caption-over-value pair, the way the scene sets a DIM label above a big number. */
+  function kstat(label) {
+    const val = h('div', { class: 'kval skel' });
+    return { el: h('div', { class: 'kstat' }, h('div', { class: 'klabel' }, label), val), val };
   }
   /** One term-sheet row: label, dotted leader, value. */
   const lrow = (label, value) => h('div', { class: 'lrow' }, h('dt', {}, label), h('span', { class: 'lead', 'aria-hidden': 'true' }), h('dd', {}, value));
@@ -68,17 +82,9 @@
     if (t.textContent !== text) t.textContent = text;
     if (sortValue !== undefined && sortValue !== null && !Number.isNaN(sortValue)) td.dataset.v = String(sortValue);
   }
-  /** Stock logo with a monogram fallback. */
-  function avatar(symbol) {
-    const el = h('span', { class: 'avatar', 'aria-hidden': 'true' }, h('span', { class: 'mono' }, symbol.slice(0, 2)));
-    const img = h('img', { alt: '', loading: 'lazy', src: `https://financialmodelingprep.com/image-stock/${encodeURIComponent(symbol)}.png` });
-    img.addEventListener('load', () => el.classList.add('has-img'));
-    img.addEventListener('error', () => img.remove());
-    el.appendChild(img);
-    return el;
-  }
-  const symCell = (symbol, name) => h('td', { class: 'sym' }, h('div', { class: 'symwrap' }, avatar(symbol), h('div', {}, h('div', { class: 'ticker' }, symbol), h('div', { class: 'name' }, name))));
-  const stat = (label, valueEl, sub) => h('div', { class: 'stat' }, h('div', { class: 'label' }, label), valueEl, sub ? h('div', { class: 'sub' }, sub) : null);
+  /** A board/tape row's identity cell: ticker only, exactly what the scene's own screens show —
+   *  no logo, no second line. The full name still reaches assistive tech via the cell's title. */
+  const symCell = (symbol, name) => h('td', { class: 'sym', title: name || '' }, symbol);
   /** Click a column heading to sort; cells sort by data-v when present, else by their text. */
   function makeSortable(table) {
     const ths = Array.from(table.querySelectorAll('thead th'));
@@ -550,6 +556,14 @@
   const DOCK_ORIGIN = { markets: [0.50, 0.62], premium: [0.74, 0.62], desk: [0.26, 0.36] };
   function setActiveTab(tab) {
     document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.route === tab));
+    const idx = ['markets', 'lend', 'short', 'premium'].indexOf(tab);
+    document.querySelectorAll('#cmd-keys kbd').forEach((k, i) => k.classList.toggle('on', i === idx));
+  }
+  /** The prompt's working directory: the route, or the symbol for a market page. */
+  function updateCmdPath() {
+    const el = document.getElementById('cl-path');
+    if (!el) return;
+    el.textContent = STATE.route === 'm' ? `~/${(STATE.param || '').toLowerCase()}` : `~/${STATE.route || ''}`;
   }
   function navigate() {
     if (currentCleanup) { try { currentCleanup(); } catch { /* noop */ } currentCleanup = null; }
@@ -587,6 +601,7 @@
     STATE.param = segs[1] ? decodeURIComponent(segs[1]) : null;
     const mode = route === 'lend' ? 'lend' : route === 'short' ? 'short' : (STATE.query.get('mode') === 'lend' ? 'lend' : 'short');
     setActiveTab(route === 'm' ? mode : route);
+    updateCmdPath();
     const view = document.getElementById('view');
     clear(view);
     view.scrollTop = 0;
@@ -605,28 +620,18 @@
     const anyOpen = STATE.markets.some(isDeployed);
     const totalCap = STATE.markets.reduce((a, m) => a + (m.initialCapUsd || 0), 0);
 
-    view.appendChild(h('div', { class: 'page-head' },
-      h('div', {},
-        h('h2', {}, 'Markets'),
-        h('p', { class: 'memo' }, 'Borrow a stock against USDG, or lend yours and earn the borrow rate. Prices and premiums are live; select a row to open its market.')),
-      anyOpen ? null : h('div', { class: 'launch' }, h('span', { class: 'pill' }, 'Opens soon'), h('span', {}, `${STATE.markets.length} markets · ${fmtUsd(totalCap, 0)} in lending caps at launch`))
-    ));
-
-    const volEl = h('div', { class: 'value skel' });
-    const widestEl = h('div', { class: 'value skel' });
-    const medianEl = h('div', { class: 'value skel' });
-    const quotesEl = h('div', { class: 'value skel' });
-    view.appendChild(h('div', { class: 'stats' },
-      stat('DEX volume, 24h', volEl, 'across these ten pools'),
-      stat('Widest premium', widestEl, 'DEX price against Robinhood\'s quote'),
-      stat('Median premium', medianEl, 'the typical gap right now'),
-      stat('Robinhood quotes', quotesEl, '24/5 feed, paused at weekends')
-    ));
-
+    const vol = kstat('DEX VOLUME 24H');
+    const widest = kstat('WIDEST PREMIUM');
+    const median = kstat('MEDIAN PREMIUM');
+    const quotes = kstat('ROBINHOOD QUOTES');
     const notice = h('div', { class: 'notice hidden' }, h('strong', {}, 'Quotes unavailable. '), 'This is a local copy without the /api/quotes function; DEX prices still load.');
-    view.appendChild(notice);
 
-    const wrap = h('div', { class: 'table-wrap' });
+    view.appendChild(pnl('MARKETS',
+      anyOpen ? `${STATE.markets.length} MARKETS OPEN` : `OPENS SOON · ${STATE.markets.length} MARKETS · ${fmtUsd(totalCap, 0)} CAP`,
+      pad(h('div', { class: 'krow' }, vol.el, widest.el, median.el, quotes.el), notice),
+      foot('Borrow a stock against USDG, or lend yours and earn the borrow rate — select a row to open its market.')
+    ));
+
     const table = h('table', { class: 'markets' + (anyOpen ? ' open' : '') });
     const cols = [
       ['Stock', ''], ['Quote', 'num'], ['DEX', 'num'], ['Premium', 'num'], ['24h', 'num'], ['Volume 24h', 'num'], ['LLTV', 'num'], [anyOpen ? 'Cap' : 'Cap at launch', 'num'],
@@ -635,10 +640,11 @@
     table.appendChild(h('thead', {}, h('tr', {}, ...cols.map(([t, c]) => h('th', { class: c }, t)))));
     const tbody = h('tbody');
     table.appendChild(tbody);
-    table.appendChild(h('tfoot', {}, h('tr', {}, h('td', { colspan: String(cols.length) },
-      'Quote is Robinhood\'s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener; 24h and volume are that pool\'s. Premium is DEX over quote.'))));
-    wrap.appendChild(table);
-    view.appendChild(wrap);
+
+    view.appendChild(pnl('STOCK MARKETS', anyOpen ? null : 'SORT ANY COLUMN',
+      h('div', { class: 'table-wrap' }, table),
+      foot('Quote is Robinhood’s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener; 24h and volume are that pool’s. Premium is DEX over quote.')
+    ));
     makeSortable(table);
 
     const rows = new Map();
@@ -676,9 +682,9 @@
       const dex = await ensureDexData(STATE.markets.map((m) => m.token));
       if (cancelled) return;
 
-      let widest = null;
+      let widestRow = null;
       const prems = [];
-      let vol = 0;
+      let volSum = 0;
       for (const m of STATE.markets) {
         const r = rows.get(m.symbol);
         const q = quoteFor(m.symbol);
@@ -690,38 +696,38 @@
         r.chgC.className = 'num' + (c > 0 ? ' pos' : c < 0 ? ' neg' : '');
         setTile(r.volC, d ? fmtUsd(d.vol24, 0) : '—', d ? d.vol24 : undefined);
         r.volC.classList.add('dim');
-        if (d) vol += d.vol24 || 0;
+        if (d) volSum += d.vol24 || 0;
         if (q && d) {
           const prem = (d.priceUsd - q.mid) / q.mid;
           prems.push(Math.abs(prem));
           setTile(r.premC, (prem >= 0 ? '+' : '') + fmtPct(prem), prem);
           r.premC.className = premClass(prem) + ' hasbar';
           r.premC.style.setProperty('--bar', `${Math.min(96, Math.abs(prem) * 1600)}px`);
-          if (!widest || Math.abs(prem) > Math.abs(widest.prem)) widest = { symbol: m.symbol, prem };
+          if (!widestRow || Math.abs(prem) > Math.abs(widestRow.prem)) widestRow = { symbol: m.symbol, prem };
         } else {
           setTile(r.premC, '—');
         }
         if (q && q.halted && r.statusC) { const pill = r.statusC.querySelector('.pill'); pill.textContent = 'Halted'; pill.className = 'pill halt'; }
       }
 
-      volEl.classList.remove('skel'); volEl.textContent = vol > 0 ? fmtUsd(vol, 0) : '—';
+      vol.val.classList.remove('skel'); vol.val.textContent = volSum > 0 ? fmtUsd(volSum, 0) : '—';
       // the monitors in the scene show the same numbers this table does
       if (window.LocateScene) {
-        const rows = [];
+        const liveRows = [];
         for (const m of STATE.markets) {
           const q = quoteFor(m.symbol), d = dex.get(m.token.toLowerCase());
-          if (q && d) rows.push({ symbol: m.symbol, name: m.name, quote: q.mid, dex: d.priceUsd });
+          if (q && d) liveRows.push({ symbol: m.symbol, name: m.name, quote: q.mid, dex: d.priceUsd });
         }
-        window.LocateScene.setData(rows, rows.map((r) => ({ ...r, prem: (r.dex - r.quote) / r.quote })).sort((a, b) => Math.abs(b.prem) - Math.abs(a.prem)));
+        window.LocateScene.setData(liveRows, liveRows.map((r) => ({ ...r, prem: (r.dex - r.quote) / r.quote })).sort((a, b) => Math.abs(b.prem) - Math.abs(a.prem)));
       }
-      widestEl.classList.remove('skel');
-      if (widest) { widestEl.textContent = `${widest.symbol} ${widest.prem >= 0 ? '+' : ''}${fmtPct(widest.prem)}`; widestEl.classList.add(widest.prem >= 0 ? 'pos' : 'neg'); }
-      else widestEl.textContent = '—';
-      medianEl.classList.remove('skel');
-      if (prems.length) { prems.sort((a, b) => a - b); medianEl.textContent = fmtPct(prems[Math.floor(prems.length / 2)]); }
-      else medianEl.textContent = '—';
-      quotesEl.classList.remove('skel');
-      quotesEl.textContent = STATE.quotesUnavailable || !STATE.quotesTs ? 'Unavailable' : `${Math.max(0, Math.round(Date.now() / 1000 - STATE.quotesTs))}s ago`;
+      widest.val.classList.remove('skel');
+      if (widestRow) { widest.val.textContent = `${widestRow.symbol} ${widestRow.prem >= 0 ? '+' : ''}${fmtPct(widestRow.prem)}`; widest.val.classList.add(widestRow.prem >= 0 ? 'pos' : 'neg'); }
+      else widest.val.textContent = '—';
+      median.val.classList.remove('skel');
+      if (prems.length) { prems.sort((a, b) => a - b); median.val.textContent = fmtPct(prems[Math.floor(prems.length / 2)]); }
+      else median.val.textContent = '—';
+      quotes.val.classList.remove('skel');
+      quotes.val.textContent = STATE.quotesUnavailable || !STATE.quotesTs ? 'Unavailable' : `${Math.max(0, Math.round(Date.now() / 1000 - STATE.quotesTs))}s ago`;
 
       if (!anyOpen) return;
       for (const m of STATE.markets) {
@@ -760,9 +766,8 @@
       ['Shorts pay you', 'The vault lends your stock to the market. Borrowers pay the rate; the vault keeps 10% of the interest.'],
       ['Withdraw when there is liquidity', 'At full utilisation you wait for repayments. Lending caps are set by the vault owner.'],
     ];
-    return h('div', { class: 'card how' },
-      h('h3', {}, mode === 'short' ? 'How a short works' : 'How lending works'),
-      h('ol', {}, ...steps.map((st, i) => h('li', {}, h('i', {}, String(i + 1)), h('b', {}, st[0]), st[1])))
+    return pnl(mode === 'short' ? 'HOW A SHORT WORKS' : 'HOW LENDING WORKS', null,
+      pad(h('ol', { class: 'how' }, ...steps.map((st, i) => h('li', {}, h('i', {}, String(i + 1).padStart(2, '0')), h('b', {}, st[0]), st[1]))))
     );
   }
 
@@ -776,16 +781,19 @@
     const mine = { retired: false };
     let curMode = mode;
 
-    // ---- header: identity left, price right ----
-    const bigPrice = h('div', { class: 'big skel' });
-    const priceLab = h('div', { class: 'lab' }, ' ');
-    const priceSub = h('div', { class: 'sub' });
-    view.appendChild(h('header', { class: 'mkt-head' },
-      h('div', { class: 'mkt-title' }, avatar(symbol),
-        h('div', {},
-          h('h2', {}, symbol, h('span', { class: 'pill' + (deployed ? ' open' : '') }, deployed ? 'Open' : 'Opens soon')),
-          h('div', { class: 'name' }, m.name, ' · ', h('a', { href: '#/markets' }, 'All markets')))),
-      h('div', { class: 'mkt-price' }, priceLab, bigPrice, priceSub)
+    // ---- header: identity in the bar, the big price and its change in the body ----
+    const bigPrice = h('div', { class: 'kval hero skel' });
+    const priceChg = h('span', { class: 'mkt-chg' });
+    const priceLab = h('div', { class: 'klabel' }, ' ');
+    const priceSub = h('div', { class: 'mkt-sub' });
+    const headMeta = h('span', { class: 'pnl-meta' }, deployed ? 'TRADING LIVE' : 'OPENS SOON');
+    view.appendChild(h('section', { class: 'pnl' },
+      h('div', { class: 'pnl-bar' }, h('span', { class: 'pnl-title mkt-id' }, `${symbol} · ${m.name}`), headMeta),
+      pad(
+        h('div', { class: 'mkt-hero' }, priceLab, h('div', { class: 'mkt-px' }, bigPrice, priceChg)),
+        priceSub
+      ),
+      foot(h('a', { href: '#/markets' }, '← all markets'))
     ));
 
     const grid = h('div', { class: 'mkt' });
@@ -795,34 +803,36 @@
     grid.appendChild(side);
     view.appendChild(grid);
 
-    // ---- stats ----
-    const cell = (label, val) => h('div', { class: 'cell' }, h('div', { class: 'label' }, label), val);
-    const soon = () => h('div', { class: 'val dim' }, deployed ? '…' : '—');
-    const borrowApyEl = soon(), supplyApyEl = soon(), availEl = soon(), utilEl = soon();
-    main.appendChild(h('div', { class: 'card mkt-stats' },
-      cell('Loan-to-value', h('div', { class: 'val' }, (m.lltvBps / 100).toFixed(1) + '%')),
-      cell('Borrow APY', borrowApyEl),
-      cell('Supply APY', supplyApyEl),
-      cell('Available', availEl),
-      cell('Utilisation', utilEl),
-      cell('Lending cap', h('div', { class: 'val' }, fmtUsd(m.initialCapUsd, 0)))
-    ));
+    // ---- terms: the same caption-over-value row every panel uses ----
+    const ltv = kstat('LOAN-TO-VALUE'), borrowApy = kstat('BORROW APY'), supplyApy = kstat('SUPPLY APY'),
+      avail = kstat('AVAILABLE'), util = kstat('UTILISATION'), cap = kstat('LENDING CAP');
+    ltv.val.classList.remove('skel'); ltv.val.textContent = (m.lltvBps / 100).toFixed(1) + '%';
+    cap.val.classList.remove('skel'); cap.val.textContent = fmtUsd(m.initialCapUsd, 0);
+    if (!deployed) { for (const s of [borrowApy, supplyApy, avail, util]) { s.val.classList.remove('skel'); s.val.textContent = '—'; s.val.classList.add('dim'); } }
+    main.appendChild(pnl('TERMS', null, pad(h('div', { class: 'krow' }, ltv.el, borrowApy.el, supplyApy.el, avail.el, util.el, cap.el))));
 
     // ---- position (only shown when there is something to show) ----
-    const posCard = h('div', { class: 'card panel position hidden' }, h('h3', {}, 'Your position'));
-    const posBody = h('div');
-    posCard.appendChild(posBody);
-    main.appendChild(posCard);
+    const posPnl = pnl('YOUR POSITION', null); posPnl.classList.add('hidden');
+    const posBody = h('div', { class: 'pnl-pad' });
+    posPnl.appendChild(posBody);
+    main.appendChild(posPnl);
 
     // ---- chart ----
-    const chart = h('div', { class: 'card chart' }, h('div', { class: 'ph' }, 'Loading price chart…'));
+    const chartMeta = h('span', { class: 'pnl-meta' }, 'LOADING…');
+    const chartBody = h('div', {}, h('div', { class: 'ph' }, 'Loading price chart…'));
+    const chart = h('section', { class: 'pnl chart' },
+      h('div', { class: 'pnl-bar' }, h('span', { class: 'pnl-title' }, `${symbol} / USDG`), chartMeta),
+      chartBody);
     main.appendChild(chart);
     let how = howCard(curMode, symbol);
     main.appendChild(how);
 
     // ---- order panel ----
-    const panel = h('div', { class: 'card order' });
-    side.appendChild(panel);
+    const orderTitle = h('span', {}, curMode.toUpperCase(), ' ', symbol);
+    const orderPnl = pnl(orderTitle, (m.lltvBps / 100).toFixed(1) + '% LTV');
+    const panel = h('div', { class: 'pnl-pad order' });
+    orderPnl.appendChild(panel);
+    side.appendChild(orderPnl);
 
     const live = { ref: null, quote: null, dex: null, onchain: null, usdgBal: null, stockBal: null, vaultLiq: null, vaultTotal: null, myAssets: null, maxWithdraw: null };
     let recomputeShort = () => {};
@@ -833,6 +843,7 @@
       curMode = next;
       setActiveTab(next);
       try { history.replaceState(null, '', `#/m/${symbol}${next === 'lend' ? '?mode=lend' : ''}`); } catch { /* noop */ }
+      orderTitle.textContent = `${curMode.toUpperCase()} ${symbol}`;
       const fresh = howCard(curMode, symbol);
       main.replaceChild(fresh, how);
       how = fresh;
@@ -870,7 +881,7 @@
       ));
       panel.appendChild(h('div', { class: 'amt' },
         h('div', { class: 'top' }, h('span', {}, 'Borrow'), maxLink),
-        h('div', { class: 'in' }, borrowIn, h('span', { class: 'unit' }, avatar(symbol), symbol))
+        h('div', { class: 'in' }, borrowIn, h('span', { class: 'unit' }, symbol))
       ));
       const chipVals = [1.2, 1.5, 2, 3];
       const chips = chipVals.map((v) => h('button', { class: 'ghost', onclick: () => setFromHf(v) }, `${v}×`));
@@ -952,7 +963,7 @@
       depBal.addEventListener('click', (e) => { e.preventDefault(); if (live.stockBal !== null) depIn.value = plainToken(live.stockBal, STOCK_DECIMALS, 6); });
       panel.appendChild(h('div', { class: 'amt' },
         h('div', { class: 'top' }, h('span', {}, 'Deposit'), depBal),
-        h('div', { class: 'in' }, depIn, h('span', { class: 'unit' }, avatar(symbol), symbol))
+        h('div', { class: 'in' }, depIn, h('span', { class: 'unit' }, symbol))
       ));
       const rApy = h('b', {}), rLiq = h('b', {}), rTot = h('b', {}), rMine = h('b', {});
       panel.appendChild(h('div', { class: 'rows' },
@@ -1020,20 +1031,31 @@
 
     // ---------------------------------------------------------------- position
     async function loadPosition() {
-      if (!routerLive || !STATE.account) { posCard.classList.add('hidden'); return; }
+      if (!routerLive || !STATE.account) { posPnl.classList.add('hidden'); return; }
       try {
         const mp = mpFor(m);
         const data = await ethCall(STATE.addresses.rpc, STATE.addresses.router, encodeCall('positionOf((address,address,address,address,uint256),address)', marketParamsTuple(mp), STATE.account));
         if (mine.retired) return;
         const w = decodeWords(data);
         const pos = { collateral: toBig(w[0]), borrowAssets: toBig(w[1]), maxBorrow: toBig(w[2]), healthFactorWad: toBig(w[3]), liquidationPrice: toBig(w[4]) };
-        if (pos.collateral === 0n && pos.borrowAssets === 0n) { posCard.classList.add('hidden'); return; }
+        if (pos.collateral === 0n && pos.borrowAssets === 0n) { posPnl.classList.add('hidden'); return; }
         clear(posBody);
-        posCard.classList.remove('hidden');
+        posPnl.classList.remove('hidden');
+        // the same big-number-plus-gauge the scene's own position() screen paints
+        const hfNum = Number(pos.healthFactorWad) / 1e18;
+        const bad = hfNum < 1.2, warn = hfNum < 1.5;
+        const gcolor = bad ? 'var(--down)' : warn ? 'var(--amber)' : 'var(--up)';
+        const gpct = Math.max(0, Math.min(1, (hfNum - 1) / 2));
+        const buf = (hfNum - 1) * 100;
+        posBody.appendChild(h('div', { class: 'hf-hero' },
+          h('div', {}, h('div', { class: 'klabel' }, 'HEALTH FACTOR'), h('div', { class: 'kval hero', style: bad ? 'color:var(--down)' : '' }, fmtHf(pos.healthFactorWad))),
+          h('div', { class: 'gauge', style: `--pct:${gpct};--gcolor:${gcolor}` },
+            h('div', { class: 'g-track' }), h('div', { class: 'g-val' }),
+            h('div', { class: 'g-hole' }, h('div', { class: 'klabel' }, 'BUFFER'), h('div', { class: 'gval' }, `${buf >= 0 ? '+' : ''}${buf.toFixed(0)}%`)))
+        ));
         posBody.appendChild(h('dl', { class: 'ledger' },
           lrow('Collateral', h('div', { class: 'value small' }, fmtToken(pos.collateral, STATE.addresses.usdgDecimals, 2) + ' USDG')),
           lrow('Borrowed', h('div', { class: 'value small' }, fmtToken(pos.borrowAssets, STOCK_DECIMALS, 4) + ' ' + symbol)),
-          lrow('Health factor', h('div', { class: `value${pos.healthFactorWad < (12n * 10n ** 17n) ? ' red' : ''}` }, fmtHf(pos.healthFactorWad))),
           lrow('Liquidation price', h('div', { class: 'value small' }, pos.borrowAssets > 0n ? fmtUsd(Number(pos.liquidationPrice) / 1e18) : '—')),
           lrow('Can still borrow', h('div', { class: 'value small' }, fmtToken(pos.maxBorrow > pos.borrowAssets ? pos.maxBorrow - pos.borrowAssets : 0n, STOCK_DECIMALS, 4) + ' ' + symbol))
         ));
@@ -1110,33 +1132,31 @@
       const d = dexMap.get(m.token.toLowerCase()) || null;
       live.quote = q; live.dex = d;
       bigPrice.classList.remove('skel');
-      if (q) { bigPrice.textContent = fmtUsd(q.mid); priceLab.textContent = 'Robinhood quote'; }
-      else if (d) { bigPrice.textContent = fmtUsd(d.priceUsd); priceLab.textContent = 'DEX price'; }
-      else { bigPrice.textContent = '—'; priceLab.textContent = 'No price'; }
-      clear(priceSub);
+      if (q) { bigPrice.textContent = fmtUsd(q.mid); priceLab.textContent = 'ROBINHOOD QUOTE'; }
+      else if (d) { bigPrice.textContent = fmtUsd(d.priceUsd); priceLab.textContent = 'DEX PRICE'; }
+      else { bigPrice.textContent = '—'; priceLab.textContent = 'NO PRICE'; }
+      clear(priceChg); clear(priceSub);
       if (d) {
         const prem = q ? (d.priceUsd - q.mid) / q.mid : null;
+        if (d.chg24 !== null && !Number.isNaN(d.chg24)) {
+          priceChg.textContent = `${d.chg24 >= 0 ? '+' : ''}${d.chg24.toFixed(2)}%`;
+          priceChg.className = 'mkt-chg' + (d.chg24 > 0 ? ' pos' : d.chg24 < 0 ? ' neg' : '');
+        }
         priceSub.appendChild(h('span', {}, 'DEX ', h('b', {}, fmtUsd(d.priceUsd))));
         if (prem !== null) priceSub.appendChild(h('span', {}, 'Premium ', h('b', { class: prem > 0 ? 'pos' : prem < 0 ? 'neg' : '' }, (prem >= 0 ? '+' : '') + fmtPct(prem))));
-        if (d.chg24 !== null && !Number.isNaN(d.chg24)) priceSub.appendChild(h('span', {}, '24h ', h('b', { class: d.chg24 > 0 ? 'pos' : d.chg24 < 0 ? 'neg' : '' }, (d.chg24 >= 0 ? '+' : '') + d.chg24.toFixed(2) + '%')));
         priceSub.appendChild(h('span', {}, 'Volume 24h ', h('b', {}, fmtUsd(d.vol24, 0))));
-        clear(chart);
-        chart.appendChild(h('div', { class: 'scr-bar' },
-          h('span', { class: 'scr-id' }, `${symbol} / USDG`),
-          h('span', { class: 'scr-meta' }, `${(d.dexId || 'pool').toUpperCase()} · ROBINHOOD CHAIN`),
-          h('span', { class: 'scr-live' }, h('i', {}), 'Live')
-        ));
-        chart.appendChild(h('div', { class: 'scr-glass' },
+        clear(chartBody);
+        chartMeta.textContent = `${(d.dexId || 'pool').toUpperCase()} · ROBINHOOD CHAIN`;
+        chartBody.appendChild(h('div', { class: 'scr-glass' },
           h('iframe', { src: d.url + '?embed=1&theme=dark&chartTheme=dark&trades=0&info=0&chartLeftToolbar=0&loadChartSettings=0&chartResolution=15', loading: 'lazy', title: `${symbol} price on the DEX pool` })
         ));
-        chart.appendChild(h('div', { class: 'scr-led' }));
-        chart.appendChild(h('div', { class: 'cap' }, h('span', {}, 'Chart by DexScreener'), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'Open the pool ↗')));
+        chart.appendChild(foot(h('span', {}, 'chart by dexscreener · '), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'open the pool ↗')));
       } else {
-        clear(chart);
-        chart.appendChild(h('div', { class: 'scr-bar' }, h('span', { class: 'scr-id' }, `${symbol} / USDG`), h('span', { class: 'scr-meta' }, 'NO POOL')));
-        chart.appendChild(h('div', { class: 'ph' }, `No DEX pool found for ${symbol} yet.`));
+        clear(chartBody);
+        chartMeta.textContent = 'NO POOL';
+        chartBody.appendChild(h('div', { class: 'ph' }, `No DEX pool found for ${symbol} yet.`));
       }
-      if (q && q.halted) { const pill = view.querySelector('.mkt-title .pill'); if (pill) { pill.textContent = 'Halted'; pill.className = 'pill halt'; } }
+      if (q && q.halted) headMeta.textContent = 'TRADING HALTED';
 
       live.ref = await getReferencePrice(m);
       if (mine.retired) return;
@@ -1147,11 +1167,11 @@
         if (mine.retired) return;
         if (oc) {
           live.onchain = oc;
-          borrowApyEl.textContent = fmtPct(oc.borrowApy); borrowApyEl.className = 'val';
-          supplyApyEl.textContent = fmtPct(oc.supplyApy); supplyApyEl.className = 'val';
-          utilEl.textContent = fmtPct(oc.utilisation); utilEl.className = 'val';
-          const avail = Number(oc.availableRaw) / 1e18;
-          availEl.textContent = `${fmtNum(avail, 2)} ${symbol}`; availEl.className = 'val';
+          borrowApy.val.classList.remove('skel'); borrowApy.val.textContent = fmtPct(oc.borrowApy);
+          supplyApy.val.classList.remove('skel'); supplyApy.val.textContent = fmtPct(oc.supplyApy);
+          util.val.classList.remove('skel'); clear(util.val); util.val.appendChild(ubar(oc.utilisation));
+          const availTokens = Number(oc.availableRaw) / 1e18;
+          avail.val.classList.remove('skel'); avail.val.textContent = `${fmtNum(availTokens, 2)} ${symbol}`;
           paintPanel();
         }
       }
@@ -1171,12 +1191,11 @@
 
   // ================================================================== Premium Board
   function renderPremium(view) {
-    view.appendChild(viewHead('Premiums', null,
-      'DEX price against Robinhood\'s quote for every stock token with a pool, largest gap first. Robinhood only mints and burns while the exchange is open, so pools drift.'));
-    const filter = h('input', { type: 'text', placeholder: 'Filter by symbol or name', 'aria-label': 'Filter' });
+    const filter = h('input', { type: 'text', placeholder: 'Filter symbol or name', 'aria-label': 'Filter' });
     const status = h('span', { class: 'count' }, 'Loading…');
-    view.appendChild(h('div', { class: 'toolbar' }, filter, status));
-    const wrap = h('div', { class: 'table-wrap hidden' });
+    const notice = h('div', { class: 'notice hidden' },
+      h('strong', {}, 'Robinhood registry unavailable. '),
+      'The full board needs api/quotes.js (Vercel only) to list all Robinhood stock tokens — that API has no CORS for direct browser calls. Showing DEX data for the ten configured markets instead.');
     const table = h('table', { class: 'premium' });
     table.appendChild(h('thead', {}, h('tr', {},
       h('th', { class: 'idx', 'data-nosort': '' }, '#'), h('th', {}, 'Stock'), h('th', { class: 'num' }, 'DEX'), h('th', { class: 'num' }, 'Quote'),
@@ -1190,19 +1209,21 @@
     });
     const tbody = h('tbody');
     table.appendChild(tbody);
-    wrap.appendChild(table);
-    view.appendChild(wrap);
+    const wrap = h('div', { class: 'table-wrap hidden' }, table);
+
+    view.appendChild(pnl('PREMIUM BOARD', 'DEX VS ROBINHOOD · SORTED BY GAP',
+      h('div', { class: 'toolbar' }, filter, status),
+      notice,
+      wrap,
+      foot('DEX price against Robinhood’s quote for every stock token with a pool, largest gap first — Robinhood only mints and burns while the exchange is open, so pools drift.')
+    ));
 
     let cancelled = false;
     (async () => {
       const quotes = await fetchQuotes();
       const assets = quotes.assets || [];
       if (STATE.quotesUnavailable || !assets.length) {
-        clear(status);
-        status.appendChild(h('div', { class: 'notice' },
-          h('strong', {}, 'Robinhood registry unavailable. '),
-          'The full board needs api/quotes.js (Vercel only) to list all Robinhood stock tokens — that API has no CORS for direct browser calls. Showing DEX data for the ten configured markets instead.'
-        ));
+        notice.classList.remove('hidden');
         const addrs = STATE.markets.map((m) => m.token);
         const dex = await ensureDexData(addrs);
         if (cancelled) return;
@@ -1326,7 +1347,7 @@
     }
     const chainSeg = document.getElementById('s-chain');
     clear(chainSeg);
-    chainSeg.appendChild(h('span', {}, 'Robinhood Chain ', h('b', {}, String(STATE.addresses.chainId))));
+    chainSeg.appendChild(h('span', {}, 'robinhood-chain:', h('b', {}, String(STATE.addresses.chainId))));
 
     document.getElementById('btn-connect').addEventListener('click', connectWallet);
     primeLive();
@@ -1335,9 +1356,20 @@
     startFeedTicker();
     startClock();
     wireHotkeys();
+    syncMastheadHeight();
     fetchQuotes(); // warm the cache so the status bar's feed age has something to show quickly
     window.addEventListener('hashchange', navigate);
     navigate();
+  }
+
+  /** The command line docks directly under the masthead; its height varies (it wraps to two
+   *  rows under 760px), so this measures rather than hardcodes the offset. */
+  function syncMastheadHeight() {
+    const mh = document.getElementById('masthead');
+    if (!mh) return;
+    const set = () => document.documentElement.style.setProperty('--mh-h', mh.offsetHeight + 'px');
+    set();
+    window.addEventListener('resize', set);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

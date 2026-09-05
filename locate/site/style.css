@@ -1,25 +1,31 @@
 /* Locate — the desk, continued.
-   The app runs on the same glass as the hero: near-black ground, cyan instrument accent,
-   green and red reserved for signed numbers. Chakra Petch throughout, Big Shoulders for titles. */
+   The app is not a page beside the monitors, it is one of them: same near-black glass, same
+   34px chrome bar with a cyan tab, same one typeface at every size. Chakra Petch, full stop —
+   there is no second, display face; --display is kept only because the signed-off hero still
+   sets it directly on .htop h1, which this pass does not touch. */
 
 :root {
-  --bg: #060606;
+  --bg: #030507;
   --bg-2: #0a0b0c;
   --panel: #0c0e0f;
   --panel-2: #101213;
   --line: #1d2224;
   --line-2: #16191b;
-  --ink: #dae2e6;
-  --ink-2: #97a3a9;
-  --ink-3: #6d787d;
-  --accent: #59e4fd;
+  --scr-bg: #070c11;       /* the painters' own panel ground, scene.js chrome() */
+  --scr-head: rgba(255, 255, 255, .04);
+  --scr-stripe: rgba(255, 255, 255, .025);
+  --ink: #dbe6ec;          /* scene INK */
+  --ink-2: #97a3a9;        /* the DIM tone, solid rather than translucent so it clears the
+                               #97a3a9 legibility floor on the near-black ground */
+  --ink-3: #6d787d;        /* structural only from here on — hairlines, never running text */
+  --accent: #57e6ff;       /* scene CY */
   --accent-2: #2fa6c2;
-  --accent-tint: rgba(89, 228, 253, .10);
+  --accent-tint: rgba(87, 230, 255, .10);
   --up: #3ddc84;
   --up-tint: rgba(61, 220, 132, .12);
   --down: #ff5c6a;
   --down-tint: rgba(255, 92, 106, .12);
-  --amber: #ffb35c;
+  --amber: #ffd23f;
   --shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 12px 32px rgba(0, 0, 0, .45);
   --font: 'Chakra Petch', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --display: 'Big Shoulders Inline Display', 'Arial Narrow', var(--font);
@@ -137,188 +143,215 @@ p { margin: 0; }
 #masthead .wallet .amber { color: var(--ink); font-weight: 600; }
 #masthead .wallet button { height: 36px; padding: 0 15px; font-size: 12px; }
 
+/* ---------------------------------------------------------------- command line
+   A persistent status line docked under the masthead — chain, block, feed age, a live
+   clock, and the hotkeys that already switch desks (wireHotkeys in app.js). It stays
+   pinned while a view scrolls, the way a shell's own status line would. */
+#cmdline {
+  position: sticky; top: var(--mh-h, 62px); z-index: 5;
+  /* #app is a flex column with overflow: auto; without this, cmdline is the one child whose
+     overflow:hidden gives it an automatic min-height of 0, so it alone absorbs the shrinkage
+     when content is taller than the frame and collapses to nothing (see the masthead's own
+     flex:0 0 auto, same reason). */
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  height: 27px; padding: 0 30px;
+  background: rgba(255, 255, 255, .035);
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink-2); font-size: 11px; letter-spacing: .03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden;
+}
+#cmdline .cl-l, #cmdline .cl-r { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; }
+#cmdline .cl-prompt { color: var(--accent); font-weight: 600; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#cmdline .cl-prompt b { font-weight: 600; }
+#cmdline .cl-path { color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+#cmdline .cl-caret { flex: 0 0 auto; display: inline-block; width: 6px; height: 13px; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: blink 1.1s steps(1, end) infinite; vertical-align: -2px; }
+#cmdline .cl-r b { color: var(--ink); font-weight: 600; }
+#cmdline .cl-r .red { color: var(--down); }
+#cmdline .sep { color: var(--ink-3); }
+#cmdline .cl-keys { display: flex; align-items: center; gap: 3px; color: var(--ink-2); text-transform: uppercase; }
+#cmdline .cl-keys kbd {
+  font: inherit; font-size: 10px; color: var(--ink-2); background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--line); min-width: 14px; text-align: center; line-height: 15px;
+  padding: 0 3px; margin-right: 2px; transition: background .15s, color .15s, border-color .15s;
+}
+#cmdline .cl-keys kbd.on { color: #04070a; background: var(--accent); border-color: var(--accent); }
+body:not(.docked) #cmdline { display: none; }
+@media (max-width: 760px) {
+  #cmdline { top: var(--mh-h, 96px); }
+}
+@media (max-width: 700px) {
+  #cmdline { padding: 0 14px; gap: 10px; }
+  #cmdline .cl-path, #cmdline .cl-keys, #cmdline .sep-ck { display: none; }
+}
+@media (max-width: 460px) {
+  #cmdline .sep-fc, #cmdline #s-clock { display: none; }
+}
+@media (max-width: 400px) {
+  #cmdline .cl-prompt { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #cmdline .cl-caret { animation: none; } }
+
 /* ---------------------------------------------------------------- layout */
 
-main { flex: 1 1 auto; width: 100%; max-width: 1420px; margin: 0 auto; padding: 28px 34px 64px; }
+main { flex: 1 1 auto; width: 100%; max-width: 1420px; margin: 0 auto; padding: 16px 30px 44px; }
 main:focus { outline: none; }
 #view > .field { max-width: 560px; }
 
-.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
-.page-head h2, .vh h2 { font-size: 30px; font-weight: 600; line-height: 1.1; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 9px; color: var(--ink); }
-.page-head .memo, .vh .memo { color: var(--ink-2); font-size: 15px; max-width: 62ch; }
-.vh { margin-bottom: 24px; max-width: 70ch; }
-.vh .meta { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+/* ---------------------------------------------------------------- panels
+   The one kind of box the desk has: a 34px chrome bar — a cyan tab flush left, a title, a
+   right-aligned meta string — then whatever body content follows. No radius, no shadow, no
+   gradient: this is scene.js's own chrome() painter, verbatim, at the same 34px. */
 
-.launch {
-  display: inline-flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--ink-2); background: var(--panel);
-  border: 1px solid var(--line); border-radius: 999px; padding: 5px 15px 5px 6px; white-space: nowrap;
+.pnl { background: var(--scr-bg); margin-bottom: 10px; }
+.pnl-bar {
+  height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 0 14px 0 16px; background: var(--scr-head); border-left: 4px solid var(--accent);
 }
-
-.card, .panel {
-  position: relative;
-  background: linear-gradient(180deg, rgba(18, 27, 36, .97), rgba(11, 18, 25, .98));
-  border: 1px solid var(--line); border-radius: var(--r);
-  box-shadow: 0 1px 0 rgba(150, 215, 255, .10) inset, 0 26px 70px rgba(0, 0, 0, .85);
+.pnl-title {
+  font: 600 15px/1 var(--font); color: var(--ink); text-transform: uppercase; letter-spacing: .01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* the sheen the scene paints across every monitor, at panel scale */
-.card::after, .panel::after, .table-wrap::after {
-  content: ''; position: absolute; inset: 0; border-radius: var(--r); pointer-events: none;
-  background: linear-gradient(203deg, transparent 44%, rgba(190, 225, 255, .045) 52%, transparent 61%);
-}
-.panel { padding: 22px 24px; margin-bottom: 18px; max-width: 560px; }
-.panel > h3 { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 16px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; max-width: 1000px; }
-.two .panel { max-width: none; }
+.pnl-meta { font: 500 14px/1 var(--font); color: var(--ink-2); text-transform: uppercase; letter-spacing: .01em; white-space: nowrap; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.pnl-pad { padding: 18px 20px; }
+.pnl-foot { padding: 12px 20px 16px; color: var(--ink-2); font: 500 12px/1.5 var(--font); text-transform: uppercase; letter-spacing: .03em; }
+.pnl-foot a { color: var(--accent); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
 @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
 
-/* stats strip */
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
-.stat {
-  background: linear-gradient(180deg, rgba(18, 27, 36, .97), rgba(11, 18, 25, .98));
-  border: 1px solid var(--line); border-radius: var(--r);
-  box-shadow: 0 1px 0 rgba(150, 215, 255, .10) inset, 0 26px 70px rgba(0, 0, 0, .85);
-  padding: 16px 18px; min-width: 0; position: relative; overflow: hidden;
+/* a caption over a value — the scene's own way of setting a number, from a stat row to a hero number */
+.krow { display: flex; flex-wrap: wrap; gap: 22px 40px; }
+.kstat { min-width: 0; }
+.klabel { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 7px; white-space: nowrap; }
+.kval { font-size: 22px; font-weight: 600; letter-spacing: -0.005em; color: var(--ink); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kval.pos { color: var(--up); }
+.kval.neg { color: var(--down); }
+.kval.skel {
+  display: inline-block; width: 92px; height: 19px; vertical-align: -3px;
+  background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(87,230,255,.14) 50%, rgba(255,255,255,.05) 75%);
+  background-size: 200% 100%; animation: shimmer 1.3s linear infinite;
 }
-.stat::before { content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(87, 230, 255, .35), transparent); }
-.stat .label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 8px; }
-.stat .value { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
-.stat .sub { font-size: 12px; color: var(--ink-2); margin-top: 5px; opacity: .85; }
-@media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.kstat.hero .klabel { font-size: 13px; letter-spacing: .1em; margin-bottom: 8px; }
+.kstat.hero .kval, .kval.hero { font: 700 52px/1 var(--font); letter-spacing: -0.01em; }
+.kval.hero { font-size: 46px; }
+.kstat.hero .kval.skel, .kval.hero.skel { width: 170px; height: 46px; }
 
 /* ---------------------------------------------------------------- ledgers */
 
-dl.ledger { margin: 6px 0 4px; padding: 0; }
-.lrow { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid var(--line-2); }
-.lrow:first-child { border-top: 0; }
-.lrow dt { color: var(--ink-2); font-size: 13px; }
+dl.ledger { margin: 0; padding: 0; }
+.lrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 33px; padding: 0 4px; }
+.lrow:nth-child(even) { background: var(--scr-stripe); }
+.lrow dt { color: var(--ink-2); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
 .lrow .lead { display: none; }
 .lrow dd { margin: 0; text-align: right; }
-.lrow dd .value { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
-.lrow dd .value.small { font-weight: 500; font-size: 15px; }
+.lrow dd .value { font: 500 15px/1 var(--font); color: var(--ink); }
+.lrow dd .value.small { font-weight: 500; }
 .lrow dd .value.red { color: var(--down); }
 
 /* ---------------------------------------------------------------- tables */
 
-.table-wrap {
-  position: relative;
-  background: linear-gradient(180deg, rgba(18, 27, 36, .97), rgba(11, 18, 25, .98));
-  border: 1px solid var(--line); border-radius: var(--r);
-  box-shadow: 0 1px 0 rgba(150, 215, 255, .10) inset, 0 26px 70px rgba(0, 0, 0, .85);
-  overflow-x: auto;
-}
-table { border-collapse: collapse; width: 100%; min-width: 960px; }
-table.markets tbody td { height: 60px; }
+.table-wrap { overflow-x: auto; padding: 0 8px; }
+table { border-collapse: collapse; width: 100%; min-width: 860px; }
 table.tight { min-width: 0; }
 
 thead th {
-  text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--ink-2); padding: 13px 11px; border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, .015); white-space: nowrap; user-select: none;
+  text-align: left; font: 500 12px/1 var(--font); letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-2); height: 30px; padding: 0 12px; white-space: nowrap; user-select: none;
 }
-thead th:first-child { border-top-left-radius: var(--r); }
-thead th:last-child { border-top-right-radius: var(--r); }
 thead th.sortable { cursor: pointer; }
-thead th.sortable:hover { color: var(--accent); }
+thead th.sortable:hover { color: var(--ink); }
 thead th.sortable::after { content: ''; display: inline-block; width: 0; height: 0; margin-left: 6px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--accent); opacity: 0; vertical-align: 2px; }
 thead th.sortable[data-dir='desc']::after { opacity: 1; }
 thead th.sortable[data-dir='asc']::after { opacity: 1; transform: rotate(180deg); }
 thead th.num, tbody td.num, tfoot td.num { text-align: right; }
-th.idx, td.idx { width: 44px; color: var(--ink-3); font-size: 12px; text-align: right; padding-right: 4px; }
+th.idx, td.idx { width: 30px; color: var(--ink-2); font-size: 12px; text-align: right; padding-right: 2px; }
 
-tbody td { padding: 0 11px; height: 58px; border-bottom: 1px solid var(--line-2); white-space: nowrap; vertical-align: middle; font-size: 15px; color: var(--ink); font-weight: 500; }
-tbody tr:last-child td { border-bottom: 0; }
+tbody td {
+  padding: 0 12px; height: 33px; white-space: nowrap; vertical-align: middle;
+  font: 500 15px/1 var(--font); color: var(--ink); font-variant-numeric: tabular-nums;
+}
+tbody tr:nth-child(even) td { background: var(--scr-stripe); }
 tbody tr.link { cursor: pointer; }
-tbody tr:hover td { background: rgba(87, 230, 255, .045); }
-tbody tr.link:hover td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+tbody tr:hover td { background: rgba(87, 230, 255, .07); }
+tbody tr.link:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 tbody td.num.dim { color: var(--ink-2); }
 tbody td.num.pos, tbody td.num.neg { font-weight: 600; }
 
-.symwrap { display: flex; align-items: center; gap: 12px; }
-.ticker { font-weight: 600; letter-spacing: .02em; }
-td.sym .name { display: block; font-weight: 400; font-size: 12px; color: var(--ink-2); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-
-.avatar {
-  position: relative; flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(255, 255, 255, .05); border: 1px solid var(--line);
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; color: var(--ink-2); overflow: hidden;
+/* the magnitude bar the board painter draws beside its percentage, at the same ~35% alpha */
+td.num.hasbar { position: relative; }
+td.num.hasbar::before {
+  content: ''; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: var(--bar, 0px); height: 15px; background: currentColor; opacity: .35;
 }
-.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 5px; opacity: 0; transition: opacity .15s; }
-.avatar.has-img { background: rgba(255, 255, 255, .93); border-color: transparent; }
-.avatar.has-img img { opacity: 1; }
-.avatar.has-img .mono { visibility: hidden; }
+
+td.sym { font-weight: 600; letter-spacing: .02em; } /* ticker only, no logo, no name line — the scene's own board/tape rows carry exactly this */
+
 
 .v { display: inline; }
 .v.skel, .value.skel {
-  display: inline-block; width: 72px; height: 12px; border-radius: 6px; vertical-align: middle;
+  display: inline-block; width: 60px; height: 12px; border-radius: 2px; vertical-align: middle;
   background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(87,230,255,.14) 50%, rgba(255,255,255,.05) 75%);
   background-size: 200% 100%; animation: shimmer 1.3s linear infinite;
 }
-.value.skel { height: 18px; width: 128px; }
-@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-.soon .v { color: var(--ink-3); }
+.value.skel { height: 18px; width: 110px; }
+.soon .v { color: var(--ink-2); }
 a.v { color: var(--accent); font-size: 14px; font-weight: 500; }
 
-.pill { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.05); color: var(--ink-3); line-height: 1.4; border: 1px solid var(--line); }
-.pill.open { background: var(--up-tint); color: var(--up); border-color: rgba(61,220,132,.25); }
-.pill.halt { background: var(--down-tint); color: var(--down); border-color: rgba(255,92,106,.28); }
+.pill { display: inline-flex; align-items: center; height: 15px; font: 500 11px/1 var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); border-left: 2px solid var(--line); padding-left: 7px; }
+.pill.open { color: var(--up); border-color: var(--up); }
+.pill.halt { color: var(--down); border-color: var(--down); }
 
-tfoot td { padding: 13px 11px; font-size: 12px; color: var(--ink-3); white-space: normal; border-top: 1px solid var(--line); background: rgba(255,255,255,.015); }
-tfoot td:first-child { border-bottom-left-radius: var(--r); }
-
-.badge { font-size: 12px; font-weight: 500; }
-.badge.halt { color: var(--down); }
-.badge.live { color: var(--ink-2); }
-
-.toolbar { display: flex; gap: 14px; align-items: center; margin: 0 0 16px; flex-wrap: wrap; }
-.toolbar input[type=text] { max-width: 320px; height: 40px; font-size: 14px; }
-.toolbar .count { font-size: 13px; color: var(--ink-2); letter-spacing: .02em; }
+.toolbar { display: flex; gap: 16px; align-items: center; padding: 10px 20px; flex-wrap: wrap; }
+.toolbar input[type=text] { max-width: 260px; height: 30px; font-size: 13px; }
+.toolbar .count { font-size: 12px; color: var(--ink-2); letter-spacing: .02em; text-transform: uppercase; }
 
 /* ---------------------------------------------------------------- forms */
 
-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 7px; }
+label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 6px; }
 select, input[type=text], input[type=number] {
-  width: 100%; height: 44px; padding: 0 13px;
-  background: rgba(0, 0, 0, .35); border: 1px solid var(--line); border-radius: 8px; color: var(--ink);
-  font-family: var(--font); font-size: 15px; font-variant-numeric: tabular-nums;
+  width: 100%; height: 40px; padding: 0 12px;
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--line); border-radius: 2px; color: var(--ink);
+  font-family: var(--font); font-size: 14px; font-variant-numeric: tabular-nums;
   transition: border-color .12s, box-shadow .12s;
 }
 select:hover, input:hover { border-color: #24323e; }
-select:focus, input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--accent-tint); }
-input::placeholder { color: var(--ink-3); opacity: 1; }
-.field { margin-bottom: 15px; }
-.hint { font-size: 12px; color: var(--ink-3); margin-top: 7px; }
+select:focus, input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 2px var(--accent-tint); }
+input::placeholder { color: var(--ink-2); opacity: 1; }
+.field { margin-bottom: 13px; }
+.hint { font-size: 12px; color: var(--ink-2); margin-top: 7px; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .row > .field { flex: 1 1 200px; }
-.row > div:not(.field) { margin-bottom: 15px; }
+.row > div:not(.field) { margin-bottom: 13px; }
 
 button, .btn {
-  font-family: var(--font); font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-  background: var(--accent); color: #04070a; border: 1px solid var(--accent); border-radius: 8px;
-  height: 44px; padding: 0 20px; cursor: pointer; white-space: nowrap;
+  font-family: var(--font); font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+  background: var(--accent); color: #04070a; border: 1px solid var(--accent); border-radius: 2px;
+  height: 40px; padding: 0 18px; cursor: pointer; white-space: nowrap;
   transition: background .12s, box-shadow .12s, color .12s, border-color .12s;
 }
 button:hover:not(:disabled) { background: #7cf0ff; border-color: #7cf0ff; box-shadow: 0 0 20px rgba(87, 230, 255, .28); }
-button:disabled { background: rgba(255,255,255,.04); color: var(--ink-3); border-color: var(--line); cursor: not-allowed; }
+button:disabled { background: rgba(255,255,255,.04); color: var(--ink-2); border-color: var(--line); cursor: not-allowed; }
 button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
 button.ghost:hover:not(:disabled) { background: rgba(255,255,255,.05); border-color: var(--accent-2); color: var(--accent); box-shadow: none; }
 button.danger { background: transparent; color: var(--down); border-color: rgba(255,92,106,.35); }
 button.danger:hover:not(:disabled) { background: var(--down-tint); border-color: var(--down); box-shadow: none; }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
 
-/* ---------------------------------------------------------------- notices */
+/* ---------------------------------------------------------------- notices
+   A flagged line, not a tinted box: the same cyan rule a panel's own bar carries. */
 
-.notice { background: var(--accent-tint); border: 1px solid rgba(87,230,255,.18); border-radius: 9px; padding: 12px 15px; font-size: 14px; color: var(--ink-2); margin-bottom: 16px; max-width: 74ch; }
-.notice.error { background: var(--down-tint); border-color: rgba(255,92,106,.28); color: var(--down); }
+.notice { border-left: 3px solid var(--accent); padding: 9px 0 9px 14px; font-size: 13px; color: var(--ink-2); max-width: 74ch; }
+.notice.error { border-left-color: var(--down); color: var(--down); }
 .notice strong { color: var(--ink); font-weight: 600; }
 .inline-error { color: var(--down); font-size: 13px; margin-top: 9px; }
 
 /* ---------------------------------------------------------------- toasts */
 
 #toasts { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: 9px; z-index: 60; max-width: 350px; }
-.toast { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 9px; padding: 13px 15px; font-size: 14px; color: var(--ink); box-shadow: 0 14px 36px rgba(0,0,0,.6); }
-.toast.pending { border-left-color: var(--ink-3); }
+.toast { background: var(--scr-bg); border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 13px 15px; font-size: 14px; color: var(--ink); box-shadow: 0 14px 36px rgba(0,0,0,.6); }
+.toast.pending { border-left-color: var(--ink-2); }
 .toast.error { border-left-color: var(--down); }
 .toast.success { border-left-color: var(--up); }
 .toast .t-title { font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: 12px; margin-bottom: 3px; color: var(--ink); }
@@ -326,137 +359,131 @@ button.danger:hover:not(:disabled) { background: var(--down-tint); border-color:
 
 /* ---------------------------------------------------------------- footer */
 
-footer { border-top: 1px solid var(--line); padding: 34px 30px 30px; font-size: 13px; color: var(--ink-2); background: var(--bg-2); }
+footer { border-top: 1px solid var(--line); padding: 28px 30px; font-size: 13px; color: var(--ink-2); background: var(--bg-2); }
 footer .fgrid { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 28px; }
 footer .fbrand { display: flex; align-items: center; gap: 9px; color: var(--ink); font-weight: 600; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
 footer .fbrand svg { color: var(--accent); }
-footer .fcol h4 { margin: 0 0 11px; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+footer .fcol h4 { margin: 0 0 11px; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
 footer .fcol a { display: block; color: var(--ink-2); padding: 4px 0; }
 footer .fcol a:hover { color: var(--accent); }
-footer .fstatus { max-width: 1360px; margin: 26px auto 0; padding-top: 18px; border-top: 1px solid var(--line-2); display: flex; gap: 22px; flex-wrap: wrap; color: var(--ink-3); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
-footer .fstatus b { font-weight: 600; color: var(--ink-2); }
-footer .fstatus .red { color: var(--down); }
 @media (max-width: 900px) { footer .fgrid { grid-template-columns: 1fr 1fr; } }
 
 /* ---------------------------------------------------------------- market page */
 
-.mkt-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; }
-.mkt-title { display: flex; align-items: center; gap: 15px; }
-.mkt-title .avatar { width: 46px; height: 46px; font-size: 14px; }
-.mkt-title h2 { font-size: 27px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; display: flex; align-items: center; gap: 12px; line-height: 1.1; }
-.mkt-title .name { color: var(--ink-3); font-size: 13px; margin-top: 4px; }
-.mkt-price { text-align: right; }
-.mkt-price .big { font-size: 30px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.1; color: var(--ink); }
-.mkt-price .big.skel { display: inline-block; width: 150px; height: 28px; }
-.mkt-price .lab { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px; }
-.mkt-price .sub { font-size: 13px; color: var(--ink-2); display: flex; gap: 16px; justify-content: flex-end; flex-wrap: wrap; margin-top: 6px; }
-.mkt-price .sub b { font-weight: 600; color: var(--ink); }
+.mkt-id { display: inline-flex; align-items: center; gap: 9px; }
+.mkt-hero { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.mkt-px { display: flex; align-items: baseline; gap: 14px; }
+.mkt-chg { font-size: 17px; font-weight: 500; color: var(--ink-2); }
+.mkt-chg.pos { color: var(--up); }
+.mkt-chg.neg { color: var(--down); }
+.mkt-sub { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+.mkt-sub b { font-weight: 600; color: var(--ink); }
 
-.mkt { display: grid; grid-template-columns: minmax(0, 1fr) 378px; gap: 22px; align-items: start; }
-.mkt-side { position: sticky; top: 82px; }
+.mkt { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 10px; align-items: start; }
+.mkt-side { position: sticky; top: calc(var(--mh-h, 62px) + 27px + 10px); }
 
-.mkt-stats { display: grid; grid-template-columns: repeat(6, 1fr); margin-bottom: 18px; }
-.mkt-stats .cell { padding: 15px 18px; border-left: 1px solid var(--line-2); min-width: 0; }
-.mkt-stats .cell:first-child { border-left: 0; }
-.mkt-stats .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mkt-stats .val { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
-.mkt-stats .val.dim { color: var(--ink-3); font-weight: 500; }
+.chart .ph { height: 220px; display: flex; align-items: center; justify-content: center; color: var(--ink-2); font-size: 14px; }
+.chart .scr-glass { position: relative; overflow: hidden; }
+.chart iframe { display: block; width: 100%; height: 440px; border: 0; }
 
-.chart { overflow: hidden; margin-bottom: 18px; }
-.chart iframe { display: block; width: 100%; height: 460px; border: 0; }
-.chart .ph { height: 240px; display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 14px; }
-.chart .cap { padding: 11px 16px; border-top: 1px solid var(--line-2); font-size: 12px; color: var(--ink-3); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-
-.how { padding: 22px 24px; margin-bottom: 18px; }
-.how h3 { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 16px; }
-.how ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.how { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .how li { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
-.how li i { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-tint); color: var(--accent); font-style: normal; font-size: 12px; font-weight: 600; align-items: center; justify-content: center; margin-bottom: 10px; }
+.how li i { display: block; font: 600 12px/1 var(--font); color: var(--accent); font-style: normal; margin-bottom: 8px; letter-spacing: .05em; }
 .how li b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 4px; }
 
-.position { max-width: none; }
+/* the health-factor gauge: a 270°-arc ring with the gap at the bottom, the shape the scene's own
+   position() screen draws, built from two stacked conic-gradients rather than canvas. */
+.hf-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+.gauge { position: relative; width: 88px; height: 88px; flex: 0 0 auto; }
+.gauge > div { position: absolute; inset: 0; border-radius: 50%; }
+.g-track { background: conic-gradient(from 225deg, rgba(255,255,255,.10) 0 270deg, transparent 270deg 360deg); }
+.g-val { background: conic-gradient(from 225deg, var(--gcolor, var(--up)) 0 calc(var(--pct, 0) * 270deg), transparent calc(var(--pct, 0) * 270deg) 270deg, transparent 270deg 360deg); }
+.g-hole { inset: 10px; background: var(--scr-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.g-hole .klabel { margin: 0; }
+.g-hole .gval { font: 600 15px/1 var(--font); color: var(--ink); }
 
-.order { padding: 18px 20px 22px; }
-.segc { display: flex; background: rgba(0,0,0,.4); border: 1px solid var(--line); border-radius: 10px; padding: 3px; margin-bottom: 17px; }
-.segc button { flex: 1; height: 36px; background: transparent; border: 0; color: var(--ink-2); font-weight: 600; border-radius: 7px; padding: 0; box-shadow: none; }
-.segc button:hover:not(:disabled) { background: transparent; color: var(--ink); box-shadow: none; }
-.segc button.on, .segc button.on:hover { background: var(--accent); color: #04070a; }
+.order .segc { display: flex; background: rgba(255,255,255,.03); border: 1px solid var(--line); padding: 2px; margin-bottom: 15px; }
+.order .segc button { flex: 1; height: 32px; background: transparent; border: 0; color: var(--ink-2); font-weight: 600; border-radius: 0; padding: 0; box-shadow: none; }
+.order .segc button:hover:not(:disabled) { background: transparent; color: var(--ink); box-shadow: none; }
+/* the active side is marked the way everything else on the desk is marked - a cyan rule and a
+   cyan label, never a filled slab. A solid block of accent is the one thing the scene's screens
+   never do, and the masthead was rebuilt to drop it. */
+.order .segc button.on, .order .segc button.on:hover { background: none; color: var(--accent); box-shadow: inset 0 -3px 0 0 var(--accent); }
 
-.amt { border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px 13px; margin-bottom: 11px; transition: border-color .12s, box-shadow .12s; background: rgba(0,0,0,.3); }
-.amt:focus-within { border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--accent-tint); }
-.amt .top { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px; }
+.amt { border: 1px solid var(--line); padding: 10px 12px 12px; margin-bottom: 10px; transition: border-color .12s, box-shadow .12s; background: rgba(255,255,255,.02); }
+.amt:focus-within { border-color: var(--accent-2); box-shadow: 0 0 0 2px var(--accent-tint); }
+.amt .top { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 5px; }
 .amt .top a { font-weight: 600; }
 .amt .in { display: flex; align-items: center; gap: 10px; }
-.amt input, .amt input[type=text] { flex: 1 1 auto; width: 100%; min-width: 0; border: 0; padding: 0; height: 34px; font-size: 25px; font-weight: 600; background: transparent; box-shadow: none !important; letter-spacing: -0.01em; border-radius: 0; color: var(--ink); }
+.amt input, .amt input[type=text] { flex: 1 1 auto; width: 100%; min-width: 0; border: 0; padding: 0; height: 32px; font-size: 23px; font-weight: 600; background: transparent; box-shadow: none !important; letter-spacing: -0.01em; border-radius: 0; color: var(--ink); font-family: var(--font); }
 .amt .unit { font-weight: 600; color: var(--ink-2); font-size: 13px; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; letter-spacing: .05em; }
-.amt .unit .avatar { width: 22px; height: 22px; font-size: 9px; }
 
-.chips { display: flex; gap: 6px; margin: 3px 0 15px; align-items: center; }
-.chips span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-right: 4px; }
-.chips button { height: 28px; padding: 0 12px; font-size: 11px; border-radius: 999px; background: transparent; color: var(--ink-2); border-color: var(--line); box-shadow: none; }
+.chips { display: flex; gap: 6px; margin: 2px 0 14px; align-items: center; }
+.chips span { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
+.chips button { height: 26px; padding: 0 11px; font-size: 11px; border-radius: 0; background: transparent; color: var(--ink-2); border-color: var(--line); box-shadow: none; }
 .chips button:hover:not(:disabled) { background: rgba(255,255,255,.05); color: var(--ink); border-color: var(--accent-2); box-shadow: none; }
 .chips button.on, .chips button.on:hover { background: var(--accent); color: #04070a; border-color: var(--accent); }
 
-.hf { margin: 5px 0 15px; }
-.hf .track { height: 6px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
-.hf .fill { height: 100%; border-radius: 3px; background: var(--up); transition: width .15s; width: 0; box-shadow: 0 0 12px currentColor; }
-.hf .fill.warn { background: #ffd23f; }
+.hf { margin: 4px 0 14px; }
+.hf .track { height: 4px; background: rgba(255,255,255,.08); overflow: hidden; }
+.hf .fill { height: 100%; background: var(--up); transition: width .15s; width: 0; box-shadow: 0 0 10px currentColor; }
+.hf .fill.warn { background: var(--amber); }
 .hf .fill.bad { background: var(--down); }
-.hf .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 7px; }
+.hf .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); margin-top: 7px; }
 .hf .lbl b { color: var(--ink); font-weight: 600; }
 
-.order .rows { margin-top: 3px; }
-.order .r { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 10px 0; border-top: 1px solid var(--line-2); }
-.order .r span:first-child { color: var(--ink-2); }
+.order .rows { margin-top: 2px; }
+.order .r { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; height: 32px; align-items: center; padding: 0 4px; }
+.order .r:nth-child(even) { background: var(--scr-stripe); }
+.order .r span:first-child { color: var(--ink-2); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
 .order .r b { font-weight: 600; color: var(--ink); }
-.order button.cta { width: 100%; height: 48px; margin-top: 15px; font-size: 13px; }
-.order .fine { font-size: 12px; color: var(--ink-3); margin-top: 12px; line-height: 1.5; }
-.order .sub-h { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin: 20px 0 9px; }
+
+/* every label on a screen is set the same way: small, uppercase, dim. Sentence case was the last
+   thing on the desk still reading like prose. */
+.order .chips > span:first-child,
+.order .hf .lbl > span:first-child { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+
+.order button.cta { width: 100%; height: 44px; margin-top: 14px; font-size: 12px; }
+.order .fine { font-size: 12px; color: var(--ink-2); margin-top: 12px; line-height: 1.5; }
+.order .sub-h { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-2); margin: 18px 0 9px; }
 .order .inline-error { margin-top: 10px; }
+
+/* the utilisation text-bar: a literal ASCII gauge, ten cells, cyan filled against dim empty */
+.ubar { font-variant-numeric: tabular-nums; color: var(--accent); letter-spacing: 1px; font-size: 15px; }
+.ubar b { color: var(--ink); font-weight: 600; margin-left: 9px; letter-spacing: normal; font-size: 15px; }
 
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 1000px) {
   .mkt { grid-template-columns: 1fr; }
   .mkt-side { position: static; order: -1; }
-  .mkt-stats { grid-template-columns: repeat(3, 1fr); }
-  .mkt-stats .cell:nth-child(4) { border-left: 0; }
-  .mkt-stats .cell { border-top: 1px solid var(--line-2); }
-  .mkt-stats .cell:nth-child(-n+3) { border-top: 0; }
-  .how ol { grid-template-columns: 1fr; gap: 15px; }
-  .mkt-price { text-align: left; }
-  .mkt-price .sub { justify-content: flex-start; }
+  .how { grid-template-columns: 1fr; gap: 14px; }
+  .mkt-sub { justify-content: flex-start; }
 }
 @media (max-width: 760px) {
-  #masthead { padding: 10px 16px 0; gap: 12px; height: auto; flex-wrap: wrap; position: static; }
-  #masthead .brand { order: 1; }
-  #masthead .spacer { order: 2; }
+  /* untouched: the one still-active rule from the masthead's own mobile layout */
   #masthead .net { display: none; }
-  #masthead .wallet { order: 3; }
-  #masthead nav { order: 4; flex-basis: 100%; gap: 2px; padding: 8px 0; overflow-x: auto; }
-  main { padding: 20px 16px 50px; }
-  .page-head h2, .vh h2 { font-size: 32px; }
-  .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .stat { padding: 13px 14px; }
-  .stat .value { font-size: 19px; }
-  .mkt-stats { grid-template-columns: repeat(2, 1fr); }
-  .mkt-stats .cell:nth-child(odd) { border-left: 0; }
-  .mkt-stats .cell:nth-child(4) { border-left: 1px solid var(--line-2); }
-  .mkt-stats .cell:nth-child(-n+2) { border-top: 0; }
-  .mkt-stats .cell:nth-child(3) { border-top: 1px solid var(--line-2); }
-  .chart iframe { height: 340px; }
+
+  main { padding: 10px 16px 40px; }
+  .pnl-bar { padding: 0 12px 0 14px; }
+  .pnl-pad { padding: 15px 16px; }
+  .pnl-foot { padding: 10px 16px 14px; }
+  .krow { gap: 16px 26px; }
+  .kval.hero, .kstat.hero .kval { font-size: 32px; }
   table.markets, table.premium { min-width: 0; }
   table.markets th:nth-child(2), table.markets td:nth-child(2), table.markets th:nth-child(n+5), table.markets td:nth-child(n+5) { display: none; }
   table.premium th:nth-child(7), table.premium td:nth-child(7), table.premium th:nth-child(8), table.premium td:nth-child(8), table.premium th:nth-child(9), table.premium td:nth-child(9) { display: none; }
   th.idx, td.idx { display: none; }
-  thead th { padding: 11px 10px; }
-  tbody td { padding: 0 10px; height: 54px; }
-  td.sym .name { max-width: 110px; }
-  .avatar { width: 28px; height: 28px; }
-  .panel { padding: 18px 16px; }
-  footer { padding: 26px 16px; }
+}
+@media (max-width: 480px) {
+  /* a long meta has nowhere to go beside a long title at phone width, so the bar wraps to it
+     instead of mangling both with ellipsis — still every word, just on two lines */
+  .pnl-bar { height: auto; min-height: 34px; flex-wrap: wrap; row-gap: 2px; padding-top: 7px; padding-bottom: 7px; }
+  .pnl-meta { max-width: 100%; flex-basis: 100%; white-space: normal; }
+  .krow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+  .chart iframe { height: 280px; }
+  footer { padding: 22px 16px; }
   footer .fgrid { grid-template-columns: 1fr; gap: 18px; }
-  .launch { white-space: normal; border-radius: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
@@ -552,49 +579,10 @@ body.docked .back { opacity: 1; pointer-events: auto; }
   .back { left: 12px; bottom: 12px; }
 }
 
-/* ================================================================ the chart, framed as a monitor
-   The embedded chart is a third-party panel. Wrapping it in the same bezel, label bar and LED strip
-   the scene's monitors have makes it read as content ON one of our screens instead of a foreign box. */
-
-.chart { padding: 0; border: 1px solid var(--line); background: linear-gradient(180deg, #121b24, #0b121a); position: relative; }
-.chart .scr-bar {
-  display: flex; align-items: center; gap: 14px; padding: 11px 16px;
-  border-bottom: 1px solid var(--line-2); background: rgba(255, 255, 255, .02);
-  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-}
-.chart .scr-bar::before { content: ''; width: 3px; height: 15px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
-.chart .scr-id { color: var(--ink); font-weight: 600; letter-spacing: .1em; }
-.chart .scr-meta { color: var(--ink-3); }
-.chart .scr-live { margin-left: auto; display: flex; align-items: center; gap: 7px; color: var(--up); }
-.chart .scr-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--up); box-shadow: 0 0 8px var(--up); }
-.chart .scr-glass { position: relative; margin: 10px 10px 0; border: 1px solid #121a22; border-radius: 4px; overflow: hidden; }
-/* the same diagonal sheen the scene paints across its glass */
-.chart .scr-glass::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(202deg, transparent 42%, rgba(190, 225, 255, .05) 51%, transparent 60%);
-}
-.chart iframe { height: 430px; }
-.chart .scr-led { height: 2px; margin: 10px 26% 0; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .5; }
-.chart .cap { border-top: 0; padding: 12px 16px 13px; }
-.chart .ph { height: 220px; }
-
-/* ---------------------------------------------------------------- the hero's chrome, echoed in the app */
+/* ---------------------------------------------------------------- the hero's chrome, echoed in the app
+   The masthead's own net-status dot keeps the hero's blink timing — untouched, not part of this pass. */
 
 #masthead .net i { animation: blink 2.4s steps(1) infinite; }
-
-/* the display face from the hero, kept for the one number each page is actually about */
-.mkt-price .big { font-size: 34px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.05; text-shadow: 0 0 30px rgba(200, 218, 226, .22); }
-.stat .value { font-size: 25px; font-weight: 600; letter-spacing: -0.01em; text-shadow: 0 0 26px rgba(200, 218, 226, .20); }
-.stat .value.skel { height: 22px; }
-.mkt-stats .val { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; text-shadow: 0 0 20px rgba(200, 218, 226, .16); }
-
-/* token marks: an inset chip rather than a white dot punched in a dark page */
-.avatar.has-img { background: rgba(224, 235, 242, .92); box-shadow: 0 0 0 1px rgba(120, 190, 220, .18), 0 0 14px rgba(87, 230, 255, .1); }
-.avatar { width: 28px; height: 28px; }
-.mkt-title .avatar { width: 44px; height: 44px; }
-
-/* let the desk breathe at the edges of the market page */
-.mkt { max-width: 1290px; }
 
 /* ================================================================ flying into the screen
    The camera flies at a monitor; the UI has to arrive with it. It grows out of that monitor's
@@ -700,138 +688,23 @@ body.zooming #glass, body.zooming #led { transform-origin: var(--dock-x, 50%) va
   body.docked footer { border-radius: 0; }
 }
 
-/* ================================================================ the screens' own UI language
-   Ported verbatim from the painters that draw the monitors in the scene (scene.js): panel ground
-   #070c11, a 34px header strip at 4% white with a 4px cyan tab at its left, 15px semibold title,
-   dim meta right-aligned, ~33px rows striped rather than ruled, square corners, no shadows.
-   The app is one of those screens, so it is built from the same parts. */
-
-:root { --scr-bg: #0b0d0e; --scr-head: rgba(255, 255, 255, .045); --scr-stripe: rgba(255, 255, 255, .022); }
-
-.card, .panel, .stat, .table-wrap, .chart, .mkt-stats {
-  background: var(--scr-bg) !important;
-  border: 1px solid var(--line);
-  border-radius: 2px !important;
-  box-shadow: none !important;
-}
-.card::after, .panel::after, .table-wrap::after { display: none; }
-
-/* every panel wears the chrome bar */
-.panel > h3, .how h3, .order .segc + *, .position > h3 {
-  font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink);
-}
-.panel > h3, .how h3, .position > h3 {
-  margin: -22px -24px 16px; padding: 0 16px; height: 34px; line-height: 34px;
-  background: var(--scr-head); border-bottom: 1px solid var(--line);
-  border-left: 4px solid var(--accent);
-}
-.order { padding-top: 18px; }
-.order .segc { margin-top: 2px; border-radius: 2px; }
-.order .segc button { border-radius: 1px; }
-
-/* stat cells: the six-across strip the scene uses, not four rounded tiles */
-.stats { display: flex; gap: 0; border: 1px solid var(--line); background: var(--scr-bg); border-radius: 2px; margin-bottom: 18px; }
-.stat { flex: 1 1 0; border: 0 !important; border-left: 1px solid var(--line-2) !important; border-radius: 0 !important; padding: 13px 16px 15px; }
-.stat:first-child { border-left: 0 !important; }
-.stat::before { display: none; }
-.stat .label { font-size: 10px; letter-spacing: .12em; margin-bottom: 6px; color: var(--ink-2); }
-.stat .value { font-size: 21px; font-weight: 600; letter-spacing: -0.005em; }
-.stat .sub { font-size: 11px; margin-top: 4px; }
-@media (max-width: 900px) { .stats { flex-wrap: wrap; } .stat { flex: 1 1 46%; } }
-
-/* the table is the board painter: a chrome header, striped rows, no rules */
-.table-wrap { padding: 0; }
-thead th {
-  background: var(--scr-head) !important; color: var(--ink) !important;
-  font-size: 11px; font-weight: 600; letter-spacing: .11em;
-  height: 34px; padding: 0 12px !important; border-bottom: 1px solid var(--line) !important;
-  border-radius: 0 !important;
-}
-thead th:first-child { box-shadow: inset 4px 0 0 var(--accent); }
-tbody td { height: 38px !important; padding: 0 12px !important; border-bottom: 0 !important; font-size: 14px; }
-tbody tr:nth-child(even) td { background: var(--scr-stripe); }
-tbody tr:hover td { background: rgba(87, 230, 255, .07) !important; }
-td.sym { font-weight: 600; }
-td.sym .name { font-size: 11px; margin-top: 0; }
-.symwrap { gap: 9px; }
-.avatar { width: 22px; height: 22px; border-radius: 2px; font-size: 9px; }
-.avatar.has-img { border-radius: 2px; }
-.mkt-title .avatar { width: 34px; height: 34px; border-radius: 3px; }
-tfoot td { background: var(--scr-head) !important; height: 30px; padding: 0 12px !important; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border-radius: 0 !important; }
-
-/* the premium column carries the bar the board painter draws behind its value */
-td.num.hasbar { position: relative; }
-td.num.hasbar::before {
-  content: ''; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  width: var(--bar, 0px); height: 15px; border-radius: 1px; background: currentColor; opacity: .16;
-}
-
-/* the market page stat row is the same strip */
-.mkt-stats .cell { padding: 13px 16px 15px; border-left: 1px solid var(--line-2); }
-.mkt-stats .label { font-size: 10px; letter-spacing: .12em; }
-.mkt-stats .val { font-size: 17px; }
-
-/* chrome bar on the chart, matching the panels */
-.chart .scr-bar { height: 34px; padding: 0 16px; background: var(--scr-head); border-left: 4px solid var(--accent); }
-.chart .scr-bar::before { display: none; }
-.chart .scr-glass { margin: 0; border: 0; border-radius: 0; border-top: 1px solid var(--line); }
-.chart .scr-led { margin: 0 32% 0; }
-.chart .cap { background: var(--scr-head); height: 30px; padding: 0 16px; display: flex; align-items: center; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-
-/* controls square off to match */
-button, .btn, select, input[type=text], input[type=number], .amt, .notice, .pill, .chips button, .toolbar input[type=text] { border-radius: 2px !important; }
-.pill { border-radius: 2px !important; font-size: 10px; letter-spacing: .1em; }
-.launch { border-radius: 2px; }
-#masthead nav a { border-radius: 2px; }
-.hf .track, .hf .fill { border-radius: 0; }
-
-/* ================================================================ grunge on the surfaces
-   Grain over type destroys it; grain *under* type does not. Every panel's own background gets the
-   noise, the scanlines and the uneven light, so the surfaces read as filthy glass while the numbers
-   printed on them stay sharp. */
+/* ================================================================ monitor grain
+   Two noise passes over the glass — the textures only; #topgrain/#finegrain's position, size
+   and dock-visibility are set below, in "grain, contained", clipped to the bezel. */
 
 :root {
   --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.95'/%3E%3C/svg%3E");
-  --scan: repeating-linear-gradient(rgba(0, 0, 0, .34) 0 1px, rgba(255, 255, 255, .02) 1px 2px, transparent 2px 3px);
 }
-
-.card, .panel, .stat, .table-wrap, .chart, .mkt-stats, .stats, #masthead, footer, .notice, .amt {
-  background-color: var(--scr-bg) !important;
-  background-image:
-    /* uneven light: a hot corner and a dead one, never a flat wash */
-    radial-gradient(120% 130% at 8% -14%, rgba(206, 222, 230, .10), transparent 52%),
-    radial-gradient(80% 85% at 112% 118%, rgba(0, 0, 0, .78), transparent 58%),
-    radial-gradient(60% 70% at 88% 6%, rgba(0, 0, 0, .45), transparent 60%),
-    var(--scan),
-    var(--noise) !important;
-  background-blend-mode: screen, multiply, multiply, normal, overlay !important;
-  background-size: auto, auto, auto, auto, 220px 220px !important;
+#topgrain {
+  z-index: 45; pointer-events: none; mix-blend-mode: screen;
+  background-image: var(--noise); background-size: 200px 200px;
 }
-#masthead, footer { background-color: rgba(8, 9, 10, .97) !important; }
-
-/* rows carry the scan too, so the table surface is textured all the way down */
-tbody tr:nth-child(even) td { background-image: var(--scan); }
-tbody td { background-image: var(--scan); background-blend-mode: multiply; }
-
-/* inside the chassis: light bleeding from the top edge, dirt pooling in the corners */
-body.docked #app {
-  box-shadow:
-    0 0 0 7px #0b0c0d,
-    0 0 0 8px #1e2325,
-    0 42px 130px rgba(0, 0, 0, .8),
-    0 0 160px rgba(89, 228, 253, .13),
-    0 0 400px rgba(60, 150, 175, .07),
-    inset 0 42px 90px -60px rgba(200, 218, 226, .34),
-    inset 0 0 150px rgba(0, 0, 0, .75) !important;
+#finegrain {
+  z-index: 46; pointer-events: none; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23f)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
 }
-
-/* the panel edges catch light unevenly, the way a real bezel does */
-.card, .panel, .stat, .table-wrap, .chart {
-  border-color: #1d2224 !important;
-  box-shadow: inset 0 1px 0 rgba(196, 214, 222, .07), inset 0 -18px 40px -30px rgba(0, 0, 0, .92) !important;
-}
-
-/* a last, light pass of grain over the whole picture - enough to sit on the type without eating it */
+/* a last, faint pass of dust and hairline scratches over the whole picture */
 #dust {
   position: fixed; inset: 3.4vh 0; left: 0; right: 0; width: min(93vw, 1580px); margin-inline: auto;
   z-index: 44; pointer-events: none; opacity: 0; transition: opacity .8s ease .3s; mix-blend-mode: screen;
@@ -841,115 +714,9 @@ body.docked #app {
 body.docked #dust { opacity: .55; }
 @media (max-width: 860px) { #dust { display: none; } }
 
-#topgrain {
-  position: fixed; top: -40%; left: -40%; width: 180%; height: 180%;
-  z-index: 993; pointer-events: none; opacity: .10; mix-blend-mode: overlay;
-  background-image: var(--noise); background-size: 200px 200px;
-  animation: grainShift .55s steps(6) infinite;
-}
-@media (prefers-reduced-motion: reduce) { #dust {
-  position: fixed; inset: 3.4vh 0; left: 0; right: 0; width: min(93vw, 1580px); margin-inline: auto;
-  z-index: 44; pointer-events: none; opacity: 0; transition: opacity .8s ease .3s; mix-blend-mode: screen;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700'%3E%3Cg fill='none' stroke='%23bcd8e8' stroke-width='.7' opacity='.30'%3E%3Cpath d='M120 40 L188 96'/%3E%3Cpath d='M700 120 L744 210'/%3E%3Cpath d='M300 600 L372 556'/%3E%3Cpath d='M820 430 L860 486'/%3E%3C/g%3E%3Cg fill='%23cfe4f0' opacity='.24'%3E%3Ccircle cx='210' cy='300' r='1.1'/%3E%3Ccircle cx='640' cy='90' r='.9'/%3E%3Ccircle cx='450' cy='520' r='1.3'/%3E%3Ccircle cx='780' cy='640' r='1'/%3E%3Ccircle cx='90' cy='480' r='.8'/%3E%3Ccircle cx='560' cy='260' r='1.1'/%3E%3Ccircle cx='330' cy='150' r='.9'/%3E%3Ccircle cx='880' cy='200' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 900px 700px;
-}
-body.docked #dust { opacity: .55; }
-@media (max-width: 860px) { #dust { display: none; } }
-
-#topgrain { animation: none; } }
-
-/* phosphor bleed on anything bright */
-.stat .value, .mkt-price .big, td.sym, thead th:first-child { text-shadow: 0 0 22px rgba(204, 220, 228, .18); }
-.pill.open, .badge.live { text-shadow: 0 0 14px rgba(61, 220, 132, .45); }
-
-/* ================================================================ the screens, literally
-   The monitors in the scene are not made of cards. They are black, with a cyan tab, an uppercase
-   label, rows of text, and a right-aligned percentage. Everything else on this page was furniture
-   the scene never had, so it comes off: panel fills, borders, stripes, header bars, tile boxes. */
-
-.card, .panel, .stat, .stats, .table-wrap, .mkt-stats, .chart, .notice, .how, .position {
-  background: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-}
-
-/* a section is a cyan tab, a label, and its rows */
-.panel > h3, .how h3, .position > h3, .chart .scr-bar {
-  margin: 0 0 12px !important; padding: 0 0 0 12px !important;
-  height: auto !important; line-height: 1.2 !important;
-  background: none !important; border: 0 !important;
-  border-left: 3px solid var(--accent) !important;
-  font-size: 12px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--ink);
-}
-.chart .scr-bar { display: flex; align-items: center; gap: 14px; }
-.chart .scr-glass { border: 0; border-top: 0; }
-.chart .cap { background: none !important; padding: 10px 0 0 !important; height: auto; }
-.chart .scr-led { margin: 8px 0 0; }
-
-/* the stat strip: labels over values on black, no boxes and no dividers */
-.stats { display: flex; gap: 46px; padding: 0; margin: 0 0 26px; }
-.stat { flex: 0 1 auto; padding: 0 !important; border: 0 !important; }
-.stat .label { font-size: 10px; letter-spacing: .14em; color: var(--ink-3); margin-bottom: 5px; }
-.stat .value { font-size: 22px; font-weight: 600; }
-.stat .sub { font-size: 11px; color: var(--ink-3); }
-
-/* the table is rows of text: dim uppercase column labels, a cyan tab on the first, nothing else */
-thead th {
-  background: none !important; box-shadow: none !important;
-  border-bottom: 0 !important; color: var(--ink-3) !important;
-  font-size: 10px; font-weight: 500; letter-spacing: .14em; height: 26px; padding: 0 12px !important;
-}
-thead th:first-child { box-shadow: inset 3px 0 0 var(--accent) !important; color: var(--ink) !important; }
-tbody td { background: none !important; background-image: none !important; height: 33px !important; font-size: 14px; font-weight: 400; border: 0 !important; }
-tbody tr:nth-child(even) td { background: none !important; }
-tbody tr:hover td { background: rgba(89, 228, 253, .06) !important; }
-td.sym { font-weight: 500; color: var(--ink); }
-td.sym .name { display: none; }        /* the scene's rows carry the ticker only */
-.symwrap { gap: 10px; }
-.avatar { display: none; }             /* no logos on those screens */
-tfoot td { background: none !important; color: var(--ink-3) !important; padding: 14px 12px 0 !important; }
-td.num { color: var(--ink-2); }
-td.num.pos, td.num.neg { font-weight: 500; }
-td.num.hasbar::before { opacity: .22; }
-
-/* the chassis keeps its bezel; its interior is the black of the screen */
+/* the app sits in the bezel's own black, and the diagonal glass sheen stays off the live data */
 body.docked #app { background: #000 !important; }
-#masthead, footer { background: none !important; background-image: none !important; border-color: var(--line-2) !important; }
-.pill { background: none !important; border: 1px solid var(--line) !important; }
-.pill.open { border-color: rgba(61, 220, 132, .4) !important; }
-.launch { background: none !important; border-color: var(--line) !important; }
-.notice { border-left: 3px solid var(--accent) !important; padding-left: 12px !important; }
-.mkt-stats { display: flex; gap: 40px; }
-.mkt-stats .cell { border: 0 !important; padding: 0 !important; }
-.lrow { border-color: var(--line-2) !important; }
-.amt { background: none !important; border: 1px solid var(--line) !important; }
-
-/* ================================================================ grain on the black
-   Two corrections. The diagonal sheen over the chart was reading as a smear across live data, so it
-   is gone. And grain blended with `overlay` is mathematically invisible against pure black - which
-   is exactly what the page became once the panels came off - so the grain layer switches to `screen`,
-   where black + noise resolves to the speckle you actually want. */
-
-.chart .scr-glass::after { display: none !important; }
 #glass { background: none !important; }
-
-#topgrain {
-  mix-blend-mode: screen !important;
-  opacity: .13 !important;
-  z-index: 45;
-}
-
-/* a second, finer pass fixed to the picture so the grain has two scales, like real stock */
-#finegrain {
-  position: fixed; inset: 0; z-index: 46; pointer-events: none;
-  mix-blend-mode: screen; opacity: .07;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23f)'/%3E%3C/svg%3E");
-  background-size: 120px 120px;
-  animation: grainShift .45s steps(5) infinite reverse;
-}
-@media (prefers-reduced-motion: reduce) { #finegrain { animation: none; } }
 
 /* ================================================================ grain, contained
    The grain layers were oversized and animated by translating the whole element, so the noise tile
