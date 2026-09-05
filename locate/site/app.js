@@ -89,7 +89,14 @@
   }
   /** A board/tape row's identity cell: ticker only, exactly what the scene's own screens show —
    *  no logo, no second line. The full name still reaches assistive tech via the cell's title. */
-  const symCell = (symbol, name) => h('td', { class: 'sym', title: name || '' }, symbol);
+  /** A token mark: a coloured ring with the ticker's first letters, its hue fixed by the ticker. */
+  function tokenIcon(symbol, large) {
+    let hue = 0; for (const ch of symbol) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
+    const el = h('span', { class: 'tk-ic' + (large ? ' lg' : ''), 'aria-hidden': 'true' }, symbol.slice(0, 2));
+    el.style.setProperty('--h', String(hue));
+    return el;
+  }
+  const symCell = (symbol, name) => h('td', { class: 'sym', title: name || '' }, h('span', { class: 'tk' }, tokenIcon(symbol), symbol));
   /** Click a column heading to sort; cells sort by data-v when present, else by their text. */
   function makeSortable(table) {
     const ths = Array.from(table.querySelectorAll('thead th'));
@@ -625,13 +632,13 @@
     const anyOpen = STATE.markets.some(isDeployed);
     const totalCap = STATE.markets.reduce((a, m) => a + (m.initialCapUsd || 0), 0);
 
-    const vol = kstat('DEX VOLUME 24H');
-    const widest = kstat('WIDEST PREMIUM');
-    const median = kstat('MEDIAN PREMIUM');
-    const quotes = kstat('ROBINHOOD QUOTES');
+    const vol = kstat('DEX volume 24h');
+    const widest = kstat('Widest premium');
+    const median = kstat('Median premium');
+    const quotes = kstat('Robinhood quotes');
     const notice = h('div', { class: 'notice hidden' }, h('strong', {}, 'Quotes unavailable. '), 'This is a local copy without the /api/quotes function; DEX prices still load.');
 
-    view.appendChild(pnl('MARKETS',
+    view.appendChild(pnl('Markets',
       anyOpen ? `${STATE.markets.length} MARKETS OPEN` : `OPENS SOON · ${STATE.markets.length} MARKETS · ${fmtUsd(totalCap, 0)} CAP`,
       pad(h('div', { class: 'krow' }, vol.el, widest.el, median.el, quotes.el), notice),
       foot('Borrow a stock against USDG, or lend yours and earn the borrow rate — select a row to open its market.')
@@ -646,7 +653,7 @@
     const tbody = h('tbody');
     table.appendChild(tbody);
 
-    view.appendChild(pnl('STOCK MARKETS', anyOpen ? null : 'SORT ANY COLUMN',
+    view.appendChild(pnl('Stock markets', anyOpen ? null : 'Sort any column',
       h('div', { class: 'table-wrap' }, table),
       foot('Quote is Robinhood’s 24/5 price. DEX is the deepest Robinhood Chain pool on DexScreener; 24h and volume are that pool’s. Premium is DEX over quote.')
     ));
@@ -781,7 +788,7 @@
       ['Shorts pay you', 'The vault lends your stock to the market. Borrowers pay the rate; the vault keeps 10% of the interest.'],
       ['Withdraw when there is liquidity', 'At full utilisation you wait for repayments. Lending caps are set by the vault owner.'],
     ];
-    return pnl(mode === 'short' ? 'HOW A SHORT WORKS' : 'HOW LENDING WORKS', null,
+    return pnl(mode === 'short' ? 'How a short works' : 'How lending works', null,
       pad(h('ol', { class: 'how' }, ...steps.map((st, i) => h('li', {}, h('i', {}, String(i + 1).padStart(2, '0')), h('b', {}, st[0]), st[1]))))
     );
   }
@@ -801,18 +808,15 @@
     const priceChg = h('span', { class: 'mkt-chg' });
     const priceLab = h('div', { class: 'klabel' }, ' ');
     const priceSub = h('div', { class: 'mkt-sub' });
-    const headMeta = h('span', { class: 'pnl-meta' }, deployed ? 'TRADING LIVE' : 'OPENS SOON');
-    const sparkCv = h('canvas', { class: 'spark big', 'aria-hidden': 'true' });
-    const sparkLab = h('div', { class: 'klabel' }, '24H · POOL');
-    view.appendChild(h('section', { class: 'pnl' },
-      h('div', { class: 'pnl-bar' }, h('span', { class: 'pnl-title mkt-id' }, `${symbol} · ${m.name}`), headMeta),
-      pad(h('div', { class: 'mkt-top' },
-        h('div', {},
-          h('div', { class: 'mkt-hero' }, priceLab, h('div', { class: 'mkt-px' }, bigPrice, priceChg)),
-          priceSub),
-        h('div', { class: 'mkt-spark' }, sparkLab, sparkCv))),
-      foot(h('a', { href: '#/markets' }, '← all markets'))
-    ));
+    const headMeta = h('span', { class: 'pnl-meta' }, deployed ? 'Trading live' : 'Opens soon');
+    bigPrice.classList.add('big'); priceChg.classList.add('chg'); priceSub.classList.add('cc-sub'); headMeta.classList.add('pill');
+    const tfSlot = h('div', { class: 'cc-right' }, headMeta);
+    const ccHead = h('div', { class: 'cc-head' },
+      h('div', {},
+        h('div', { class: 'cc-pair' }, tokenIcon(symbol, true), h('span', {}, `${symbol}/USDG`), h('small', {}, m.name)),
+        h('div', { class: 'cc-px' }, bigPrice, priceChg),
+        priceSub),
+      tfSlot);
 
     const grid = h('div', { class: 'mkt' });
     const main = h('div', { class: 'mkt-main' });
@@ -822,8 +826,8 @@
     view.appendChild(grid);
 
     // ---- terms: the same caption-over-value row every panel uses ----
-    const ltv = kstat('LOAN-TO-VALUE'), borrowApy = kstat('BORROW APY'), supplyApy = kstat('SUPPLY APY'),
-      avail = kstat('AVAILABLE'), util = kstat('UTILISATION'), cap = kstat('LENDING CAP');
+    const ltv = kstat('Loan-to-value'), borrowApy = kstat('Borrow APY'), supplyApy = kstat('Supply APY'),
+      avail = kstat('Available'), util = kstat('Utilisation'), cap = kstat('Lending cap');
     ltv.val.classList.remove('skel'); ltv.val.textContent = (m.lltvBps / 100).toFixed(1) + '%';
     cap.val.classList.remove('skel'); cap.val.textContent = fmtUsd(m.initialCapUsd, 0);
     if (!deployed) {
@@ -833,26 +837,55 @@
       atOpen(avail, '$0', 'fills as lenders deposit');
       atOpen(util, '0.0%', 'at open');
     }
-    main.appendChild(pnl('TERMS', null, pad(h('div', { class: 'krow' }, ltv.el, borrowApy.el, supplyApy.el, avail.el, util.el, cap.el))));
+    const termsStrip = h('div', { class: 'cc-terms' }, ltv.el, borrowApy.el, supplyApy.el, avail.el, util.el, cap.el);
 
     // ---- position (only shown when there is something to show) ----
-    const posPnl = pnl('YOUR POSITION', null); posPnl.classList.add('hidden');
+    const posPnl = pnl('Your position', null); posPnl.classList.add('hidden');
     const posBody = h('div', { class: 'pnl-pad' });
     posPnl.appendChild(posBody);
     main.appendChild(posPnl);
 
     // ---- chart ----
-    const chartMeta = h('span', { class: 'pnl-meta' }, 'LOADING…');
+    const chartMeta = h('span', { class: 'pnl-meta hidden' }, '');
     const chartBody = h('div', {}, h('div', { class: 'ph' }, 'Loading price chart…'));
-    const chart = h('section', { class: 'pnl chart' },
-      h('div', { class: 'pnl-bar' }, h('span', { class: 'pnl-title' }, `${symbol} / USDG`), chartMeta),
-      chartBody);
+    const chart = h('section', { class: 'pnl chart' }, ccHead, chartBody, termsStrip);
     main.appendChild(chart);
+
+    // ---- the other markets, as cards: price, move, a day's trace ----
+    const others = STATE.markets.filter((x) => x.symbol !== symbol).slice(0, 4);
+    if (others.length) {
+      const cards = new Map();
+      main.appendChild(h('div', { class: 'mcards' }, ...others.map((o) => {
+        const c = { chg: h('span', { class: 'chg' }, '—'), px: h('div', { class: 'px' }, '—'), sp: h('canvas', { class: 'spark', 'aria-hidden': 'true' }) };
+        cards.set(o.symbol, c);
+        return h('a', { class: 'mcard', href: `#/m/${o.symbol}` },
+          h('div', { class: 'top' }, h('span', { class: 'nm' }, tokenIcon(o.symbol), `${o.symbol}/USDG`), c.chg), c.px, c.sp);
+      })));
+      ensureDexData(others.map((o) => o.token)).then(async (dm) => {
+        if (mine.retired) return;
+        const pools = new Map();
+        for (const o of others) {
+          const d = dm.get(o.token.toLowerCase()); const c = cards.get(o.symbol);
+          if (!d) continue;
+          c.px.textContent = fmtUsd(d.priceUsd);
+          if (d.chg24 !== null && d.chg24 !== undefined && !Number.isNaN(d.chg24)) {
+            c.chg.textContent = `${d.chg24 >= 0 ? '+' : ''}${d.chg24.toFixed(2)}%`;
+            c.chg.className = 'chg' + (d.chg24 > 0 ? ' pos' : d.chg24 < 0 ? ' neg' : '');
+          }
+          if (d.pairAddress) pools.set(o.symbol, String(d.pairAddress).toLowerCase());
+        }
+        if (window.LocateChart && pools.size) {
+          const s = await LocateChart.series([...pools.values()], '15m', 96);
+          if (mine.retired) return;
+          for (const [sym, p] of pools) LocateChart.spark(cards.get(sym).sp, s.get(p) || null);
+        }
+      }).catch(() => {});
+    }
     let how = howCard(curMode, symbol);
     main.appendChild(how);
 
     // ---- order panel ----
-    const orderTitle = h('span', {}, curMode.toUpperCase(), ' ', symbol);
+    const orderTitle = h('span', {}, curMode.charAt(0).toUpperCase() + curMode.slice(1), ' ', symbol);
     const orderPnl = pnl(orderTitle, (m.lltvBps / 100).toFixed(1) + '% LTV');
     const panel = h('div', { class: 'pnl-pad order' });
     orderPnl.appendChild(panel);
@@ -867,7 +900,7 @@
       curMode = next;
       setActiveTab(next);
       try { history.replaceState(null, '', `#/m/${symbol}${next === 'lend' ? '?mode=lend' : ''}`); } catch { /* noop */ }
-      orderTitle.textContent = `${curMode.toUpperCase()} ${symbol}`;
+      orderTitle.textContent = `${curMode.charAt(0).toUpperCase() + curMode.slice(1)} ${symbol}`;
       const fresh = howCard(curMode, symbol);
       main.replaceChild(fresh, how);
       how = fresh;
@@ -901,7 +934,8 @@
 
       panel.appendChild(h('div', { class: 'amt' },
         h('div', { class: 'top' }, h('span', {}, 'Collateral'), collBal),
-        h('div', { class: 'in' }, collIn, h('span', { class: 'unit' }, 'USDG'))
+        h('div', { class: 'in' }, collIn, h('span', { class: 'unit' }, 'USDG')),
+        h('div', { class: 'quick' }, ...[100, 500, 1000, 5000].map((v) => h('button', { type: 'button', onclick: () => { collIn.value = String(v); collIn.dispatchEvent(new Event('input')); } }, v.toLocaleString('en-US'))))
       ));
       panel.appendChild(h('div', { class: 'amt' },
         h('div', { class: 'top' }, h('span', {}, 'Borrow'), maxLink),
@@ -1072,10 +1106,10 @@
         const gpct = Math.max(0, Math.min(1, (hfNum - 1) / 2));
         const buf = (hfNum - 1) * 100;
         posBody.appendChild(h('div', { class: 'hf-hero' },
-          h('div', {}, h('div', { class: 'klabel' }, 'HEALTH FACTOR'), h('div', { class: 'kval hero', style: bad ? 'color:var(--down)' : '' }, fmtHf(pos.healthFactorWad))),
+          h('div', {}, h('div', { class: 'klabel' }, 'Health factor'), h('div', { class: 'kval hero', style: bad ? 'color:var(--down)' : '' }, fmtHf(pos.healthFactorWad))),
           h('div', { class: 'gauge', style: `--pct:${gpct};--gcolor:${gcolor}` },
             h('div', { class: 'g-track' }), h('div', { class: 'g-val' }),
-            h('div', { class: 'g-hole' }, h('div', { class: 'klabel' }, 'BUFFER'), h('div', { class: 'gval' }, `${buf >= 0 ? '+' : ''}${buf.toFixed(0)}%`)))
+            h('div', { class: 'g-hole' }, h('div', { class: 'klabel' }, 'Buffer'), h('div', { class: 'gval' }, `${buf >= 0 ? '+' : ''}${buf.toFixed(0)}%`)))
         ));
         posBody.appendChild(h('dl', { class: 'ledger' },
           lrow('Collateral', h('div', { class: 'value small' }, fmtToken(pos.collateral, STATE.addresses.usdgDecimals, 2) + ' USDG')),
@@ -1156,15 +1190,16 @@
       const d = dexMap.get(m.token.toLowerCase()) || null;
       live.quote = q; live.dex = d;
       bigPrice.classList.remove('skel');
-      if (q) { bigPrice.textContent = fmtUsd(q.mid); priceLab.textContent = 'ROBINHOOD QUOTE'; }
-      else if (d) { bigPrice.textContent = fmtUsd(d.priceUsd); priceLab.textContent = 'DEX PRICE'; }
-      else { bigPrice.textContent = '—'; priceLab.textContent = 'NO PRICE'; }
+      if (q) { bigPrice.textContent = fmtUsd(q.mid); priceLab.textContent = 'Robinhood quote'; }
+      else if (d) { bigPrice.textContent = fmtUsd(d.priceUsd); priceLab.textContent = 'DEX price'; }
+      else { bigPrice.textContent = '—'; priceLab.textContent = 'No price'; }
       clear(priceChg); clear(priceSub);
+      priceSub.appendChild(h('span', {}, priceLab.textContent));
       if (d) {
         const prem = q ? (d.priceUsd - q.mid) / q.mid : null;
         if (d.chg24 !== null && !Number.isNaN(d.chg24)) {
           priceChg.textContent = `${d.chg24 >= 0 ? '+' : ''}${d.chg24.toFixed(2)}%`;
-          priceChg.className = 'mkt-chg' + (d.chg24 > 0 ? ' pos' : d.chg24 < 0 ? ' neg' : '');
+          priceChg.className = 'chg' + (d.chg24 > 0 ? ' pos' : d.chg24 < 0 ? ' neg' : '');
         }
         priceSub.appendChild(h('span', {}, 'DEX ', h('b', {}, fmtUsd(d.priceUsd))));
         if (prem !== null) priceSub.appendChild(h('span', {}, 'Premium ', h('b', { class: prem > 0 ? 'pos' : prem < 0 ? 'neg' : '' }, (prem >= 0 ? '+' : '') + fmtPct(prem))));
@@ -1175,22 +1210,17 @@
         chartMeta.textContent = restMeta;
         if (d.pairAddress && window.LocateChart) {
           chartBody.className = 'cd-wrap';
-          mine.chart = LocateChart.mount(chartBody, { pool: d.pairAddress, tf: '1h', meta: chartMeta, restMeta });
-          LocateChart.candles(d.pairAddress, '15m', 96).then((rows) => {
-            if (mine.retired) return;
-            const mv = LocateChart.spark(sparkCv, rows);
-            if (mv !== null) sparkLab.textContent = `24H · POOL · ${mv >= 0 ? '+' : ''}${(mv * 100).toFixed(2)}%`;
-          }).catch(() => {});
+          mine.chart = LocateChart.mount(chartBody, { pool: d.pairAddress, tf: '1h', meta: null, tfSlot });
         } else {
           chartBody.appendChild(h('div', { class: 'ph' }, 'No candles for this pool yet.'));
         }
         chart.appendChild(foot(h('span', {}, 'candles by geckoterminal · '), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'open the pool on dexscreener ↗')));
       } else {
         clear(chartBody);
-        chartMeta.textContent = 'NO POOL';
+        chartMeta.textContent = 'No pool';
         chartBody.appendChild(h('div', { class: 'ph' }, `No DEX pool found for ${symbol} yet.`));
       }
-      if (q && q.halted) headMeta.textContent = 'TRADING HALTED';
+      if (q && q.halted) headMeta.textContent = 'Trading halted';
 
       live.ref = await getReferencePrice(m);
       if (mine.retired) return;
@@ -1245,7 +1275,7 @@
     table.appendChild(tbody);
     const wrap = h('div', { class: 'table-wrap hidden' }, table);
 
-    view.appendChild(pnl('PREMIUM BOARD', 'DEX VS ROBINHOOD · SORTED BY GAP',
+    view.appendChild(pnl('Premium board', 'DEX vs Robinhood · sorted by gap',
       h('div', { class: 'toolbar' }, filter, status),
       notice,
       wrap,
