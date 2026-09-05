@@ -177,3 +177,35 @@ Pool discovery goes through DexScreener; everything else is the public RPC. The 
 column assumes the in-range liquidity stays constant to twice the price, which real books do not,
 so it bounds a spot spike from above. The rate-model constants are from Morpho's
 `ConstantsLib`; the liquidation bonus is Morpho's formula at a 38.5% LLTV, capped at 15%.
+
+## Extensions worth designing for now
+
+**Community liquidations.** Morpho's `liquidate` hands the liquidator the seized USDG *before*
+it pulls the repaid meme, through the `onMorphoLiquidate` callback, so a liquidation needs no
+capital: receive the USDG, buy the meme on Uniswap inside the callback, repay. A 150-line
+`Liquidator` contract and a button on the desk turn every holder into a liquidator of their own
+coin's shorts, paid Morpho's 15% bonus. Thin markets get a liquidator network for free, lenders
+get faster liquidations and less bad debt, and the communities that will hate the shorts get to
+hunt them, which is the marketing. Build it with the oracle; it is the same week.
+
+**Anti-coins.** A vault per meme that holds USDG, borrows the meme through the market, sells it,
+and issues an ERC-20 share: an inverse token that trades on Uniswap like any other coin, so
+people who will never open a Morpho position can short by buying `sPONS`. Be honest about the
+size: at a 38.5% LLTV a short that must survive a 90% pump can only run about −0.2× exposure per
+dollar of collateral, and a −0.3× short is liquidated at +28%, so these are small-exposure,
+rebalanced, put-like tokens that decay the way every leveraged token decays. They are also
+memes in their own right, and an inverse basket of the top five (`DOOM`) is the same vault with
+five markets.
+
+**Staking, as the word for the lender side.** The vault is "PONS staking, 180% a year, paid by
+the people shorting you." That sentence is the entire lender acquisition plan.
+
+**Once Locate holds stock in Morpho, stock tokens become flash-loanable.** Morpho Blue lends
+anything it holds for free within a transaction, which nobody has ever been able to do with a
+tokenized equity: zero-capital arbitrage across the premium pools, and a router for it. A fact
+to use, not a product to build first.
+
+**The other short.** PONS, CASHCAT and AI sit in deep v3 pools, so Panoptic-style perpetual
+options minted from concentrated liquidity ranges are possible on them today, and nobody offers
+options on this chain at all. A far bigger build than a borrow market, and Panoptic itself could
+deploy any week; noted so the borrow market's router leaves room for it.
