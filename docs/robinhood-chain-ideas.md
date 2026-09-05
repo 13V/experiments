@@ -553,6 +553,62 @@ week, with the risk that the flow leaves as fast as it came. Or the honest launc
 quote stock into a treasury the meme is redeemable against, so the chips have a floor made of
 the stock they are priced in.
 
+## What actually reaches $1M to $10M here
+
+Read on 5 September 2026 from GeckoTerminal, DexScreener and the trade press, for the question
+"which of these could carry a token to a $1M to $10M market cap on this chain".
+
+| Token | Cap | What it is | Launched | Venue |
+|---|---|---|---|---|
+| PONS | $430M to $636M | the launchpad's token, buybacks from fees | 16 Jul | Uniswap v3 |
+| AI (Artificial Inu) | $232M | memecoin, paired with NVDA | 3 Sep | Uniswap v4, 0.23% fee |
+| STONKBROKER | $37M now, ~$80M peak | 4,444 free-mint NFTs each loaded with random stock tokens; the token activates "Clock In" stock drops, votes fee routing on their DEX, and settles their NFT AMM | 17 Jul | Uniswap |
+| BONER | $34M | memecoin parody of HIMS; the wrapper traded 112% over the stock | 31 Aug | Uniswap v4, 0.9% fee |
+| FATCOIN | $25M | memecoin quoted in LLY | 1 Sep | o1 launchpad |
+| MOO | $15M | memecoin quoted in MU | 20 Jul | bankr |
+| OTER, ROBINCAT | $10.8M each | memecoins; ROBINCAT rides the brand | 5 Sep, 1 Sep | Uniswap |
+| BOW (Longbow) | $8M | the credit layer's token; fees to the vault, buybacks, staking | Aug | Uniswap, BOW/SPY pool |
+| amc, gld, djt, par | $2.9M to $7.7M | lower-case ticker parodies | late Aug | Uniswap |
+| NetNet ($NET) | ~$4.5M treasury | on-chain treasury company | Aug | |
+| BRODIE, YOLO | $3.1M to $3.5M | the two biggest memes to graduate from Pons | Jul | Pons |
+| CHROME, SEMI, NEKO, GI, VenusCoin | $1M to $2.9M | memecoins quoted in SLV, MU, NVDA, GLD, SPCX | this week | Uniswap, bankr |
+
+Base rates: Pons has launched 124,000 to 167,000 tokens and 1.1% graduated; almost everything
+above $1M today was launched in the last ten days of a frenzy; the ones that held for weeks
+(PONS, STONKBROKER, BOW) are the ones with a product, visible fee capture and a chain-native
+story. Holding $10M has meant $0.5M to $1.3M of pool liquidity and $5M or more of daily volume;
+$1M has meant about $100K of liquidity. The winners' pools are Uniswap v4 with a 0.78% to 0.9%
+dynamic fee, so the trading itself funds the buybacks.
+
+Three genres reliably reach the range: memecoins quoted in a stock token (eight of them between
+$1M and $25M this week), parodies of a ticker (four between $3M and $34M), and collectibles or
+products with real stock inside (STONKBROKER). Infrastructure tokens top out near BOW.
+
+**Ranked for a $1M to $10M launch:**
+
+1. **Stonk Packs with a pack token.** The closest comparable on this chain, STONKBROKER, is the
+   same idea in a worse form (one random injection at mint, then drops gated by the token) and
+   it peaked near $80M. Packs are built, provably fair, demoable, and the line "one in two
+   thousand packs holds a whole share of Eli Lilly" is a meme on a chain where a coin quoted
+   in LLY reached $25M this week. The token takes the 10% fee and stakers get pack drops, which
+   is the Clock In loop. What is missing is the legal clearance the README parks, inventory,
+   and an operator. STONKBROKER running random stock in collectibles since July is evidence of
+   demand, not of legality.
+2. **The chips, as a single launch.** One memecoin quoted in a stock with a v4 hook that turns
+   every trade's fee into that stock in a treasury the coin is redeemable against. It is the
+   hottest genre here with the one twist none of them has: a floor. Days of work. It lives or
+   dies on timing and distribution like every meme, and it is not a product.
+3. **Locate with a token.** BOW is the comparable at $8M after two months with real traction.
+   Locate is built, the dividend leak and ex-date shorts are the launch story, and the token
+   takes the vault's performance fee. Slower, needs borrow demand, and it will not spike.
+4. **Stock parlays with a house token.** The house-token model made RLB and its cousins nine
+   figures elsewhere and nobody offers parlays on stocks; but it is not built, the frenzy may
+   not wait, and the legal shape is the packs' shape.
+
+Everything else in this document (Gap Cover, options, the weekend exchange, prize savings,
+agent accounts, baskets, the tape, the spread board) is infrastructure or data. Those tokens
+top out at BOW's scale and take months, and the data products should not have tokens at all.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
