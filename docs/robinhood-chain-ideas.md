@@ -734,6 +734,69 @@ Ranked: borrow the meme, because it is Locate's code with a new market list and 
 demand is the loudest on the chain, and the fees exist from the first day; then Pairs and
 Guardian, which both make Locate's borrow side real; then Depth; then Stops.
 
+## Five more, separate from Locate
+
+### 25. Stock Royale
+
+> Thirty-two stocks enter Monday. One leaves Friday.
+
+A weekly elimination tournament on stock tokens. Players stake USDG on one of thirty-two
+stocks before Monday's open. Every hour of the trading week the worst performer since the start
+is eliminated and its pool flows to the survivors' pools; Friday's last print crowns the winner
+and its backers split everything pro rata. Forty eliminations a week, each settled from a
+Chainlink print, each a moment to post about. Same fairness argument as Stonk Packs (nothing to
+decide after the whistle) and the same legal shape as a prediction market, which Meridian already
+runs on this chain. A meme edition runs on the borrow-the-meme oracles. One contract, one keeper,
+one site: a week.
+
+### 26. Pause cover
+
+> The token can be paused by its issuer. Insure the pause.
+
+Robinhood's token contracts carry thirteen roles including pause, and `oraclePaused()` stops the
+feed during corporate actions. When a token pauses, every protocol holding it freezes: Longbow,
+hdfi, Robinfolio, the pools, Locate. A parametric cover market that pays if the pause flag holds
+for longer than a stated window, settled by reading the token's own state, with no oracle and no
+claims committee. Buyers are protocols, treasuries and LPs; sellers earn premium for bearing a
+tail. The purest settlement in this document (one storage read) and a small market, which is
+what tail insurance always is.
+
+### 27. The oracle layer
+
+> The chain's long tail has no price. Sell it one.
+
+Chainlink covers 95 stocks. v4 pools carry no oracle, v3 pools need their buffers grown, and
+nothing prices the other 160,000 tokens. Build the oracle layer as its own product: v3 and v2
+TWAP adapters, the truncated-oracle hook for new v4 pools, Data Streams adapters for stocks, a
+registry, and a Morpho-ready `price()` for every entry. Longbow already trusts TWAPs for meme
+collateral, Arcus and the launchpads need marks, and borrow-the-meme is customer one. Oracle
+networks are the one infrastructure category where tokens have held value. Strategic rather
+than fast, and it contains the borrow market rather than competing with it.
+
+### 28. Born shortable
+
+> A launchpad whose coins can be shorted from the first block.
+
+A Pons competitor with one difference: every pool is created with the truncated-oracle hook, so
+each coin can be borrowed, shorted, posted as collateral and optioned from launch, and the
+borrow yield flows to holders. "The shorts pay you" is a launch pitch nobody has made. The field
+is crowded and the launchpad-token model is proven at $400M+, which cuts both ways.
+
+### 29. Options from the pools
+
+> No oracle, no counterparty, no auction: the liquidity is the option.
+
+Panoptic's mechanic: sell an option by depositing single-sided liquidity out of range, buy one by
+borrowing that position and removing it, pay premium as the fees it would have earned. It needs
+only a deep v3 pool. SPY and NVDA sit in $7M to $10M v3 pools and the three big memes in $3M to
+$7M ones, so options on stocks and on memes are possible today from pools that already exist,
+and nobody offers options on this chain. The biggest missing primitive here and the biggest
+build, and Panoptic itself could arrive any week.
+
+None of these should displace borrow the meme, which is a fortnight of work with the demand
+already shouting. The oracle layer is the one that could absorb it: build the market first, and
+the oracle it needs is the first entry in the registry.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
