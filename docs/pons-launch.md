@@ -189,3 +189,70 @@ These are one thing seen from three sides. $SHORT is the venue, the house is its
 is its distribution. If the launch is a memecoin on Pons, make it the product's token, not a
 treasury beside it: the meme framing gives the product the attention it needs, and the product
 gives the meme the only utility on this chain that is not already a template.
+
+## The NUKES.FUN model, and what the chain adds to it
+
+NUKES.FUN is the right kind of ambition: a mission (accumulate all of Nano Nuclear), a thesis (a
+sub-$1B stock with a third of its float sold short), bonds and rebasing staking in the Olympus
+shape, a treasury floor, protocol-owned liquidity behind a timelock, team pay gated behind a $33M
+cap, and the one thing that makes it work: acquisition over the counter through an Authorised
+Participant, because buying small caps on-chain is impossible. The on-chain floats, read on
+5 September:
+
+| Stock | On-chain float | Top pool | Creations and redemptions, 24h |
+|---|---|---|---|
+| NNE | 3,003 tokens, ~$50K | $35K | $7K |
+| SLS, NVTS, IREN, SMCI | $29K to $75K | $6K to $22K | $2K to $6K |
+| ASTS, RKLB, RCAT | $135K to $176K | $36K to $51K | $8K to $100K |
+| MSTR, DJT, HIMS | $2.3M to $3.9M | $0.7M to $1.4M | $1.0M to $1.6M |
+| GME, AMC | $7.0M, $7.8M | $0.8M, $2.3M | $2.1M, $5.1M |
+
+Two constraints follow for a Pons launch. A Pons token has no mint function, so Olympus-style
+rebasing emissions are impossible; staking yield has to come from something real. And without
+an AP relationship, accumulation only works in the names the AP already refills daily, which are
+the big meme stocks, where the "economically relevant participant" line does not apply. What the
+chain adds is a yield source NUKES does not use: shorts pay to borrow.
+
+### 37. The float bank
+
+> We own the float. The shorts pay us rent.
+
+Pick a heavily shorted name with real on-chain float and daily creations (GME, HIMS, DJT, MSTR,
+AMC). Launch the coin on Pons, paired with USDG. The fee stream and bond sales (discounted sales
+of protocol-held coins from the dev buy and buybacks, vesting five days, since nothing can be
+minted) buy the stock during market hours through a rule that never pays more than a fraction of
+a percent over the feed, letting the AP refill the float behind each tranche. The treasury then
+supplies the stock into a Locate market and stakers earn what the on-chain shorts pay to borrow
+it, which the adaptive curve pushes toward hundreds of percent when the float is tight. Real
+yield, from the other side. The lever is the weekly vote: lend, or recall. Recall pulls supply,
+utilisation hits 100%, the rate quadruples, and every on-chain short has to cover into a float
+the protocol owns. It is a lender's ordinary right, and it is the most exciting button a
+staking contract has ever had. Locate gets its first large lender; the coin gets the only yield
+on the chain paid by its enemies.
+
+### 38. The squeeze index
+
+> We buy what they short, and lend it back to them.
+
+Once Locate has markets, on-chain short interest is observable: utilisation and borrows per
+stock. A treasury that buys the most-borrowed stocks by that rule, weekly, and supplies them back
+to the same markets. The signal is on chain, the rule is public, and the yield is the shorts'
+interest on the exact names they chose. NUKES picks one stock by thesis; this picks whatever the
+shorts pick, automatically, and charges them for it.
+
+### 39. The accumulation factory
+
+> NUKES.FUN for every stock on the chain, with real yield underneath.
+
+The meta NUKES is starting will fork the way Olympus forked, into dozens of "accumulate all of
+X" protocols. Build the standard once, Pons-compatible: fee router to treasury, the never-overpay
+accumulator, bonds from inventory, protocol-owned liquidity behind a timelock, staking paid from
+Locate lending rather than emissions, and a team bond gated behind a cap as NUKES does. Any
+community launches one for any of the 194 stocks; the factory token takes a slice of every
+treasury's fees, and every treasury lends through Locate. That makes Locate the yield layer of
+the entire accumulation meta, which is worth more than any single protocol on top of it.
+
+Order: the float bank first, on GME or HIMS, because it proves the yield and the button; the
+factory second, once the first one has a rate to show; the squeeze index once Locate has enough
+markets to read. If AP access can be arranged, NUKES's small-cap thesis becomes available to all
+three, and the never-overpay accumulator becomes the fallback rather than the only path.
