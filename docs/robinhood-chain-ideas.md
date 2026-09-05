@@ -319,6 +319,140 @@ market, then "cover this position" inside Locate, then options on the same round
 consumer product instead, prize-linked savings reuses the most of what is here and has the
 friendliest legal shape.
 
+## Thinking differently
+
+The first seven fill holes in a DeFi map. These start from the other end: what the tokens are
+(real companies, with fans, customers, employees and weekends), who the audience is (120
+countries, most of which never had a brokerage account), and what people actually do on this
+chain (launch things, talk, gamble, and trade at three in the morning). Same tests as before,
+looser on precedent.
+
+### 8. Stock as a reward currency
+
+> Stop airdropping memecoins. Airdrop Apple.
+
+Merchants and creators pay rewards in stock dust. A creator with fifty thousand followers sends
+each of them a few cents of NVDA instead of launching a coin that rugs by Thursday. A shop gives
+a slice of SBUX with every coffee. Stash's Stock-Back card did this in the US with a bank in the
+middle; here it is a transfer.
+
+Mechanics: a sponsor deposits USDG. Claims are Merkle drops or claim links with the recipient
+inside the signed digest (the Treasure Hunt design). On claim the contract buys the stock on
+Uniswap at that moment and sends it, gas sponsored through 4337, so the recipient needs nothing
+but a passkey. A webhook for merchants: order paid, dust sent. The growth stunt is obvious and
+cheap: a sponsor funds a few cents of SPY to every active wallet on the chain, and a few cents
+times a million wallets is a marketing budget, not a treasury.
+
+Why it is different: it makes the security the unit of appreciation instead of the object of
+speculation. A reward that has a chart. Legal: giving securities away as a promotion is a
+regulated act in some places, recipients must be eligible, and the shape has to be a gift, not a
+sale.
+
+### 9. Positions or ban
+
+> A social feed where every take is collateralised.
+
+To post about NVDA you lock a position for the life of the post: tokens, or a Locate short. The
+post's hash is committed with the lock. The feed shows direction, size, entry and live P&L from
+the Chainlink feed. Unlock early and the post is deleted and the profile marked. Subscriptions in
+USDG, tips in stock dust (#8), a leaderboard by realised P&L.
+
+Why it is different: it is a social product and the chain is the fact-checker. It is also the
+cheapest thing in this document: a lock contract and a site, with posts living in calldata.
+"Positions or ban" is already the rule of the subreddit that made retail trading a culture.
+
+### 10. Holder perks
+
+> Hold the stock, get the discount.
+
+Japanese shareholder perks (kabunushi yutai) on chain. Any merchant publishes a perk gated on
+`balanceOfUI(token) >= n`, proven by sign-in with Ethereum; vouchers are signed, single use and
+non-transferable. Tesla accessory shops for TSLA holders, game stores for GME holders, who would
+enjoy it more than anyone. The issuers will not join on day one. Their fans' merchants will.
+
+Why it is different: commerce, not trading, and zero securities-law surface, since nothing is sold
+or transferred.
+
+### 11. Savings circles in the S&P 500
+
+> The chit fund, the tanda and the susu, paid out in SPY.
+
+Rotating savings groups are how a large share of the world saves. N members contribute USDG
+weekly, swapped to SPY; one member takes the pot each round. Order by random draw (the Stonk
+Packs hash chain) or by a chit-fund discount auction. Missed payments come out of a stake. The
+group's whole history is public, so groups can form across borders with strangers.
+
+Why it is different: a savings ritual from Lagos, Chennai and Mexico City, in a US index, on a US
+broker's chain. Legal: lending circles are mostly tolerated; India's Chit Funds Act is the
+exception to check.
+
+### 12. The Weekend Exchange
+
+> Open only when Wall Street is closed.
+
+A venue that runs from Friday's last print to Sunday's first. Hourly uniform-price batch auctions
+(the frequent-batch-auction design from Budish, Cramton and Shim), no AMM, no oracle, no MEV,
+and the clearing price published on chain every hour as the weekend index. Orders are limit
+orders with USDG or tokens escrowed; unfilled orders roll to the next batch.
+
+Why it is different: the first list protected LPs from the weekend; this stops pretending there
+should be a continuous market when there is no continuous information. A published weekend index
+is what every lender on the chain needs and nobody has. Fees: a taker fee on cleared volume. No
+token needed.
+
+### 13. Backed memes
+
+> Every memecoin on this launchpad has a floor made of stock.
+
+The chain's memecoin crowd already pays a premium for wrappers of stocks (the HIMS wrapper traded
+40% over). A launchpad where every meme is an honest wrapper: minting burns USDG to buy the named
+stock into a treasury, and any holder can redeem pro rata for the stock at any time. The meme is
+the story and the community; the floor is NVDA. The redemption path is exactly what that wrapper
+lacked.
+
+Why it is different: it takes the chain's dominant behaviour and gives it a bottom. Legal: a
+redeemable wrapper of a security is a security; hdfi and Robinfolio already wrap, and it still
+needs counsel.
+
+### 14. Chores for shares
+
+> A child's first share, earned, and locked until they are eighteen.
+
+A family account. The parent's 4337 account funds a child sub-account whose policy is "can
+receive, cannot send, unlocks on a date." The child earns SPY dust for chores (the parent taps
+approve), watches the balance and the multiplier tick, and cannot lose it to a bad trade or a lost
+phone. A time-capsule message rides with each deposit.
+
+Why it is different: family finance for the 120 countries with no custodial accounts. Legal: the
+parent holds; the child is the beneficiary of a rule, not a holder.
+
+### 15. Contractor equity
+
+> RSUs for the people who never got them.
+
+A payroll product for remote teams: part of a contractor's fee paid in the employer's own stock
+token where one exists, or in SPY, with on-chain vesting, cliffs, and per-second streaming.
+Coinbase, Shopify and Uber have thousands of non-US contractors who cannot get RSUs.
+
+Why it is different: B2B, boring, and paid for from a real budget. Legal: compensation in
+securities to non-US persons is well trodden but not paperwork-free; the employer's counsel does
+that part.
+
+### 16. Wild cards
+
+- A tontine in the S&P 500: proof-of-life check-ins; miss a year and your share goes to the
+  rest. Longevity insurance without an insurer. Legal in some places, banned in others.
+- Physical packs: Stonk Packs as NFC cards in foil, sold in shops, each card a claim on a stock
+  token. Atoms, and a customs form.
+- A shadow proxy: token holders have no vote, so hold one anyway, weighted by `balanceOfUI`, and
+  publish "what the tokenholders would have said" before every AGM. No utility, all press.
+
+### Which of these
+
+The Weekend Exchange if you want a company: it is the one thing only this chain makes possible,
+and it turns the weekend from a risk into a venue. Positions or ban if you want something live in
+two weeks that could catch: a lock contract, a feed, and a name everyone already knows.
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
