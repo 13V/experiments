@@ -847,6 +847,7 @@
 
     // ---- chart ----
     const chartMeta = h('span', { class: 'pnl-meta hidden' }, '');
+    const srcSpan = h('span', {}, 'candles by geckoterminal · ');
     const chartBody = h('div', {}, h('div', { class: 'ph' }, 'Loading price chart…'));
     const chart = h('section', { class: 'pnl chart' }, ccHead, chartBody, termsStrip);
     main.appendChild(chart);
@@ -1212,11 +1213,17 @@
         chartMeta.textContent = restMeta;
         if (d.pairAddress && window.LocateChart) {
           chartBody.className = 'cd-wrap';
-          mine.chart = LocateChart.mount(chartBody, { pool: d.pairAddress, tf: '1h', meta: null, tfSlot });
+          mine.chart = LocateChart.mount(chartBody, {
+            pool: d.pairAddress, cg: m.coingeckoId || null, tf: '1h', meta: null, tfSlot,
+            onSource: (src, isLine) => {
+              srcSpan.textContent = src === 'coingecko' ? (isLine ? 'prices by coingecko · ' : 'candles from coingecko prices (geckoterminal unavailable) · ')
+                : src === 'geckoterminal' ? 'candles by geckoterminal · ' : 'chart unavailable right now · ';
+            },
+          });
         } else {
           chartBody.appendChild(h('div', { class: 'ph' }, 'No candles for this pool yet.'));
         }
-        chart.appendChild(foot(h('span', {}, 'candles by geckoterminal · '), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'open the pool on dexscreener ↗')));
+        chart.appendChild(foot(srcSpan, h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'open the pool on dexscreener ↗')));
       } else {
         clear(chartBody);
         chartMeta.textContent = 'No pool';

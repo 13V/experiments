@@ -40,10 +40,28 @@
     const list = (((body || {}).data || {}).attributes || {}).ohlcv_list || [];
     return list.map((k) => k.map(Number)).sort((a, b) => a[0] - b[0]);
   }
-  /** Candles for one pool: [[t, o, h, l, c, v], ...] oldest first, or null when the pool is unknown. */
-  function candles(pool, tf, limit) {
+  /** CoinGecko's price history for the coin, shaped like the function shapes it. */
+  async function directCoingecko(cg, tf) {
+    const days = tf === '1d' ? 90 : 1;
+    const res = await fetchT(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(cg)}/market_chart?vs_currency=usd&days=${days}`, 6000, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error('coingecko HTTP ' + res.status);
+    const prices = (((await res.json()) || {}).prices || []).map(([t, p]) => [Math.floor(t / 1000), Number(p)]).filter((x) => x[1] > 0).sort((a, b) => a[0] - b[0]);
+    if (!prices.length) throw new Error('coingecko: no prices');
+    if (tf === '1d') return { line: prices, source: 'coingecko' };
+    const bucket = tf === '15m' ? 900 : 3600, map = new Map();
+    for (const [t, p] of prices) { const k = Math.floor(t / bucket) * bucket; const c = map.get(k); if (!c) map.set(k, [k, p, p, p, p, 0]); else { if (p > c[2]) c[2] = p; if (p < c[3]) c[3] = p; c[4] = p; } }
+    return { candles: [...map.values()], source: 'coingecko' };
+  }
+  /** Both direct sources in turn; resolves to { candles | line, source }. */
+  async function directAny(pool, tf, limit, cg) {
+    try { const rows = await direct(pool, tf, limit); if (rows && rows.length) return { candles: rows, source: 'geckoterminal' }; if (!cg) return { candles: rows, source: 'geckoterminal' }; }
+    catch (e) { if (!cg) throw e; }
+    return directCoingecko(cg, tf);
+  }
+  /** Price history for one pool: { candles: [[t,o,h,l,c,v], ...] | line: [[t,p], ...], source }. */
+  function candles(pool, tf, limit, cg) {
     pool = String(pool || '').toLowerCase();
-    if (!pool) return Promise.resolve(null);
+    if (!pool) return Promise.resolve({ candles: null, source: null });
     const key = `${pool}|${tf}|${limit}`;
     const hit = memo.get(key);
     if (hit && Date.now() - hit.ts < TTL[tf]) return hit.promise;
@@ -52,17 +70,21 @@
       // refusal is usually the upstream metering a burst, so a few tries a second or two apart
       // succeed where one does not; the caller only hears about it when all of them fail.
       let lastErr = null;
+      const viaFunction = async () => {
+        const res = await fetchT(`/api/ohlcv?pool=${pool}&tf=${tf}&limit=${limit}${cg ? '&cg=' + encodeURIComponent(cg) : ''}`, 9000);
+        if (res.status === 404) { apiAvailable = false; throw new Error('no /api/ohlcv'); }
+        if (!res.ok) throw new Error('ohlcv api HTTP ' + res.status);
+        const body = await res.json();
+        return { candles: body.candles || null, line: body.line || null, source: body.source || 'geckoterminal' };
+      };
       for (let attempt = 0; attempt < 4; attempt++) {
         if (attempt) await sleep(700 * 2 ** (attempt - 1));
-        if (apiAvailable) {
-          try {
-            const res = await fetchT(`/api/ohlcv?pool=${pool}&tf=${tf}&limit=${limit}`, 9000);
-            if (res.status === 404) apiAvailable = false;
-            else if (res.ok) return (await res.json()).candles;
-            else lastErr = new Error('ohlcv api HTTP ' + res.status);
-          } catch (e) { lastErr = e; }
-        }
-        try { return await direct(pool, tf, limit); } catch (e) { lastErr = e; }
+        // the first round asks the function alone; later rounds race it against the direct sources,
+        // so whichever answers first wins and a hung request cannot hold the round
+        const racers = [];
+        if (apiAvailable) racers.push(viaFunction());
+        if (attempt > 0 || !apiAvailable) racers.push(directAny(pool, tf, limit, cg));
+        try { return await Promise.any(racers); } catch (e) { lastErr = (e && e.errors && e.errors[0]) || e; }
       }
       throw lastErr || new Error('unavailable');
     })();
@@ -77,11 +99,11 @@
     const want = [];
     for (const p of all) {
       const hit = memo.get(`${p}|${tf}|${limit}`);
-      if (hit && Date.now() - hit.ts < TTL[tf]) { try { out.set(p, await hit.promise); continue; } catch { /* refetch */ } }
+      if (hit && Date.now() - hit.ts < TTL[tf]) { try { const got = await hit.promise; out.set(p, got && got.candles ? got.candles : null); continue; } catch { /* refetch */ } }
       want.push(p);
     }
     if (!want.length) return out;
-    const remember = (p, rows) => memo.set(`${p}|${tf}|${limit}`, { ts: Date.now(), promise: Promise.resolve(rows) });
+    const remember = (p, rows) => memo.set(`${p}|${tf}|${limit}`, { ts: Date.now(), promise: Promise.resolve({ candles: rows, source: 'geckoterminal' }) });
     if (apiAvailable) {
       try {
         const res = await fetchT(`/api/ohlcv?pools=${want.join(',')}&tf=${tf}&limit=${limit}`, 12000);
@@ -126,6 +148,7 @@
    */
   function mount(el, opts) {
     const pool = String(opts.pool || '').toLowerCase();
+    const cg = opts.cg || null;
     const meta = opts.meta || null;
     const restMeta = opts.restMeta || '';
     const cv = document.createElement('canvas'); cv.className = 'cd'; el.appendChild(cv);
@@ -138,13 +161,15 @@
     (opts.tfSlot || el).appendChild(bar);
     const note = document.createElement('div'); note.className = 'cd-note'; el.appendChild(note);
 
-    let tf = opts.tf || '1h', data = null, hover = -1, dead = false, raf = 0;
+    let tf = opts.tf || '1h', data = null, line = null, hover = -1, dead = false, raf = 0;
     const draw = () => {
       raf = 0; palette();
       const { ctx, w, h } = fit(cv);
       ctx.clearRect(0, 0, w, h);
-      if (!data || data.length < 2) return;
-      const c = data;
+      // a line series is drawn through the same code as flat candles, then styled as a line
+      const c = data || (line && line.length > 1 ? line.map(([t, p]) => [t, p, p, p, p, 0]) : null);
+      const asLine = !data && !!c;
+      if (!c || c.length < 2) return;
       const axW = 58, x0 = axW, x1 = w - 18, y0 = 18, y1 = h - 42;
       let hi = -Infinity, lo = Infinity;
       for (const k of c) { if (k[2] > hi) hi = k[2]; if (k[3] < lo) lo = k[3]; }
@@ -173,9 +198,18 @@
         if (tf !== '1d') { const day = d.getUTCDate(); if (day !== lastDay && lastDay !== -1) lab = `${day} ${MON[d.getUTCMonth()]}`; lastDay = day; }   // a new day is labelled by its date
         ctx.fillStyle = DIM; ctx.fillText(lab, X(i), h - 14); ctx.beginPath(); ctx.arc(X(i), y1 + 9, 1.6, 0, Math.PI * 2); ctx.fill();
       }
+      if (asLine) {
+        // an area line in gold or pink by the move over the window
+        const up = c[c.length - 1][4] >= c[0][1];
+        ctx.beginPath(); c.forEach((k, i) => (i ? ctx.lineTo(X(i), Y(k[4])) : ctx.moveTo(X(i), Y(k[4]))));
+        ctx.strokeStyle = up ? UP : DOWN; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.lineTo(X(c.length - 1), y1); ctx.lineTo(X(0), y1); ctx.closePath();
+        const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, up ? 'rgba(242,196,109,.28)' : 'rgba(240,86,154,.28)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g; ctx.fill();
+      }
       // candles: 1px wicks, rounded bodies, gold up and pink down
       const bw = Math.max(3, Math.min(14, cw * 0.55)), r = Math.min(3, bw / 2);
-      for (let i = 0; i < c.length; i++) {
+      for (let i = 0; asLine ? false : i < c.length; i++) {
         const k = c[i], x = Math.round(X(i)) + .5, up = k[4] >= k[1];
         ctx.strokeStyle = ctx.fillStyle = up ? UP : DOWN;
         ctx.beginPath(); ctx.moveTo(x, Y(k[2])); ctx.lineTo(x, Y(k[3])); ctx.stroke();
@@ -217,10 +251,11 @@
     };
     const request = () => { if (!raf) raf = requestAnimationFrame(draw); };
     const idx = (ev) => {
-      if (!data) return -1;
+      const n = data ? data.length : (line ? line.length : 0);
+      if (!n) return -1;
       const r = cv.getBoundingClientRect(); const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) * (cv.clientWidth / (r.width || 1));
       const x0 = 58, x1 = cv.clientWidth - 18; if (px < x0 || px > x1) return -1;
-      return Math.max(0, Math.min(data.length - 1, Math.floor((px - x0) / ((x1 - x0) / data.length))));
+      return Math.max(0, Math.min(n - 1, Math.floor((px - x0) / ((x1 - x0) / n))));
     };
     const onMove = (ev) => { const i = idx(ev); if (i !== hover) { hover = i; request(); } };
     const onLeave = () => { if (hover !== -1) { hover = -1; request(); } };
@@ -234,14 +269,18 @@
       const my = ++seq; note.textContent = ''; el.classList.add('loading');
       const slow = setTimeout(() => { if (my === seq && !data) note.textContent = 'Fetching candles…'; }, 1800);
       try {
-        const rows = await candles(pool, tf, tf === '1d' ? 90 : tf === '1h' ? 120 : 96);
+        const got = await candles(pool, tf, tf === '1d' ? 90 : tf === '1h' ? 120 : 96, cg);
         if (dead || my !== seq) return;
-        data = rows && rows.length ? rows : null; hover = -1;
+        data = got && got.candles && got.candles.length > 1 ? got.candles : null;
+        line = !data && got && got.line && got.line.length > 1 ? got.line : null;
+        hover = -1;
         clearTimeout(slow);
-        note.textContent = data ? '' : 'No candles for this pool yet';   // the slow-note may already be up
+        note.textContent = (data || line) ? '' : 'No candles for this pool yet';   // the slow-note may already be up
+        if (opts.onSource) opts.onSource((data || line) ? got.source : null, !!line);
       } catch (e) {
         clearTimeout(slow);
-        if (dead || my !== seq) return; data = null;
+        if (dead || my !== seq) return; data = null; line = null;
+        if (opts.onSource) opts.onSource(null, false);
         note.textContent = 'Chart unavailable right now · it will retry shortly';
         console.warn('candles', e);
       }
@@ -250,7 +289,7 @@
     setTimeframe(tf);
     // keep the last candle honest while the page is open
     const tick = setInterval(() => { if (!document.hidden && (data || !dead)) { memo.delete(`${pool}|${tf}|${tf === '1d' ? 90 : tf === '1h' ? 120 : 96}`); setTimeframe(tf); } }, 60e3);
-    const soon = setInterval(() => { if (!data && !document.hidden) setTimeframe(tf); }, 15e3);
+    const soon = setInterval(() => { if (!data && !line && !document.hidden) setTimeframe(tf); }, 15e3);
     return { setTimeframe, destroy() { dead = true; clearInterval(tick); clearInterval(soon); ro.disconnect(); if (raf) cancelAnimationFrame(raf); } };
   }
 
