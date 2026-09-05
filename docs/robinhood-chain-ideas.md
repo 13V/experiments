@@ -682,6 +682,9 @@ in an hour liquidates every short, a meme that triples in a block leaves lenders
 and a thin TWAP can be leaned on, so caps and the market list are the product. The communities
 being shorted will make the marketing themselves. Token: the fee switch, on fees that exist.
 
+Looked into in [`borrow-the-meme.md`](borrow-the-meme.md): PONS, CASHCAT and AI all have v3 pools with
+20,000-observation buffers, the WETH/USDG hop has 2,500, and the oracle reduces to one tick difference.
+
 ### 21. Pairs
 
 > Long NVDA, short AMD, one transaction, one health factor.
