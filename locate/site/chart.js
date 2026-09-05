@@ -24,10 +24,16 @@
 
   let apiAvailable = true;   // false after a 404: static hosting without the Vercel function
   const memo = new Map();    // `${pool}|${tf}|${limit}` -> { ts, promise }
-  const TTL = { '15m': 30e3, '1h': 60e3, '1d': 300e3 };
+  const TTL = { '15m': 60e3, '1h': 90e3, '1d': 300e3 };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  /** fetch with a deadline: a request that hangs must not stall the retry loop behind it */
+  function fetchT(url, ms, init) {
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms);
+    return fetch(url, Object.assign({}, init, { signal: ac.signal })).finally(() => clearTimeout(t));
+  }
 
   async function direct(pool, tf, limit) {
-    const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/robinhood/pools/${pool}/ohlcv/${TF[tf]}&limit=${limit}`, { headers: { Accept: 'application/json' } });
+    const res = await fetchT(`https://api.geckoterminal.com/api/v2/networks/robinhood/pools/${pool}/ohlcv/${TF[tf]}&limit=${limit}`, 6000, { headers: { Accept: 'application/json' } });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error('geckoterminal HTTP ' + res.status);
     const body = await res.json();
@@ -42,16 +48,23 @@
     const hit = memo.get(key);
     if (hit && Date.now() - hit.ts < TTL[tf]) return hit.promise;
     const promise = (async () => {
-      // the function first (one cached answer for everyone); if it is missing or failing, the
-      // browser asks GeckoTerminal itself, which allows cross-origin reads
-      if (apiAvailable) {
-        try {
-          const res = await fetch(`/api/ohlcv?pool=${pool}&tf=${tf}&limit=${limit}`);
-          if (res.status === 404) apiAvailable = false;
-          else if (res.ok) return (await res.json()).candles;
-        } catch { /* fall through */ }
+      // The function first (one cached answer for everyone), then GeckoTerminal directly. A
+      // refusal is usually the upstream metering a burst, so a few tries a second or two apart
+      // succeed where one does not; the caller only hears about it when all of them fail.
+      let lastErr = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (attempt) await sleep(700 * 2 ** (attempt - 1));
+        if (apiAvailable) {
+          try {
+            const res = await fetchT(`/api/ohlcv?pool=${pool}&tf=${tf}&limit=${limit}`, 9000);
+            if (res.status === 404) apiAvailable = false;
+            else if (res.ok) return (await res.json()).candles;
+            else lastErr = new Error('ohlcv api HTTP ' + res.status);
+          } catch (e) { lastErr = e; }
+        }
+        try { return await direct(pool, tf, limit); } catch (e) { lastErr = e; }
       }
-      return direct(pool, tf, limit);
+      throw lastErr || new Error('unavailable');
     })();
     memo.set(key, { ts: Date.now(), promise });
     promise.catch(() => memo.delete(key));
@@ -60,16 +73,23 @@
   /** Sparkline series for many pools at once: Map(pool -> candles | null). */
   async function series(pools, tf, limit) {
     const out = new Map();
-    const want = [...new Set(pools.filter(Boolean).map((p) => String(p).toLowerCase()))];
+    const all = [...new Set(pools.filter(Boolean).map((p) => String(p).toLowerCase()))];
+    const want = [];
+    for (const p of all) {
+      const hit = memo.get(`${p}|${tf}|${limit}`);
+      if (hit && Date.now() - hit.ts < TTL[tf]) { try { out.set(p, await hit.promise); continue; } catch { /* refetch */ } }
+      want.push(p);
+    }
     if (!want.length) return out;
+    const remember = (p, rows) => memo.set(`${p}|${tf}|${limit}`, { ts: Date.now(), promise: Promise.resolve(rows) });
     if (apiAvailable) {
       try {
-        const res = await fetch(`/api/ohlcv?pools=${want.join(',')}&tf=${tf}&limit=${limit}`);
+        const res = await fetchT(`/api/ohlcv?pools=${want.join(',')}&tf=${tf}&limit=${limit}`, 12000);
         if (res.status === 404) apiAvailable = false;
         else if (res.ok) {
           const body = await res.json();
-          for (const p of want) if (Object.prototype.hasOwnProperty.call(body.series || {}, p)) out.set(p, body.series[p]);
-          if (out.size === want.length) return out;   // anything the function could not get, fetch direct below
+          for (const p of want) if (Object.prototype.hasOwnProperty.call(body.series || {}, p)) { out.set(p, body.series[p]); remember(p, body.series[p]); }
+          if (want.every((p) => out.has(p))) return out;   // anything the function could not get, fetch direct below
         }
       } catch { /* fall through to direct */ }
     }
@@ -77,7 +97,7 @@
     if (!missing.length) return out;
     let i = 0;   // three at a time: GeckoTerminal meters by IP and this is the visitor's own allowance
     await Promise.all(Array.from({ length: Math.min(3, missing.length) }, async () => {
-      while (i < missing.length) { const p = missing[i++]; try { out.set(p, await direct(p, tf, limit)); } catch { /* dash */ } }
+      while (i < missing.length) { const p = missing[i++]; try { const rows = await direct(p, tf, limit); out.set(p, rows); remember(p, rows); } catch { /* dash */ } }
     }));
     return out;
   }
@@ -212,18 +232,26 @@
     async function setTimeframe(next) {
       tf = next; for (const k in btns) btns[k].classList.toggle('on', k === tf);
       const my = ++seq; note.textContent = ''; el.classList.add('loading');
+      const slow = setTimeout(() => { if (my === seq && !data) note.textContent = 'Fetching candles…'; }, 1800);
       try {
         const rows = await candles(pool, tf, tf === '1d' ? 90 : tf === '1h' ? 120 : 96);
         if (dead || my !== seq) return;
         data = rows && rows.length ? rows : null; hover = -1;
-        if (!data) note.textContent = 'NO CANDLES FOR THIS POOL YET';
-      } catch (e) { if (dead || my !== seq) return; data = null; note.textContent = 'CANDLES UNAVAILABLE · ' + String(e.message || e).toUpperCase(); }
+        clearTimeout(slow);
+        if (!data) note.textContent = 'No candles for this pool yet';
+      } catch (e) {
+        clearTimeout(slow);
+        if (dead || my !== seq) return; data = null;
+        note.textContent = 'Chart unavailable right now · it will retry shortly';
+        console.warn('candles', e);
+      }
       el.classList.remove('loading'); request();
     }
     setTimeframe(tf);
     // keep the last candle honest while the page is open
-    const tick = setInterval(() => { if (!document.hidden) { memo.delete(`${pool}|${tf}|${tf === '1d' ? 90 : tf === '1h' ? 120 : 96}`); setTimeframe(tf); } }, 60e3);
-    return { setTimeframe, destroy() { dead = true; clearInterval(tick); ro.disconnect(); if (raf) cancelAnimationFrame(raf); } };
+    const tick = setInterval(() => { if (!document.hidden && (data || !dead)) { memo.delete(`${pool}|${tf}|${tf === '1d' ? 90 : tf === '1h' ? 120 : 96}`); setTimeframe(tf); } }, 60e3);
+    const soon = setInterval(() => { if (!data && !document.hidden) setTimeframe(tf); }, 15e3);
+    return { setTimeframe, destroy() { dead = true; clearInterval(tick); clearInterval(soon); ro.disconnect(); if (raf) cancelAnimationFrame(raf); } };
   }
 
   /** A sparkline: closes only, coloured by the sign of the move, filled to the baseline at 12%. */

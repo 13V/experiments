@@ -875,6 +875,8 @@
           if (d.pairAddress) pools.set(o.symbol, String(d.pairAddress).toLowerCase());
         }
         if (window.LocateChart && pools.size) {
+          await new Promise((r) => setTimeout(r, 1500));   // let the chart's own request go first
+          if (mine.retired) return;
           const s = await LocateChart.series([...pools.values()], '15m', 96);
           if (mine.retired) return;
           for (const [sym, p] of pools) LocateChart.spark(cards.get(sym).sp, s.get(p) || null);

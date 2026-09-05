@@ -25,8 +25,10 @@ const memo = new Map(); // `${pool}|${tf}|${limit}` -> { ts, data }
 async function fetchCandles(pool, tf, limit, attempt = 0) {
   const url = `https://api.geckoterminal.com/api/v2/networks/${NETWORK}/pools/${pool}/ohlcv/${TF[tf].path}&limit=${limit}`;
   const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
-  if ((res.status === 429 || res.status >= 500) && attempt < 2) {
-    await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+  if ((res.status === 429 || res.status >= 500) && attempt < 3) {
+    // GeckoTerminal meters bursts; wait what it asks for, else a growing pause (1.2s, 2.4s, 3.6s)
+    const ra = Number(res.headers && res.headers.get && res.headers.get('retry-after'));
+    await new Promise((r) => setTimeout(r, Math.min(4000, ra > 0 ? ra * 1000 : 1200 * (attempt + 1))));
     return fetchCandles(pool, tf, limit, attempt + 1);
   }
   if (res.status === 404) return null;
