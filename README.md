@@ -378,6 +378,9 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[A memecoin on Pons V2, with a job](docs/pons-launch.md)**: the coin is a plain Pons token, so the utility
+  lives in the contract that receives its fees. The V2 rules verified on chain, what is already table stakes,
+  and five designs the templates cannot do, led by a vault that rips Stonk Packs for stakers every Friday.
 - **[Borrow the meme](docs/borrow-the-meme.md)**: Locate's contracts pointed at memecoins. The three biggest
   memes on the chain have v3 pools with 20,000-observation buffers, so a two-hop TWAP oracle works today;
   `scripts/meme-pools.js` checks any pool. Caps, failure modes, rates, and the build delta.

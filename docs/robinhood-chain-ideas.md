@@ -875,6 +875,12 @@ favourite insult into the token's economics.
 Ranked for fun with a job: price-locked coins, the retail flow coin, graduation markets, the
 earnings coin, listing markets, then the people's chain token with its brand caveat.
 
+## If the launch is a memecoin on Pons V2
+
+The token is a plain Pons contract and the fee recipient can be a contract, so the utility is whatever
+receives the fees. The rules, verified on chain, and five designs built for that, are in
+[`pons-launch.md`](pons-launch.md).
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
