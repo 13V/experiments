@@ -157,3 +157,35 @@ lottery, and a scoreboard to post every Friday.
 Pairing angles the factory allows and nobody has taken: GLD, SGOV, and TSLA for the obvious
 crowd. GME is approved and should be left alone; a fee-fed treasury in a stock with a few million
 dollars of on-chain float is a weekend squeeze by construction.
+
+## The honest version
+
+Everything above is passive by construction: fees in, a contract buys something, holders receive
+it. That is a treasury with a mascot. High utility on this chain means the coin is the equity of a
+venue that lets people do something they cannot do today. There are three such venues, and the
+proven comparables for each are the largest "utility meme" outcomes of the last cycles.
+
+**$SHORT: the coin is the exchange where you short memecoins.** Borrow the meme is the backend;
+the product is a one-click long/short desk on PONS, CASHCAT and AI (and every meme with an
+oracle-grade pool after them), and the coin takes the vaults' fee on interest plus a buyback.
+Launched on Pons itself, against the coins launched on Pons. It is the most controversial launch
+possible on a chain that is long everything, every community it lists will talk about it, and the
+utility is the one thing 160,000 coins' worth of traders cannot get anywhere. Comparable: HYPE,
+the token that was the exchange.
+
+**The bot: a trading bot for this chain whose fees pay the coin.** Telegram-native, like Banana
+Gun and BONKbot, which turned bot fees into nine-figure tokens, with what no other bot has: the
+tape (the issuer's mints as they happen), ex-date and dividend-leak warnings, the weekend spread
+against the app's quote, graduation odds on Pons curves, one-tap shorts through the market above.
+Real tool, proven model, and every alert is a reason to open it.
+
+**The house: an HLP-style vault token.** One pool that takes the other side of the chain: it lends
+memes to shorts, provides the liquidity in stock and meme pools, and underwrites weekend gap
+cover for leveraged borrowers, earning the borrow rate, the swap fees and the premium. The token
+is the vault's equity. Comparable: Hyperliquid's HLP and GMX's GLP, the two counterparty pools
+that became the most valuable things on their chains.
+
+These are one thing seen from three sides. $SHORT is the venue, the house is its capital, the bot
+is its distribution. If the launch is a memecoin on Pons, make it the product's token, not a
+treasury beside it: the meme framing gives the product the attention it needs, and the product
+gives the meme the only utility on this chain that is not already a template.
