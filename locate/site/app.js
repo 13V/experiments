@@ -58,9 +58,14 @@
   /** The dim, uppercase explainer line every screen prints at the foot of its panel. */
   const foot = (...content) => h('div', { class: 'pnl-foot' }, ...content);
   /** A caption-over-value pair, the way the scene sets a DIM label above a big number. */
+  /* Nothing is borrowed when a market opens, so the Adaptive Curve IRM sits at the floor of its
+     curve: 1.00% APR at zero utilisation (borrowRateView on 0x2BD3...0fa1 with an empty market
+     returns 317097919 per second = exactly 1%/yr). Shown on the term sheet until the first borrow. */
+  const OPEN_BORROW_APY = Math.exp(0.01) - 1;
   function kstat(label) {
     const val = h('div', { class: 'kval skel' });
-    return { el: h('div', { class: 'kstat' }, h('div', { class: 'klabel' }, label), val), val };
+    const sub = h('div', { class: 'ksub' });
+    return { el: h('div', { class: 'kstat' }, h('div', { class: 'klabel' }, label), val, sub), val, sub };
   }
   /** One term-sheet row: label, dotted leader, value. */
   const lrow = (label, value) => h('div', { class: 'lrow' }, h('dt', {}, label), h('span', { class: 'lead', 'aria-hidden': 'true' }), h('dd', {}, value));
@@ -320,7 +325,7 @@
     const best = mine.reduce((a, b) => ((b.liquidity?.usd || 0) > (a.liquidity?.usd || 0) ? b : a));
     const vol24 = mine.reduce((s, p) => s + (p.volume?.h24 || 0), 0);
     const chg24 = best.priceChange && best.priceChange.h24 !== undefined ? Number(best.priceChange.h24) : null;
-    return { priceUsd: Number(best.priceUsd), liqUsd: best.liquidity?.usd || 0, vol24, chg24, dexId: best.dexId, url: best.url, pairCount: mine.length };
+    return { priceUsd: Number(best.priceUsd), liqUsd: best.liquidity?.usd || 0, vol24, chg24, dexId: best.dexId, url: best.url, pairAddress: best.pairAddress, pairCount: mine.length };
   }
   let dexApiAvailable = true; // false after a 404: plain static hosting without the Vercel function
   async function fetchDexViaApi(addrs, onProgress) {
@@ -634,10 +639,10 @@
 
     const table = h('table', { class: 'markets' + (anyOpen ? ' open' : '') });
     const cols = [
-      ['Stock', ''], ['Quote', 'num'], ['DEX', 'num'], ['Premium', 'num'], ['24h', 'num'], ['Volume 24h', 'num'], ['LLTV', 'num'], [anyOpen ? 'Cap' : 'Cap at launch', 'num'],
+      ['Stock', ''], ['Quote', 'num'], ['DEX', 'num'], ['Premium', 'num'], ['24h', 'num'], ['Trend', 'sp'], ['Volume 24h', 'num'], ['LLTV', 'num'], [anyOpen ? 'Cap' : 'Cap at launch', 'num'],
       ...(anyOpen ? [['Borrow APY', 'num'], ['Supply APY', 'num'], ['Available', 'num'], ['Status', '']] : []),
     ];
-    table.appendChild(h('thead', {}, h('tr', {}, ...cols.map(([t, c]) => h('th', { class: c }, t)))));
+    table.appendChild(h('thead', {}, h('tr', {}, ...cols.map(([t, c]) => h('th', c === 'sp' ? { class: c, 'data-nosort': '' } : { class: c }, t)))));
     const tbody = h('tbody');
     table.appendChild(tbody);
 
@@ -655,10 +660,11 @@
         dexC: h('td', { class: 'num' }, skel()),
         premC: h('td', { class: 'num' }, skel()),
         chgC: h('td', { class: 'num' }, skel()),
+        sparkC: h('td', { class: 'sp' }, h('canvas', { class: 'spark', 'aria-hidden': 'true' })),
         volC: h('td', { class: 'num' }, skel()),
       };
       const cells = [
-        symCell(m.symbol, m.name), r.quoteC, r.dexC, r.premC, r.chgC, r.volC,
+        symCell(m.symbol, m.name), r.quoteC, r.dexC, r.premC, r.chgC, r.sparkC, r.volC,
         h('td', { class: 'num', 'data-v': String(m.lltvBps) }, tile((m.lltvBps / 100).toFixed(1) + '%')),
         h('td', { class: 'num', 'data-v': String(m.initialCapUsd) }, tile(fmtUsd(m.initialCapUsd, 0), 'dim')),
       ];
@@ -681,6 +687,15 @@
       if (STATE.quotesUnavailable) notice.classList.remove('hidden');
       const dex = await ensureDexData(STATE.markets.map((m) => m.token));
       if (cancelled) return;
+      // one edge-cached request draws every row's 24h trend
+      const poolOf = new Map();
+      for (const m of STATE.markets) { const d = dex.get(m.token.toLowerCase()); if (d && d.pairAddress) poolOf.set(m.symbol, String(d.pairAddress).toLowerCase()); }
+      if (window.LocateChart && poolOf.size) {
+        LocateChart.series([...poolOf.values()], '15m', 96).then((s) => {
+          if (cancelled) return;
+          for (const [sym, p] of poolOf) LocateChart.spark(rows.get(sym).sparkC.firstChild, s.get(p) || null);
+        }).catch(() => {});
+      }
 
       let widestRow = null;
       const prems = [];
@@ -787,12 +802,15 @@
     const priceLab = h('div', { class: 'klabel' }, ' ');
     const priceSub = h('div', { class: 'mkt-sub' });
     const headMeta = h('span', { class: 'pnl-meta' }, deployed ? 'TRADING LIVE' : 'OPENS SOON');
+    const sparkCv = h('canvas', { class: 'spark big', 'aria-hidden': 'true' });
+    const sparkLab = h('div', { class: 'klabel' }, '24H · POOL');
     view.appendChild(h('section', { class: 'pnl' },
       h('div', { class: 'pnl-bar' }, h('span', { class: 'pnl-title mkt-id' }, `${symbol} · ${m.name}`), headMeta),
-      pad(
-        h('div', { class: 'mkt-hero' }, priceLab, h('div', { class: 'mkt-px' }, bigPrice, priceChg)),
-        priceSub
-      ),
+      pad(h('div', { class: 'mkt-top' },
+        h('div', {},
+          h('div', { class: 'mkt-hero' }, priceLab, h('div', { class: 'mkt-px' }, bigPrice, priceChg)),
+          priceSub),
+        h('div', { class: 'mkt-spark' }, sparkLab, sparkCv))),
       foot(h('a', { href: '#/markets' }, '← all markets'))
     ));
 
@@ -808,7 +826,13 @@
       avail = kstat('AVAILABLE'), util = kstat('UTILISATION'), cap = kstat('LENDING CAP');
     ltv.val.classList.remove('skel'); ltv.val.textContent = (m.lltvBps / 100).toFixed(1) + '%';
     cap.val.classList.remove('skel'); cap.val.textContent = fmtUsd(m.initialCapUsd, 0);
-    if (!deployed) { for (const s of [borrowApy, supplyApy, avail, util]) { s.val.classList.remove('skel'); s.val.textContent = '—'; s.val.classList.add('dim'); } }
+    if (!deployed) {
+      const atOpen = (k, text, sub) => { k.val.classList.remove('skel'); k.val.textContent = text; k.sub.textContent = sub; };
+      atOpen(borrowApy, fmtPct(OPEN_BORROW_APY), 'at open · adaptive curve');
+      atOpen(supplyApy, '0.00%', 'until the first borrow');
+      atOpen(avail, '$0', 'fills as lenders deposit');
+      atOpen(util, '0.0%', 'at open');
+    }
     main.appendChild(pnl('TERMS', null, pad(h('div', { class: 'krow' }, ltv.el, borrowApy.el, supplyApy.el, avail.el, util.el, cap.el))));
 
     // ---- position (only shown when there is something to show) ----
@@ -892,7 +916,7 @@
       const liqLbl = h('span', {}, '');
       panel.appendChild(h('div', { class: 'hf' }, h('div', { class: 'track' }, fill), h('div', { class: 'lbl' }, h('span', {}, 'Health factor ', hfLbl), liqLbl)));
 
-      const rLiq = h('b', {}, '—'), rApy = h('b', {}, live.onchain ? fmtPct(live.onchain.borrowApy) : (deployed ? '…' : '—')), rRecv = h('b', {}, '—'), rPrice = h('b', {}, '—');
+      const rLiq = h('b', {}, '—'), rApy = h('b', {}, live.onchain ? fmtPct(live.onchain.borrowApy) : (deployed ? '…' : fmtPct(OPEN_BORROW_APY) + ' at open')), rRecv = h('b', {}, '—'), rPrice = h('b', {}, '—');
       panel.appendChild(h('div', { class: 'rows' },
         h('div', { class: 'r' }, h('span', {}, 'Liquidation price'), rLiq),
         h('div', { class: 'r' }, h('span', {}, 'Reference price'), rPrice),
@@ -974,7 +998,7 @@
         h('div', { class: 'r' }, h('span', {}, 'Performance fee'), h('b', {}, '10% of interest'))
       ));
       paintLendRows = () => {
-        rApy.textContent = live.onchain ? fmtPct(live.onchain.supplyApy) : (vault ? '…' : '—');
+        rApy.textContent = live.onchain ? fmtPct(live.onchain.supplyApy) : (vault ? '…' : '0.00% until borrowed');
         rTot.textContent = live.vaultTotal !== null ? `${fmtToken(live.vaultTotal, STOCK_DECIMALS, 2)} ${symbol}` : (vault ? '…' : '—');
         rLiq.textContent = live.vaultLiq !== null ? `${fmtToken(live.vaultLiq, STOCK_DECIMALS, 2)} ${symbol}` : (vault ? '…' : '—');
         rMine.textContent = live.myAssets !== null ? `${fmtToken(live.myAssets, STOCK_DECIMALS, 4)} ${symbol}` : (STATE.account ? (vault ? '…' : '—') : 'Connect wallet');
@@ -1145,12 +1169,22 @@
         priceSub.appendChild(h('span', {}, 'DEX ', h('b', {}, fmtUsd(d.priceUsd))));
         if (prem !== null) priceSub.appendChild(h('span', {}, 'Premium ', h('b', { class: prem > 0 ? 'pos' : prem < 0 ? 'neg' : '' }, (prem >= 0 ? '+' : '') + fmtPct(prem))));
         priceSub.appendChild(h('span', {}, 'Volume 24h ', h('b', {}, fmtUsd(d.vol24, 0))));
+        priceSub.appendChild(h('span', {}, 'Liquidity ', h('b', {}, fmtUsd(d.liqUsd, 0))));
         clear(chartBody);
-        chartMeta.textContent = `${(d.dexId || 'pool').toUpperCase()} · ROBINHOOD CHAIN`;
-        chartBody.appendChild(h('div', { class: 'scr-glass' },
-          h('iframe', { src: d.url + '?embed=1&theme=dark&chartTheme=dark&trades=0&info=0&chartLeftToolbar=0&loadChartSettings=0&chartResolution=15', loading: 'lazy', title: `${symbol} price on the DEX pool` })
-        ));
-        chart.appendChild(foot(h('span', {}, 'chart by dexscreener · '), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'open the pool ↗')));
+        const restMeta = `${(d.dexId || 'pool').toUpperCase()} · ROBINHOOD CHAIN`;
+        chartMeta.textContent = restMeta;
+        if (d.pairAddress && window.LocateChart) {
+          chartBody.className = 'cd-wrap';
+          mine.chart = LocateChart.mount(chartBody, { pool: d.pairAddress, tf: '1h', meta: chartMeta, restMeta });
+          LocateChart.candles(d.pairAddress, '15m', 96).then((rows) => {
+            if (mine.retired) return;
+            const mv = LocateChart.spark(sparkCv, rows);
+            if (mv !== null) sparkLab.textContent = `24H · POOL · ${mv >= 0 ? '+' : ''}${(mv * 100).toFixed(2)}%`;
+          }).catch(() => {});
+        } else {
+          chartBody.appendChild(h('div', { class: 'ph' }, 'No candles for this pool yet.'));
+        }
+        chart.appendChild(foot(h('span', {}, 'candles by geckoterminal · '), h('a', { href: d.url, target: '_blank', rel: 'noopener' }, 'open the pool on dexscreener ↗')));
       } else {
         clear(chartBody);
         chartMeta.textContent = 'NO POOL';
@@ -1186,7 +1220,7 @@
       await refreshAccount();
     })();
 
-    return () => { mine.retired = true; };
+    return () => { mine.retired = true; if (mine.chart) mine.chart.destroy(); };
   }
 
   // ================================================================== Premium Board
