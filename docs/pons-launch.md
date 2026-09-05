@@ -119,3 +119,41 @@ do, and the things this repository has already built are exactly that.
   factory, since the split is per-config rather than fixed.
 - Whether the escrow's `claimToken` can be called by anyone for the recipient or only by the
   recipient; the vault's claim step depends on it.
+
+## Six more, fresh
+
+**The people's portfolio.** Pair with USDG. Every week stakers vote, stake-weighted and on chain,
+which of the eleven approved stocks the vault buys with the week's fees; the treasury becomes a
+basket the community picked, with burn-to-redeem across it. The templates buy one stock forever.
+This one produces a vote, a result, a buy and an argument every seven days, which is what a
+community actually wants from a treasury.
+
+**The gold coin.** Pair with GLD, which the factory approves and nobody has used. Fees arrive as
+gold, the floor is gold, burn-to-redeem pays gold. Gold bugs and degens have never had a shared
+coin, and "the meme backed by gold" is the oldest pitch in money made literal. SGOV is approved
+too: the same coin with a floor in T-bills is "the boring coin," whose floor is the only one on
+the chain that earns yield while it sits there.
+
+**The gasless coin.** Pair with USDG. The vault pays holders' gas: a weekly rebate in USDG for the
+gas a holder spent on the chain, computed from their receipts, published as a Merkle root anyone
+can recompute, scaled by stake. Gas became real on 29 September for everyone outside
+Robinhood's wallet, and this is the one utility every trader on the chain feels every day.
+
+**The dip coin.** Pair with a stock. The vault holds fees as USDG and buys the stock only when the
+feed shows it down a set percentage from its 20-day high, proven by round IDs a keeper submits
+and the contract checks. "Buys the dip so you don't have to." A rule you can read, applied to the
+one behaviour retail says it wants and never manages.
+
+**Never sold.** Pair with a stock. Fees are distributed in that stock only to wallets that have
+never made an outgoing transfer of the coin, computed from the coin's own transfer events and
+published as a root; one sale and you are off the list forever, publicly. The templates pay by
+balance. This pays by conviction, and the list of the fallen is the content.
+
+**The tournament coin.** Pair with USDG. The week's fees are the prize pool of a stock-picking
+tournament that stakers enter free: pick a lineup on Sunday, settle on Friday's prints, the pool
+pays the top of the table. A skill contest with free entry, which is a better legal shape than a
+lottery, and a scoreboard to post every Friday.
+
+Pairing angles the factory allows and nobody has taken: GLD, SGOV, and TSLA for the obvious
+crowd. GME is approved and should be left alone; a fee-fed treasury in a stock with a few million
+dollars of on-chain float is a weekend squeeze by construction.
