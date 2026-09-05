@@ -378,5 +378,8 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[The dividend leak](docs/dividend-leak.md)**: Robinhood stock tokens pay dividends to whoever holds them on
+  the day of the multiplier update, split across that day's supply, after ~30% withholding. Ford holders got 2%
+  of theirs, UPS holders 20%. `scripts/dividend-leak.js` reproduces it from the public RPC with no dependencies.
 - **[Ideas](docs/robinhood-chain-ideas.md)**: sixteen things to build on Robinhood Chain: seven that fill gaps in the DeFi map and nine that start from
   what the tokens and the audience actually are, ranked against what is deployed as of September 2026.

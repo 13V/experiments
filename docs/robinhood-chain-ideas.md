@@ -453,6 +453,15 @@ The Weekend Exchange if you want a company: it is the one thing only this chain 
 and it turns the weekend from a risk into a venue. Positions or ban if you want something live in
 two weeks that could catch: a lock contract, a feed, and a name everyone already knows.
 
+## The one that is a finding, not an idea
+
+Dividends on these tokens leak: the multiplier is raised on the pay date, not the ex-date, and the
+raise is spread over whatever supply exists that day, after about 30% withholding. Ford's
+record-date holders were paid on 2% of their dividend cash, UPS's on 20%, and SPY's first
+on-chain dividend has a six-week window starting 18 September. The evidence, the formula that
+fits it to three decimals, and the three things to build on it (a tracker, ex-date shorts in
+Locate, and a wrapper that does not leak) are in [`dividend-leak.md`](dividend-leak.md).
+
 ## On tokens
 
 The cleanest utility is when the token is the product: the cover contract, the option, the basket
