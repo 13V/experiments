@@ -887,10 +887,473 @@
         ]);
         usdgBal = bals.usdg; giantBal = bals.giant;
       }
-      withPreservedInputs(container, recomputeLive);
+      recomputeLive();
       if (STATE.addresses.router) { await refreshSteps(); await refreshPosition(); }
     }
     refreshAll();
-    const id = setInterval(refreshAll, REFRESH_MS);
+    const pollId = setInterval(refreshAll, REFRESH_MS);
+    return () => clearInterval(pollId);
+  }
+
+  // ============================================================================ page: the tape
+  function renderTape(view) {
+    view.appendChild(h('div', { class: 'page-head' },
+      h('h1', {}, 'The Tape'),
+      h('p', { class: 'page-lede' }, 'Every market at a glance: rate, utilisation, short interest, and how far spot has drifted from the Prophet.')));
+    if (!STATE.markets || !STATE.markets.length) { view.appendChild(notice('No markets configured.')); return null; }
+
+    const tbody = h('tbody', {});
+    const table = h('table', {},
+      h('thead', {}, h('tr', {},
+        h('th', {}, 'Giant'), h('th', { class: 'num' }, 'Rate (APR)'), h('th', { class: 'num' }, 'Utilisation'),
+        h('th', { class: 'num' }, 'Short interest'), h('th', { class: 'num' }, 'USD'), h('th', { class: 'num' }, 'Cap left'), h('th', {}, 'Spot vs Prophet'))),
+      tbody);
+    view.appendChild(h('div', { class: 'table-wrap' }, table));
+
+    const rows = STATE.markets.map((m) => buildTapeRow(m));
+    rows.forEach((r) => tbody.appendChild(r.el));
+
+    const feedBody = h('div', { class: 'feed' }, notice('Loading…', 'plain'));
+    view.appendChild(h('div', { class: 'card' },
+      h('h3', { class: 'card-title' }, 'The Watchmen'),
+      h('p', { class: 'card-sub' }, 'Liquidations across every listed market, most recent first (best effort — last ~' + LOOKBACK_BLOCKS.toLocaleString('en-US') + ' blocks).'),
+      feedBody));
+
+    async function loadFeed() {
+      const { state, items } = await loadLiquidations();
+      clear(feedBody);
+      if (state === 'unavailable') { feedBody.appendChild(notice('Feed unavailable — the RPC would not serve that log range.', 'warn')); return; }
+      if (state === 'none') { feedBody.appendChild(notice('No markets created yet — nothing for the Watchmen to watch.', 'plain')); return; }
+      if (!items.length) { feedBody.appendChild(notice('No liquidations in the recent window. Quiet on the Tape.', 'plain')); return; }
+      items.slice(0, 25).forEach((it) => {
+        const link = STATE.addresses.explorer ? STATE.addresses.explorer + '/tx/' + it.txHash : null;
+        const main = h('span', { class: 'fi-main' },
+          spanClass(it.symbol, 'mono'), ' — ', M.shortAddr(it.borrower), ' seized ', M.fmtToken(it.seizedAssets, 4),
+          it.badDebtAssets > 0n ? spanClass(' · bad debt ' + M.fmtToken(it.badDebtAssets, 4), 'neg') : null);
+        const meta = link ? h('a', { class: 'fi-meta', href: link, target: '_blank', rel: 'noopener' }, 'block ' + parseInt(it.blockNumber, 16)) : h('span', { class: 'fi-meta' }, 'block ' + parseInt(it.blockNumber, 16));
+        feedBody.appendChild(h('div', { class: 'feed-item' }, main, meta));
+      });
+    }
+    function runAll() { rows.forEach((r) => r.load()); loadFeed(); }
+    runAll();
+    const id = setInterval(runAll, REFRESH_MS);
     return () => clearInterval(id);
   }
+
+  function buildTapeRow(m) {
+    const rateCell = h('td', { class: 'num' }, h('span', { class: 'skel' }));
+    const utilCell = h('td', { class: 'num' }, h('span', { class: 'skel' }));
+    const siCell = h('td', { class: 'num' }, h('span', { class: 'skel' }));
+    const usdCell = h('td', { class: 'num' }, h('span', { class: 'skel' }));
+    const capCell = h('td', { class: 'num' }, h('span', { class: 'skel' }));
+    const lagCell = h('td', {}, M.DASH);
+    const el = h('tr', {}, h('td', { class: 'sym' }, m.symbol, m.hold ? h('span', { class: 'badge badge-hold', style: 'margin-left:6px' }, 'hold') : null), rateCell, utilCell, siCell, usdCell, capCell, lagCell);
+
+    async function load() {
+      if (!m.token) {
+        clear(rateCell); rateCell.appendChild(spanClass('no token yet', 'dim'));
+        [utilCell, siCell, usdCell, capCell].forEach((c) => { clear(c); c.appendChild(spanClass(M.DASH, 'dim')); });
+        clear(lagCell); lagCell.appendChild(spanClass(M.DASH, 'dim'));
+        return;
+      }
+      const vaultAddr = vaultAddrFor(m);
+      const meta = await ensureMeta(m);
+      const [live, vaultData] = await Promise.all([
+        marketReady(m) ? loadMarketLive(m) : Promise.resolve({ price: null, spot: null, utilisation: null, aprFrac: null }),
+        vaultAddr ? multicall([
+          { key: 'totalAssets', to: vaultAddr, sig: 'totalAssets()', types: 'uint256' },
+          { key: 'liquidity', to: vaultAddr, sig: 'liquidity()', types: 'uint256' },
+        ]) : Promise.resolve({ totalAssets: null, liquidity: null }),
+      ]);
+      const shortInterest = (vaultData.totalAssets !== null && vaultData.liquidity !== null && vaultData.totalAssets > vaultData.liquidity) ? vaultData.totalAssets - vaultData.liquidity : (vaultData.totalAssets !== null ? 0n : null);
+      const shortInterestUsd = (shortInterest !== null && live.price !== null) ? M.giantToUsd(shortInterest, live.price) : null;
+
+      clear(rateCell); rateCell.appendChild(marketReady(m) ? spanClass(live.aprFrac !== null ? M.fmtPct(live.aprFrac) : M.DASH, 'mono') : spanClass('not created', 'dim'));
+      clear(utilCell); utilCell.appendChild(spanClass(marketReady(m) && live.utilisation !== null ? M.fmtPct(live.utilisation) : M.DASH, 'mono'));
+      clear(siCell); siCell.appendChild(spanClass(shortInterest !== null ? M.fmtCompactUnits(shortInterest, meta.giantDecimals) + ' ' + m.symbol : M.DASH, 'mono'));
+      clear(usdCell); usdCell.appendChild(spanClass(shortInterestUsd !== null ? M.fmtUsd(shortInterestUsd, true) : M.DASH, 'mono'));
+      clear(capCell); capCell.appendChild(spanClass(vaultData.liquidity !== null ? M.fmtCompactUnits(vaultData.liquidity, meta.giantDecimals) : M.DASH, 'mono'));
+      clear(lagCell); lagCell.appendChild(marketReady(m) ? lagNode(lagFraction(live.price, live.spot)) : spanClass('—', 'dim'));
+    }
+    return { el, load };
+  }
+
+  // ============================================================================ page: manna
+  function renderManna(view) {
+    view.appendChild(h('div', { class: 'page-head' }, h('h1', {}, 'Manna'), h('p', { class: 'page-lede' }, 'What falls each morning, where it comes from, and what is yours to gather.')));
+
+    if (!STATE.addresses.manna) {
+      view.appendChild(notice('The Manna contract is not deployed yet. This page will come alive at the first dawn.', 'warn'));
+      return null;
+    }
+    const manna = STATE.addresses.manna;
+
+    const bigVal = h('div', { class: 'bs-value mono' }, h('span', { class: 'skel' }));
+    const bigSub = h('div', { class: 'bs-sub' });
+    const dawnBtn = h('button', { class: 'btn btn-primary', disabled: true }, 'Call dawn');
+    const countdownCard = h('div', { class: 'card big-stat' }, h('div', { class: 'bs-label' }, 'Next dawn'), bigVal, bigSub, h('div', { class: 'btn-row', style: 'justify-content:center;margin-top:14px' }, dawnBtn));
+    view.appendChild(countdownCard);
+
+    const lastCard = h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'The last dawn'), h('div', { class: 'rows' }, skelRow('Loading')));
+    view.appendChild(lastCard);
+
+    const totalsGrid = h('div', { class: 'stat-grid' });
+    view.appendChild(h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'Totals'), totalsGrid));
+
+    const splitCard = h('div', { class: 'card' }, h('h3', { class: 'card-title' }, "This morning's split"), h('div', {}, h('span', { class: 'skel' })));
+    view.appendChild(splitCard);
+
+    const reserveRows = h('div', { class: 'rows' });
+    view.appendChild(h('div', { class: 'card' }, h('h3', { class: 'card-title' }, "Joseph's Reserve"), reserveRows));
+
+    const youCard = h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'You'));
+    view.appendChild(youCard);
+
+    const restoreCard = h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'Storehouses below high-water'), h('div', {}, h('span', { class: 'skel' })));
+    view.appendChild(restoreCard);
+
+    function tickCountdown() {
+      if (STATE.dawnOpen) {
+        bigVal.textContent = 'now';
+        bigSub.textContent = "Dawn is open — the caller's tip is theirs to take.";
+      } else if (STATE.nextDawnTs !== null) {
+        bigVal.textContent = M.fmtCountdown(STATE.nextDawnTs - M.nowSec());
+        bigSub.textContent = 'at ' + M.fmtDate(STATE.nextDawnTs);
+      } else {
+        bigVal.textContent = M.DASH;
+        bigSub.textContent = '';
+      }
+    }
+    const tickId = setInterval(tickCountdown, 1000);
+    tickCountdown();
+
+    async function loadDawnButton() {
+      const dial = await chainOrNull_dial();
+      const callerPct = dial ? Number(dial[5]) / 100 : null; // callerBps -> percent
+      dawnBtn.title = callerPct !== null ? ('The caller keeps ' + callerPct + '% of the morning’s Manna.') : '';
+      clear(dawnBtn);
+      dawnBtn.appendChild(document.createTextNode('Call dawn' + (callerPct !== null ? ' (keep ' + callerPct + '%)' : '')));
+      dawnBtn.disabled = !STATE.dawnOpen || !STATE.account;
+    }
+    wireAction(dawnBtn, async () => {
+      await sendTx({ to: manna, data: enc('dawn()'), title: 'Call dawn' });
+      refreshCurrentPage();
+    }, 'Calling…');
+
+    async function loadLast() {
+      const { state, dawn, fallen } = await loadLastDawn();
+      const rows = h('div', { class: 'rows' });
+      clear(lastCard); lastCard.appendChild(h('h3', { class: 'card-title' }, 'The last dawn')); lastCard.appendChild(rows);
+      if (state === 'unavailable') { rows.replaceWith(notice('Feed unavailable — the RPC would not serve that log range.', 'warn')); return; }
+      if (state === 'empty' || (!dawn && !fallen)) { rows.replaceWith(notice('No dawn has fallen yet.', 'plain')); return; }
+      if (dawn) {
+        rows.appendChild(rowEl('Day', M.fmtDay(dawn.day)));
+        rows.appendChild(rowEl('Income (USDG)', M.fmtUsdg(dawn.income, 2)));
+        rows.appendChild(rowEl('To treasury / reserve / charity', M.fmtUsdg(dawn.toTreasury, 2) + ' / ' + M.fmtUsdg(dawn.toReserve, 2) + ' / ' + M.fmtUsdg(dawn.toCharity, 2)));
+        rows.appendChild(rowEl('Spent on the buy', M.fmtUsdg(dawn.spent, 2) + ' USDG'));
+      }
+      if (fallen) {
+        rows.appendChild(rowEl('Manna bought', M.fmtToken(fallen.bought, 4)));
+        rows.appendChild(rowEl('Caller tip', M.fmtToken(fallen.tip, 4)));
+        rows.appendChild(rowEl('To stakers / to lenders', M.fmtToken(fallen.toStakers, 4) + ' / ' + M.fmtToken(fallen.toLenders, 4)));
+      }
+    }
+
+    async function loadTotals() {
+      const out = await multicall([
+        { key: 'totalFallen', to: manna, sig: 'totalFallen()', types: 'uint256' },
+        { key: 'totalBurned', to: manna, sig: 'totalBurned()', types: 'uint256' },
+        { key: 'stakedPool', to: manna, sig: 'stakedPool()', types: 'uint256' },
+        { key: 'lenderPool', to: manna, sig: 'lenderPool()', types: 'uint256' },
+      ]);
+      clear(totalsGrid);
+      const tile = (label, val) => h('div', { class: 'stat-tile' }, h('div', { class: 'st-label' }, label), h('div', { class: 'st-value' }, val));
+      totalsGrid.appendChild(tile('Total fallen', out.totalFallen !== null ? M.fmtCompactUnits(out.totalFallen, 18) + ' MANNA' : M.DASH));
+      totalsGrid.appendChild(tile('Total burned', out.totalBurned !== null ? M.fmtCompactUnits(out.totalBurned, 18) + ' MANNA' : M.DASH));
+      totalsGrid.appendChild(tile('Staked pool', out.stakedPool !== null ? M.fmtCompactUnits(out.stakedPool, 18) + ' MANNA' : M.DASH));
+      totalsGrid.appendChild(tile('Lender pool (ungathered)', out.lenderPool !== null ? M.fmtCompactUnits(out.lenderPool, 18) + ' MANNA' : M.DASH));
+    }
+
+    async function loadSplit() {
+      const dial = await chainOrNull_dial();
+      clear(splitCard); splitCard.appendChild(h('h3', { class: 'card-title' }, "This morning's split"));
+      if (!dial) { splitCard.appendChild(notice('Dial not available.')); return; }
+      const [treasuryBps, reserveBps, charityBps, , stakersBps, callerBps] = dial.map((x) => Number(x));
+      const buyBps = 10000 - treasuryBps - reserveBps - charityBps;
+      const incomeBar = h('div', { class: 'split-bar' },
+        h('span', { style: 'width:' + (treasuryBps / 100) + '%;background:#9c8a5e' }),
+        h('span', { style: 'width:' + (reserveBps / 100) + '%;background:#6f8f6a' }),
+        h('span', { style: 'width:' + (charityBps / 100) + '%;background:#6f95c9' }),
+        h('span', { style: 'width:' + (buyBps / 100) + '%;background:var(--gold)' }));
+      splitCard.appendChild(h('p', { class: 'small' }, 'How the morning’s USDG income is split:'));
+      splitCard.appendChild(incomeBar);
+      splitCard.appendChild(h('div', { class: 'split-legend' },
+        h('span', {}, h('span', { class: 'sw', style: 'background:#9c8a5e' }), 'Treasury ' + (treasuryBps / 100) + '%'),
+        h('span', {}, h('span', { class: 'sw', style: 'background:#6f8f6a' }), "Joseph's Reserve " + (reserveBps / 100) + '%'),
+        h('span', {}, h('span', { class: 'sw', style: 'background:#6f95c9' }), 'Charity ' + (charityBps / 100) + '%'),
+        h('span', {}, h('span', { class: 'sw', style: 'background:var(--gold)' }), 'Buys MANNA ' + (buyBps / 100) + '%')));
+
+      // The tip comes off the top of the bought MANNA; stakers/lenders then split what remains.
+      const callerFrac = callerBps / 10000, stakersFracOfRest = stakersBps / 10000;
+      const stakersFrac = (1 - callerFrac) * stakersFracOfRest;
+      const lendersFrac = (1 - callerFrac) * (1 - stakersFracOfRest);
+      const fallBar = h('div', { class: 'split-bar' },
+        h('span', { style: 'width:' + (callerFrac * 100) + '%;background:#c98f4a' }),
+        h('span', { style: 'width:' + (stakersFrac * 100) + '%;background:var(--gold)' }),
+        h('span', { style: 'width:' + (lendersFrac * 100) + '%;background:#6f95c9' }));
+      splitCard.appendChild(h('p', { class: 'small', style: 'margin-top:14px' }, 'How the bought MANNA falls:'));
+      splitCard.appendChild(fallBar);
+      splitCard.appendChild(h('div', { class: 'split-legend' },
+        h('span', {}, h('span', { class: 'sw', style: 'background:#c98f4a' }), "Caller's tip " + M.fmtPct(callerFrac)),
+        h('span', {}, h('span', { class: 'sw', style: 'background:var(--gold)' }), 'Stakers ' + M.fmtPct(stakersFrac)),
+        h('span', {}, h('span', { class: 'sw', style: 'background:#6f95c9' }), 'Storehouse lenders ' + M.fmtPct(lendersFrac))));
+    }
+
+    async function loadReserve() {
+      const out = await multicall([
+        { key: 'reserve', to: manna, sig: 'reserve()', types: 'uint256' },
+        { key: 'target', to: manna, sig: 'reserveTarget()', types: 'uint256' },
+      ]);
+      clear(reserveRows);
+      reserveRows.appendChild(rowEl('Reserve', out.reserve !== null ? M.fmtUsdg(out.reserve, 2) + ' USDG' : M.DASH));
+      reserveRows.appendChild(rowEl('Target (10% of Storehouse value)', out.target !== null ? M.fmtUsdg(out.target, 2) + ' USDG' : M.DASH));
+      if (out.reserve !== null && out.target !== null && out.target > 0n) {
+        const frac = Math.min(1, Number(out.reserve) / Number(out.target));
+        reserveRows.appendChild(h('div', { class: 'meter-row' }, h('div', { class: 'meter' }, h('span', { style: 'width:' + (frac * 100) + '%' })), spanClass(M.fmtPct(frac), 'mono')));
+      }
+    }
+
+    async function loadYou() {
+      clear(youCard); youCard.appendChild(h('h3', { class: 'card-title' }, 'You'));
+      if (!STATE.account) { youCard.appendChild(connectPrompt('Connect wallet')); return; }
+      const out = await multicall([
+        { key: 'stakedOf', to: manna, sig: 'stakedOf(address)', args: [STATE.account], types: 'uint256' },
+        { key: 'stakeShares', to: manna, sig: 'stakeShares(address)', args: [STATE.account], types: 'uint256' },
+        { key: 'autoStake', to: manna, sig: 'autoStake(address)', args: [STATE.account], types: 'bool' },
+        { key: 'mannaBal', to: STATE.addresses.token, sig: 'balanceOf(address)', args: [STATE.account], types: 'uint256' },
+        { key: 'count', to: manna, sig: 'storehouseCount()', types: 'uint256' },
+      ]);
+      const n = out.count !== null ? Number(out.count) : 0;
+      const lenderSpecs = [];
+      for (let i = 0; i < n; i++) lenderSpecs.push({ key: 'v' + i, to: manna, sig: 'storehouseAt(uint256)', args: [i], types: ['address', 'address', 'address', 'bool', 'uint256', 'uint256', 'uint256', 'uint256'] });
+      const vaults = n ? await multicall(lenderSpecs) : {};
+      const gatherSpecs = [];
+      for (let i = 0; i < n; i++) { const v = vaults['v' + i]; if (v) gatherSpecs.push({ key: 'g' + i, to: manna, sig: 'lenderOf(address,address)', args: [v[0], STATE.account], types: ['uint256', 'uint256', 'uint256', 'uint256'] }); }
+      const gathers = n ? await multicall(gatherSpecs) : {};
+      let totalFresh = 0n, totalSpoiled = 0n, any = false;
+      for (let i = 0; i < n; i++) { const g = gathers['g' + i]; if (g) { totalFresh += g[1]; totalSpoiled += g[2]; if (g[1] > 0n || g[2] > 0n) any = true; } }
+
+      const rows = h('div', { class: 'rows' });
+      rows.appendChild(rowEl('Staked', out.stakedOf !== null ? M.fmtToken(out.stakedOf, 4) + ' MANNA' : M.DASH));
+      rows.appendChild(rowEl('Stake shares', out.stakeShares !== null ? M.fmtUnits(out.stakeShares, 18, 4) : M.DASH));
+      rows.appendChild(rowEl('Gatherable now (all Storehouses)', M.fmtToken(totalFresh, 4) + ' MANNA'));
+      rows.appendChild(rowEl('Spoiled at next gather', M.fmtToken(totalSpoiled, 4) + ' MANNA'));
+      youCard.appendChild(rows);
+
+      const gatherAllBtn = h('button', { class: 'btn btn-ghost btn-sm', disabled: !any }, 'Gather all');
+      wireAction(gatherAllBtn, async () => { await sendTx({ to: manna, data: enc('gatherAll()'), title: 'Gather all' }); refreshCurrentPage(); }, 'Gathering…');
+      youCard.appendChild(h('div', { class: 'btn-row', style: 'margin:10px 0' }, gatherAllBtn));
+      youCard.appendChild(autoStakeToggle(out.autoStake));
+      youCard.appendChild(h('div', { class: 'divider' }));
+
+      const stakeF = amountField({ label: 'Stake MANNA', field: 'manna-stake', decimals: 18, getMaxRaw: () => out.mannaBal });
+      const stakeBtn = h('button', { class: 'btn btn-primary btn-sm' }, 'Stake');
+      wireAction(stakeBtn, async () => {
+        const raw = stakeF.raw();
+        if (!raw || raw <= 0n) { stakeF.setHint('Enter an amount.', true); return; }
+        await ensureAllowance(STATE.addresses.token, manna, raw, 'MANNA');
+        await sendTx({ to: manna, data: enc('stake(uint256)', raw), title: 'Stake MANNA' });
+        refreshCurrentPage();
+      }, 'Staking…');
+      stakeF.wrap.appendChild(h('div', { class: 'btn-row' }, stakeBtn));
+      youCard.appendChild(stakeF.wrap);
+
+      const unstakeF = amountField({ label: 'Unstake (shares)', field: 'manna-unstake', decimals: 18, getMaxRaw: () => out.stakeShares });
+      const unstakeBtn = h('button', { class: 'btn btn-ghost btn-sm' }, 'Unstake');
+      wireAction(unstakeBtn, async () => {
+        const raw = unstakeF.raw();
+        if (!raw || raw <= 0n) { unstakeF.setHint('Enter a share amount, or Max.', true); return; }
+        await sendTx({ to: manna, data: enc('unstake(uint256)', raw), title: 'Unstake MANNA' });
+        refreshCurrentPage();
+      }, 'Unstaking…');
+      unstakeF.wrap.appendChild(h('div', { class: 'btn-row' }, unstakeBtn));
+      youCard.appendChild(unstakeF.wrap);
+
+      return { vaults, n };
+    }
+
+    async function loadRestore(youData) {
+      clear(restoreCard); restoreCard.appendChild(h('h3', { class: 'card-title' }, 'Storehouses below high-water'));
+      const n = youData ? youData.n : Number((await chainOrNull(manna, 'storehouseCount()', [], 'uint256')) || 0n);
+      if (!n) { restoreCard.appendChild(notice('No Storehouses registered yet.', 'plain')); return; }
+      const vaults = youData ? youData.vaults : await multicall(Array.from({ length: n }, (_, i) => ({ key: 'v' + i, to: manna, sig: 'storehouseAt(uint256)', args: [i], types: ['address', 'address', 'address', 'bool', 'uint256', 'uint256', 'uint256', 'uint256'] })));
+      let shown = 0;
+      for (let i = 0; i < n; i++) {
+        const v = vaults['v' + i];
+        if (!v) continue;
+        const [vaultAddr, , , , , , highWater] = v;
+        const price24 = safeDecode(await chainCall(vaultAddr, 'convertToAssets(uint256)', [10n ** 24n]), 'uint256');
+        if (price24 === null || highWater === null || price24 >= highWater) continue;
+        shown++;
+        const m = STATE.markets.find((x) => vaultAddrFor(x).toLowerCase() === String(vaultAddr).toLowerCase());
+        const row = h('div', { class: 'row' }, h('span', { class: 'k' }, (m ? m.symbol : M.shortAddr(vaultAddr)) + ' — share price ' + M.fmtUnits(price24, 18, 6) + ' of high-water ' + M.fmtUnits(highWater, 18, 6)));
+        const btn = h('button', { class: 'btn btn-ghost btn-sm' }, 'Restore');
+        wireAction(btn, async () => { await sendTx({ to: manna, data: enc('restore(address)', vaultAddr), title: 'Restore ' + (m ? m.symbol : 'Storehouse') }); refreshCurrentPage(); }, 'Restoring…');
+        row.appendChild(btn);
+        restoreCard.appendChild(row);
+      }
+      if (!shown) restoreCard.appendChild(notice('Every Storehouse is at or above its high-water mark.', 'plain'));
+    }
+
+    async function chainOrNull(to, sig, args, types) { return safeDecode(await chainCall(to, sig, args), types); }
+    async function chainOrNull_dial() {
+      const raw = await chainCall(manna, 'dial()', []);
+      return safeDecode(raw, ['uint16', 'uint16', 'uint16', 'uint16', 'uint16', 'uint16', 'uint16', 'uint16']);
+    }
+
+    async function refreshAll() {
+      const openRaw = await chainOrNull(manna, 'dawnOpen()', [], 'bool');
+      if (openRaw !== null) STATE.dawnOpen = openRaw;
+      await loadDawnButton();
+      await Promise.all([loadLast(), loadTotals(), loadSplit(), loadReserve()]);
+      const youData = await loadYou();
+      await loadRestore(youData);
+    }
+    refreshAll();
+    const pollId = setInterval(refreshAll, REFRESH_MS);
+    return () => { clearInterval(tickId); clearInterval(pollId); };
+  }
+
+  // ============================================================================ page: sunday
+  function renderSunday(view) {
+    view.appendChild(h('div', { class: 'page-head' }, h('h1', {}, 'Sunday'), h('p', { class: 'page-lede' }, 'No parameter changes on the Sabbath. The weekly report, the Jubilee countdown, and the charity ledger.')));
+
+    const manna = STATE.addresses.manna;
+    const jubCard = h('div', { class: 'card big-stat' }, h('div', { class: 'bs-label' }, 'Next Jubilee'), h('div', { class: 'bs-value mono' }, h('span', { class: 'skel' })), h('div', { class: 'bs-sub' }));
+    view.appendChild(jubCard);
+    const bigVal = jubCard.querySelector('.bs-value');
+    const bigSub = jubCard.querySelector('.bs-sub');
+
+    const ledgerRows = h('div', { class: 'rows' });
+    const jubileeBtn = h('button', { class: 'btn btn-primary btn-sm', disabled: true }, 'Call jubilee');
+    view.appendChild(h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'Charity ledger'), ledgerRows, h('div', { class: 'btn-row', style: 'margin-top:10px' }, jubileeBtn)));
+
+    const periodRows = h('div', { class: 'rows' });
+    view.appendChild(h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'This period (since the last Jubilee)' ), periodRows));
+
+    const reportBody = h('div', {}, notice('Loading…', 'plain'));
+    view.appendChild(h('div', { class: 'card' }, h('h3', { class: 'card-title' }, 'Sunday Service — weekly report'), reportBody));
+
+    let nextJubileeDay = null, tickId = null;
+    function tick() {
+      if (nextJubileeDay === null) { bigVal.textContent = M.DASH; return; }
+      const ts = Number(nextJubileeDay) * M.DAY;
+      bigVal.textContent = M.fmtCountdown(ts - M.nowSec());
+      bigSub.textContent = 'on ' + M.fmtDay(nextJubileeDay) + ' (every 7th Sunday)';
+    }
+    tickId = setInterval(tick, 1000);
+
+    async function loadLedger() {
+      if (!manna) {
+        ledgerRows.appendChild(notice('The Manna contract is not deployed yet.', 'warn'));
+        jubileeBtn.remove();
+        return;
+      }
+      const out = await multicall([
+        { key: 'nextJubileeDay', to: manna, sig: 'nextJubileeDay()', types: 'uint256' },
+        { key: 'charityAccrued', to: manna, sig: 'charityAccrued()', types: 'uint256' },
+        { key: 'charity', to: manna, sig: 'charity()', types: 'address' },
+        { key: 'today', to: manna, sig: 'today()', types: 'uint256' },
+        { key: 'periodFallen', to: manna, sig: 'periodFallen()', types: 'uint256' },
+        { key: 'periodGathered', to: manna, sig: 'periodGathered()', types: 'uint256' },
+        { key: 'periodSpoiled', to: manna, sig: 'periodSpoiled()', types: 'uint256' },
+      ]);
+      nextJubileeDay = out.nextJubileeDay;
+      tick();
+      clear(ledgerRows);
+      ledgerRows.appendChild(rowEl('Charity address', explorerAddrLink(out.charity)));
+      ledgerRows.appendChild(rowEl('Charity accrued', out.charityAccrued !== null ? M.fmtUsdg(out.charityAccrued, 2) + ' USDG' : M.DASH));
+
+      clear(periodRows);
+      periodRows.appendChild(rowEl('Manna fallen', out.periodFallen !== null ? M.fmtToken(out.periodFallen, 4) : M.DASH));
+      periodRows.appendChild(rowEl('Manna gathered', out.periodGathered !== null ? M.fmtToken(out.periodGathered, 4) : M.DASH));
+      periodRows.appendChild(rowEl('Manna spoiled (burned)', out.periodSpoiled !== null ? M.fmtToken(out.periodSpoiled, 4) : M.DASH));
+
+      const ready = out.today !== null && nextJubileeDay !== null && out.today >= nextJubileeDay;
+      jubileeBtn.disabled = !ready;
+      jubileeBtn.title = ready ? '' : 'Not yet — the Jubilee falls every 7th Sunday.';
+    }
+    wireAction(jubileeBtn, async () => { await sendTx({ to: manna, data: enc('jubilee()'), title: 'Call jubilee' }); refreshCurrentPage(); }, 'Calling…');
+
+    async function loadReport() {
+      clear(reportBody);
+      let json = null;
+      try {
+        const res = await fetch('./data/sunday.json', { cache: 'no-store' });
+        if (res.ok) json = await res.json();
+      } catch { /* no report yet */ }
+      if (!json) { reportBody.appendChild(notice('No report yet. Check back after the first Sunday Service.', 'plain')); return; }
+
+      reportBody.appendChild(h('p', { class: 'small' },
+        'Generated ' + (json.generatedAt ? new Date(json.generatedAt).toUTCString() : M.DASH)
+        + (json.week ? ' — week of ' + new Date(json.week.from).toUTCString().slice(0, 16) + ' to ' + new Date(json.week.to).toUTCString().slice(0, 16) : '')));
+
+      if (Array.isArray(json.markets) && json.markets.length) {
+        const tbody = h('tbody', {});
+        json.markets.forEach((row) => tbody.appendChild(h('tr', {},
+          h('td', { class: 'sym' }, row.symbol || M.DASH),
+          h('td', { class: 'num mono' }, M.fmtPct(row.rateApr)),
+          h('td', { class: 'num mono' }, M.fmtPct(row.utilisation)),
+          h('td', { class: 'num mono' }, M.fmtUsd(row.shortInterestUsd, true)),
+          h('td', { class: 'num mono' }, M.fmtUsd(row.capUsd, true)))));
+        reportBody.appendChild(h('div', { class: 'table-wrap' }, h('table', {},
+          h('thead', {}, h('tr', {}, h('th', {}, 'Giant'), h('th', { class: 'num' }, 'Rate'), h('th', { class: 'num' }, 'Util.'), h('th', { class: 'num' }, 'Short interest'), h('th', { class: 'num' }, 'Cap'))),
+          tbody)));
+      }
+      if (json.manna) {
+        const mn = json.manna;
+        const rows = h('div', { class: 'rows', style: 'margin-top:14px' });
+        rows.appendChild(rowEl('Fallen / gathered / spoiled', [mn.fallen, mn.gathered, mn.spoiled].map((v) => M.fmtNum(v, 2)).join(' / ')));
+        rows.appendChild(rowEl('Reserve', M.fmtUsd(mn.reserve, true)));
+        rows.appendChild(rowEl('Charity accrued', M.fmtUsd(mn.charityAccrued, true)));
+        rows.appendChild(rowEl('Staked pool', M.fmtNum(mn.stakedPool, 2)));
+        reportBody.appendChild(rows);
+      }
+      if (Array.isArray(json.notes) && json.notes.length) {
+        const ul = h('ul', { style: 'margin:12px 0 0;padding-left:20px;color:var(--text-dim);font-size:.85rem' });
+        json.notes.forEach((n) => ul.appendChild(h('li', {}, String(n))));
+        reportBody.appendChild(ul);
+      }
+    }
+
+    loadLedger();
+    loadReport();
+    const pollId = setInterval(loadLedger, REFRESH_MS);
+    return () => { clearInterval(tickId); clearInterval(pollId); };
+  }
+
+  // ============================================================================ boot
+  async function boot() {
+    try {
+      const [addresses, markets] = await Promise.all([
+        fetch('./config/addresses.json', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('./config/markets.json', { cache: 'no-store' }).then((r) => r.json()),
+      ]);
+      STATE.addresses = addresses;
+      STATE.markets = markets;
+    } catch (e) {
+      const view = document.getElementById('view');
+      if (view) { clear(view); view.appendChild(notice('Could not load configuration. Serve this directory over HTTP (e.g. python3 -m http.server) rather than opening index.html directly.', 'error')); }
+      console.error(e);
+      return;
+    }
+    STATE.rpc = M.makeRpc(STATE.addresses.rpc);
+    initMasthead();
+    wireWalletEvents();
+    window.addEventListener('hashchange', navigate);
+    navigate();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
