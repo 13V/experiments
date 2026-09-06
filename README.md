@@ -378,6 +378,9 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[What people need, under the Pons V2 constraint](docs/needs.md)**: the chain's needs ranked by evidence
+  (63% of wallets down, gas at twenty times the floor with the subsidy ending 29 September, no way to short, no
+  yield layer, weekend quotes), and which of them a Pons launch can actually own.
 - **[A memecoin on Pons V2, with a job](docs/pons-launch.md)**: the coin is a plain Pons token, so the utility
   lives in the contract that receives its fees. The V2 rules verified on chain, what is already table stakes,
   and five designs the templates cannot do, led by a vault that rips Stonk Packs for stakers every Friday.
