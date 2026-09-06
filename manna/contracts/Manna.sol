@@ -50,6 +50,8 @@ contract Manna {
     error NotJubileeYet();
     error NoCharity();
     error NoSeller();
+    error RestoreCooldown();
+    error AccumulatorOverflow();
 
     event Dawn(
         uint256 indexed day,
@@ -84,6 +86,7 @@ contract Manna {
     );
     event StorehouseAdded(address indexed vault, address indexed asset, address indexed oracle);
     event StorehouseActiveSet(address indexed vault, bool active);
+    event StorehouseOracleSet(address indexed vault, address indexed oracle);
     event TokenSet(address indexed token, uint256 nextJubileeDay);
     event DialSet(Dial dial, uint256 maxBuy);
     event AddressesSet(address treasury, address charity, address buyer, address seller, address escrow);
@@ -131,6 +134,7 @@ contract Manna {
         uint256 totalStaked; // vault shares staked by lenders through this contract
         uint256 accPerShare; // Manna per staked share, scaled by ACC, cumulative
         uint256 highWater; // highest vault share price seen, for Joseph's Reserve
+        uint256 lastRestoreDay; // restore() runs at most once a day per Storehouse
         Checkpoint[] checkpoints; // accPerShare after each dawn that fed this Storehouse
     }
 
@@ -332,6 +336,14 @@ contract Manna {
         emit StorehouseAdded(vault, asset, oracle);
     }
 
+    /// @notice Replaces the Prophet a Storehouse is valued by (weights, the Reserve target, sale bounds). The
+    /// Morpho market's own oracle is immutable; this only changes how Manna reads the Giant's price.
+    function setStorehouseOracle(address vault, address oracle) external onlyOwner notSunday {
+        if (oracle == address(0)) revert ZeroAddress();
+        _storehouses[_index(vault)].oracle = IOracle(oracle);
+        emit StorehouseOracleSet(vault, oracle);
+    }
+
     /// @notice An inactive Storehouse takes no new lenders and receives no Manna; lenders can still leave.
     function setStorehouseActive(address vault, bool active) external onlyOwner notSunday {
         _storehouses[_index(vault)].active = active;
@@ -402,10 +414,16 @@ contract Manna {
         reserve += v.toReserve;
         charityAccrued += v.toCharity;
 
-        // 4. The buy.
+        // 4. The buy, capped by the dial and by the venue's depth (see IBuyer.maxSpend).
         v.spend = v.budget > maxBuy ? maxBuy : v.budget;
         if (v.spend > 0 && address(buyer) != address(0)) {
-            (v.spent, v.bought) = _buy(v.spend, d.buySlippageBps);
+            uint256 cap = 0;
+            try buyer.maxSpend() returns (uint256 m) {
+                cap = m;
+            } catch {}
+            if (cap < v.spend) v.spend = cap;
+            if (v.spend > 0) (v.spent, v.bought) = _buy(v.spend, d.buySlippageBps);
+            else emit BuyFailed(0);
         }
         carry = v.budget - v.spent;
 
@@ -527,6 +545,7 @@ contract Manna {
             if (portion == 0) continue;
             Storehouse storage s = _storehouses[i];
             s.accPerShare += FullMath.mulDiv(portion, ACC, s.totalStaked);
+            if (s.accPerShare > type(uint192).max) revert AccumulatorOverflow();
             s.checkpoints.push(Checkpoint(uint64(day), uint192(s.accPerShare)));
             lenderPool += portion;
             left -= portion;
@@ -682,19 +701,25 @@ contract Manna {
     // ---------------------------------------------------------------------------------------------------
 
     /// @notice If a Storehouse's share price sits below its high-water mark (bad debt in its market), buys the
-    /// Giant with the Reserve and gives it to the vault, making the lenders whole up to what the Reserve holds.
+    /// Giant with the Reserve and gives it to the vault, making the lenders whole up to the Storehouse's share
+    /// of the Reserve (its share of the Storehouses' value), once a day, so one market cannot drain the
+    /// backstop the others funded in a single call.
     function restore(address vault) external nonReentrant returns (uint256 usdgSpent, uint256 donated) {
         uint256 i = _index(vault);
         Storehouse storage s = _storehouses[i];
         if (address(seller) == address(0)) revert NoSeller();
+        uint256 d = today();
+        if (s.lastRestoreDay >= d) revert RestoreCooldown();
         uint256 sp = _sharePrice(s.vault);
         if (sp >= s.highWater || reserve == 0) revert NothingToRestore();
         uint256 unit = 10 ** s.vault.decimals();
         uint256 deficit = FullMath.mulDiv(s.highWater - sp, s.vault.totalSupply(), unit);
         uint256 p = s.oracle.price();
         uint256 needed = FullMath.mulDiv(deficit, ORACLE_SCALE, p);
-        usdgSpent = needed > reserve ? reserve : needed;
+        usdgSpent = restoreCap(i);
+        if (needed < usdgSpent) usdgSpent = needed;
         if (usdgSpent == 0) revert NothingToRestore();
+        s.lastRestoreDay = d;
         reserve -= usdgSpent;
         uint256 expected = FullMath.mulDiv(usdgSpent, p, ORACLE_SCALE);
         uint256 minOut = (expected * (BPS - dial.sellSlippageBps)) / BPS;
@@ -817,6 +842,16 @@ contract Manna {
 
     function reserveTarget() public view returns (uint256) {
         return (storehouseValueUsd() * dial.reserveTargetBps) / BPS;
+    }
+
+    /// @notice The most one restore() may spend on Storehouse `i` today: the Reserve times the Storehouse's
+    /// share of the Storehouses' value (all of it when nothing can be valued).
+    function restoreCap(uint256 i) public view returns (uint256) {
+        uint256 total = storehouseValueUsd();
+        if (total == 0) return reserve;
+        Storehouse storage s = _storehouses[i];
+        uint256 mine = _usdgFor(s.oracle, s.vault.totalAssets(), 0);
+        return FullMath.mulDiv(reserve, mine, total);
     }
 
     // ---------------------------------------------------------------------------------------------------

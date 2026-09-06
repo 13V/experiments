@@ -17,6 +17,7 @@ contract UniswapV3Swapper is ISeller, IUniswapV3SwapCallback {
     error BadCallback();
     error Slippage();
     error TransferFailed();
+    error Reentrancy();
 
     event RouteSet(address indexed token, address indexed pool, bool tokenIsToken0);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -40,10 +41,18 @@ contract UniswapV3Swapper is ISeller, IUniswapV3SwapCallback {
     mapping(address token => Route) public routes;
     /// @dev The one pool allowed to call `uniswapV3SwapCallback` right now; zero outside a swap.
     address private _activePool;
+    uint256 private _lock = 1;
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
         _;
+    }
+
+    modifier nonReentrant() {
+        if (_lock != 1) revert Reentrancy();
+        _lock = 2;
+        _;
+        _lock = 1;
     }
 
     constructor(address weth_, address usdg_, address quotePool_, address owner_) {
@@ -89,7 +98,7 @@ contract UniswapV3Swapper is ISeller, IUniswapV3SwapCallback {
     }
 
     /// @inheritdoc ISeller
-    function sell(address token, uint256 amountIn, uint256 minOut, address to) external returns (uint256 out) {
+    function sell(address token, uint256 amountIn, uint256 minOut, address to) external nonReentrant returns (uint256 out) {
         Route memory r = routes[token];
         if (address(r.pool) == address(0)) revert NoRoute();
         _pull(token, msg.sender, amountIn);
@@ -99,7 +108,7 @@ contract UniswapV3Swapper is ISeller, IUniswapV3SwapCallback {
     }
 
     /// @inheritdoc ISeller
-    function buyToken(address token, uint256 usdgIn, uint256 minOut, address to) external returns (uint256 out) {
+    function buyToken(address token, uint256 usdgIn, uint256 minOut, address to) external nonReentrant returns (uint256 out) {
         Route memory r = routes[token];
         if (address(r.pool) == address(0)) revert NoRoute();
         _pull(usdg, msg.sender, usdgIn);

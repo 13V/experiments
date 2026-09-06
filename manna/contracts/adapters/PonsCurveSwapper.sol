@@ -13,6 +13,10 @@ contract PonsCurveSwapper is IBuyer {
     error ZeroAddress();
     error TransferFailed();
 
+    /// @notice One buy may spend 1% of the curve's quote reserve (phantom included): about a 1% move on the
+    /// constant-product curve, under the 2 x 1% fee a round trip through the curve pays.
+    uint256 public constant IMPACT_CAP_BPS = 100;
+
     IPonsV2BondingCurve public immutable curve;
     address public immutable usdg;
     address public immutable token;
@@ -32,6 +36,13 @@ contract PonsCurveSwapper is IBuyer {
         uint256 net = (amountIn * (10000 - feeBps)) / 10000;
         if (q + net == 0) return 0;
         out = (t * net) / (q + net);
+    }
+
+    /// @inheritdoc IBuyer
+    function maxSpend() external view returns (uint256) {
+        if (curve.graduated()) return 0;
+        (uint256 q,) = curve.getReserves();
+        return (q * IMPACT_CAP_BPS) / 10000;
     }
 
     /// @inheritdoc IBuyer

@@ -117,6 +117,7 @@ function setAddresses(address treasury_, address charity_, address buyer_, addre
 function setDial(Dial calldata d, uint256 maxBuy_) external; // onlyOwner, notSunday; BadDial() past the bounds in §4
 function addStorehouse(address vault, address oracle) external; // onlyOwner, notSunday; StorehouseExists() if already added; NotFeeRecipient() unless vault.feeRecipient()==this
 function setStorehouseActive(address vault, bool active) external; // onlyOwner, notSunday
+function setStorehouseOracle(address vault, address oracle) external; // onlyOwner, notSunday; ZeroAddress(); only how Manna values the Giant, never the Morpho market's oracle
 function releaseReserve(uint256 amount) external;           // onlyOwner, notSunday; clamps to reserve, never reverts
 
 function dawn() external;                                   // anyone; TokenNotSet()/Sabbath()/AlreadyFell()/NotYetDawn(); see §4
@@ -131,7 +132,8 @@ function unstake(uint256 shares) external returns (uint256 amount); // Insuffici
 function stakedOf(address user) external view returns (uint256);
 function skim() external;                                    // TokenNotSet(); no-op unless there's an untracked surplus and totalStakeShares > 0
 
-function restore(address vault) external returns (uint256 usdgSpent, uint256 donated); // NoSeller(); NothingToRestore() unless sharePrice < highWater and reserve > 0
+function restore(address vault) external returns (uint256 usdgSpent, uint256 donated); // NoSeller(); RestoreCooldown() twice in a day; NothingToRestore() unless sharePrice < highWater and reserve > 0
+function restoreCap(uint256 i) external view returns (uint256); // reserve × this Storehouse's value / all Storehouses' value (all of the reserve when nothing can be valued)
 function jubilee() external;                                  // TokenNotSet(); NotJubileeYet(); NoCharity()
 
 function storehouseCount() external view returns (uint256);
@@ -152,7 +154,8 @@ aren't: `Reentrancy()` (any guarded function, §3 intro) and `TransferFailed()` 
 token call that fails or returns `false`). The full set of 21: `NotOwner ZeroAddress ZeroAmount
 Reentrancy TransferFailed Sabbath NotYetDawn AlreadyFell TokenNotSet TokenAlreadySet
 UnknownStorehouse StorehouseExists StorehouseInactive NotFeeRecipient BadDial
-InsufficientShares InsufficientStake NothingToRestore NotJubileeYet NoCharity NoSeller`.
+InsufficientShares InsufficientStake NothingToRestore NotJubileeYet NoCharity NoSeller RestoreCooldown
+AccumulatorOverflow`.
 
 **Events**
 
@@ -206,7 +209,7 @@ approves exactly the amount of one call before invoking either and verifies deli
 never by return value (§11):
 
 ```solidity
-interface IBuyer  { function buy(uint256 amountIn, uint256 minOut, address to) external returns (uint256 out); function quoteBuy(uint256 amountIn) external view returns (uint256 out); }
+interface IBuyer  { function buy(uint256 amountIn, uint256 minOut, address to) external returns (uint256 out); function quoteBuy(uint256 amountIn) external view returns (uint256 out); function maxSpend() external view returns (uint256); }
 interface ISeller { function sell(address token, uint256 amountIn, uint256 minOut, address to) external returns (uint256 out); function buyToken(address token, uint256 usdgIn, uint256 minOut, address to) external returns (uint256 out); }
 ```
 
@@ -222,8 +225,12 @@ function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes c
 `UniswapV4Swapper` (`IBuyer` — buys MANNA in its graduated pool):
 ```solidity
 constructor(address poolManager_, address usdg_, address token_, address owner_);
-function setPoolKey(uint24 fee, int24 tickSpacing, address hooks) external; // onlyOwner; currencies derived from usdg/token, sorted
-function quoteBuy(uint256 amountIn) external view returns (uint256 out); // reads sqrtPriceX96 from PoolManager storage via extsload; 0 if unset
+function setPoolKey(uint24 fee, int24 tickSpacing, address hooks, uint16 feeBps) external; // onlyOwner; currencies derived from usdg/token, sorted; feeBps = hook fee + creator tax, BadFee() if >= 100%
+function setImpactCap(uint16 bps) external;                  // onlyOwner; 1..1000 bps of the pool's USDG depth per buy; default 100
+function liquidity() external view returns (uint128);       // the pool's active liquidity, read through extsload (StateLibrary's slot + 3)
+function usdgDepth() external view returns (uint256);       // USDG the active liquidity holds at the current price, for a full-range position
+function maxSpend() external view returns (uint256);        // usdgDepth × impactCapBps / 10000
+function quoteBuy(uint256 amountIn) external view returns (uint256 out); // sqrtPriceX96 via extsload, net of feeBps; 0 if unset
 function buy(uint256 amountIn, uint256 minOut, address to) external returns (uint256 out); // Reentrancy(); PoolNotSet(); unlock -> swap -> sync/settle -> take; refunds input left unspent at a price-limit stop
 function unlockCallback(bytes calldata data) external returns (bytes memory); // NotPoolManager() unless msg.sender == poolManager
 ```
@@ -231,7 +238,8 @@ function unlockCallback(bytes calldata data) external returns (bytes memory); //
 `PonsCurveSwapper` (`IBuyer` — buys MANNA on its bonding curve, pre-graduation):
 ```solidity
 constructor(address curve_, address usdg_, address token_);
-function quoteBuy(uint256 amountIn) external view returns (uint256 out); // 0 once curve.graduated()
+function quoteBuy(uint256 amountIn) external view returns (uint256 out); // constant product on getReserves() after the curve's fee and creator tax; 0 once curve.graduated()
+function maxSpend() external view returns (uint256);        // 1% of the curve's quote reserve (phantom included); 0 once graduated
 function buy(uint256 amountIn, uint256 minOut, address to) external returns (uint256 out); // refunds any USDG the curve's own allocation clamp returns
 ```
 
@@ -281,11 +289,16 @@ point); `openShort`/`closeShort`/`addCollateral`/`repay` are exactly as specifie
    `reserve + toReserve` never exceeds `reserveTarget()`; `toCharity = income × charityBps / BPS`.
    `budget = income − toTreasury − toReserve − toCharity + carry`. Treasury is paid immediately;
    `reserve`/`charityAccrued` accumulate in place.
-5. **Buy.** `spend = min(budget, maxBuy)`. If `spend > 0` and a buyer is set: `quote =
-   buyer.quoteBuy(spend)`; `minOut = quote × (1 − buySlippageBps)` (5% default); approve exactly
+5. **Buy.** `spend = min(budget, maxBuy, buyer.maxSpend())`. The venue's cap is the defence against
+   sandwiching, not the quote: each buy may move the pool by at most about twice `impactCapBps`
+   (1% of the pool's USDG depth by default, so a move of about 2%), which is less than the 2 ×
+   (hook fee + creator tax) a sandwich pays for its round trip, so however the attacker sets the
+   spot price first, the round trip loses. If `spend > 0` and a buyer is set: `quote =
+   buyer.quoteBuy(spend)` (net of the venue's fees); `minOut = quote × (1 − buySlippageBps)` (5%
+   default), a guard against a broken adapter rather than a manipulated price; approve exactly
    `spend`; on success, `spent`/`bought` are read back from balance deltas, never the return
-   value; a zero quote or any revert emits `BuyFailed` with `spent = bought = 0`. `carry = budget
-   − spent` (a full failure carries the whole budget to tomorrow).
+   value; a zero quote, a zero cap or any revert emits `BuyFailed` with `spent = bought = 0`.
+   `carry = budget − spent` (a full failure carries the whole budget to tomorrow).
 6. **Fall**, only if `bought > 0`:
    - `tip = bought × callerBps / BPS` (0.5% default) to `msg.sender`; `rest = bought − tip`.
    - `toStakers = rest × stakersBps / BPS` (70% default); `toLenders = rest − toStakers`.
@@ -373,12 +386,12 @@ ever observed — ratcheted upward at the end of every `_harvest` (§4 step 3), 
 share price at the moment the Storehouse was added. A liquidation that writes off bad debt lowers
 the actual share price below `highWater` without moving `highWater` itself.
 
-`restore(vault)`, callable by anyone:
+`restore(vault)`, callable by anyone, at most once a day per Storehouse (`RestoreCooldown()`):
 ```
 sp = sharePrice(vault); NothingToRestore() unless sp < highWater && reserve > 0
 deficit   = (highWater − sp) × totalSupply(vault) / 10**vault.decimals()   // Giant units short, across every outstanding share
 needed    = deficit × 1e36 / oracle.price()                                // priced into USDG (Morpho's 1e36 convention, §10)
-usdgSpent = min(needed, reserve); reserve -= usdgSpent
+usdgSpent = min(needed, restoreCap(i)); reserve -= usdgSpent   // restoreCap = reserve × this Storehouse's value / all Storehouses' value
 expected  = usdgSpent × oracle.price() / 1e36
 minOut    = expected × (1 − sellSlippageBps)
 donated   = seller.buyToken(asset, usdgSpent, minOut, this), clamped to what Manna actually received
@@ -388,9 +401,11 @@ The donated Giant lands as the vault's idle balance, raising `totalAssets()` exa
 would — the vault cannot tell a Reserve donation from a morning's borrow interest, so its next
 `accrue()` mints 10% of the increase as fresh fee shares to Manna. **A Reserve payout is partially
 recycled back through the tithe on its very next dawn.** `restore()` never spends more than the
-Reserve currently holds; a deficit larger than that is left on the Storehouse's own share price,
-permanently, for its lenders to carry — exactly what `docs/borrow-the-meme.md` warned would
-sometimes happen.
+Storehouse's share of the Reserve in a day (its share of the Storehouses' value, so one market,
+or one large lender who is also its liquidated borrower, cannot drain the backstop the others
+funded in a single call); a deficit larger than that waits for tomorrow's cap or is left on the
+Storehouse's own share price, permanently, for its lenders to carry — exactly what
+`docs/borrow-the-meme.md` warned would sometimes happen.
 
 ## 8. Jubilee
 
@@ -467,7 +482,8 @@ treats every adapter as untrusted in three ways:
   Storehouse from being processed.
 
 A malicious or broken adapter can therefore misroute or waste at most one call's worth of value
-that day (bounded above by `maxBuy` for the buyer, by one Storehouse's tithe sale for the seller);
+that day (bounded above by `min(maxBuy, maxSpend)` for the buyer, by one Storehouse's tithe sale
+for the seller);
 it is never given any access to lenders' staked vault shares, stakers' `stakedPool`, or any
 balance beyond the single approval for that call.
 

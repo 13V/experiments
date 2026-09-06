@@ -112,12 +112,13 @@ contract MockPoolManager {
     int256 private _owed; // positive: locker owes the manager
     address private _owedCurrency;
 
-    function setSqrtPrice(PoolKey calldata key, uint160 sqrtPriceX96, int24 tick) external {
+    function setSqrtPrice(PoolKey calldata key, uint160 sqrtPriceX96, int24 tick, uint128 liquidity) external {
         bytes32 id = keccak256(abi.encode(key));
         sqrtPrices[id] = sqrtPriceX96;
         bytes32 slot = keccak256(abi.encodePacked(id, bytes32(uint256(6))));
         uint256 packed = uint256(sqrtPriceX96) | (uint256(uint24(tick)) << 160);
         _slots[slot] = bytes32(packed);
+        _slots[bytes32(uint256(slot) + 3)] = bytes32(uint256(liquidity));
     }
 
     function setFeeBps(uint24 bps) external {
@@ -245,6 +246,10 @@ contract MockCurve {
 contract MockFailingBuyer is IBuyer {
     function quoteBuy(uint256 amountIn) external pure returns (uint256) {
         return amountIn;
+    }
+
+    function maxSpend() external pure returns (uint256) {
+        return type(uint256).max;
     }
 
     function buy(uint256, uint256, address) external pure returns (uint256) {

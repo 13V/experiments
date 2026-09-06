@@ -7,7 +7,12 @@ pragma solidity ^0.8.24;
 /// balance, never by the return value.
 interface IBuyer {
     function buy(uint256 amountIn, uint256 minOut, address to) external returns (uint256 out);
+    /// @notice Coin expected for `amountIn` USDG at the venue's current price, net of the venue's fees.
     function quoteBuy(uint256 amountIn) external view returns (uint256 out);
+    /// @notice The most USDG one buy may spend today: a small share of the venue's USDG depth, so that the
+    /// buy's own price impact stays below what a sandwich would pay in the venue's fees. Zero means the
+    /// venue cannot take a buy right now.
+    function maxSpend() external view returns (uint256);
 }
 
 /// @notice Sells a Giant (a meme token) for USDG, and the reverse for Joseph's Reserve. Same pull-on-approval

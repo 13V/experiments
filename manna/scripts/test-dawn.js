@@ -70,6 +70,11 @@ async function run(w, h) {
   const staked1 = await sh(1);
   const curveQ0 = await viewBig(curve, 'quoteReserve()');
   const curveT0 = await viewBig(curve, 'tokenReserve()');
+  const curveCap = await viewBig(curveBuyer, 'maxSpend()'); // 1% of the curve's quote reserve, read before the buy moves it
+  const minCap = (b, cap) => {
+    const m = b < 5_000n * USDG_UNIT ? b : 5_000n * USDG_UNIT;
+    return m < cap ? m : cap;
+  };
 
   let r = await send(CALLER, mannaC, 'dawn()');
   check('dawn() succeeds for any caller', !r.reverted, revertName(r));
@@ -94,7 +99,8 @@ async function run(w, h) {
   check(`Joseph's Reserve took 10% of income (below its target of ${target})`, e.toReserve === (income * 1000n) / BPS && e.toReserve < target && (await viewBig(mannaC, 'reserve()')) === e.toReserve);
   check('the charity slice took 5% and is held', e.toCharity === (income * 500n) / BPS && (await viewBig(mannaC, 'charityAccrued()')) === e.toCharity);
   const budget = income - e.toTreasury - e.toReserve - e.toCharity;
-  check(`the buy was capped at maxBuy (5,000 USDG) and the rest carried (${budget - e.spent})`, e.spent === 5_000n * USDG_UNIT && (await viewBig(mannaC, 'carry()')) === budget - e.spent);
+  check(`the curve adapter caps a buy at 1% of the quote reserve (${curveCap} = 500 USDG)`, curveCap === 500n * USDG_UNIT);
+  check(`the buy was capped at min(maxBuy, the venue's cap) and the rest carried (${budget - e.spent})`, e.spent === minCap(budget, curveCap) && (await viewBig(mannaC, 'carry()')) === budget - e.spent, `${e.spent} vs ${minCap(budget, curveCap)}`);
   const net = (e.spent * 9800n) / BPS;
   const expectedOut = (curveT0 * net) / (curveQ0 + net);
   check('bought == the curve\'s constant-product output after its 2% fee', e.bought === expectedOut, `${e.bought} vs ${expectedOut}`);
@@ -155,12 +161,16 @@ async function run(w, h) {
   setTime(noonOf(D0 + 1n));
   check('dawnOpen() at noon', (await viewBig(mannaC, 'dawnOpen()')) === 1n);
   const carryBefore = await viewBig(mannaC, 'carry()');
+  const capTue = await viewBig(curveBuyer, 'maxSpend()');
   r = await send(STRANGER, mannaC, 'dawn()');
   check('Tuesday noon: dawn succeeds', !r.reverted, revertName(r));
   e = dawnLogs(r);
   recordFell(D0 + 1n, e.fell);
   check('Tuesday income is one day of tithe only (no escrow credit)', e.claimed.length === 0 && e.income > 0n && e.income < 10n * USDG_UNIT, `${e.income}`);
-  check('Tuesday spent the carried budget (carry shrank)', e.spent > carryBefore && (await viewBig(mannaC, 'carry()')) === 0n, `${e.spent} vs carry ${carryBefore}`);
+  {
+    const budgetT = e.income - e.toTreasury - e.toReserve - e.toCharity + carryBefore;
+    check('Tuesday spent min(budget, maxBuy, venue cap) of the carried budget and carried the rest', e.spent === minCap(budgetT, capTue) && (await viewBig(mannaC, 'carry()')) === budgetT - e.spent, `${e.spent} vs ${minCap(budgetT, capTue)}`);
+  }
   check('nextDawn() now == Wednesday noon; the caller was tipped', (await viewBig(mannaC, 'nextDawn()')) === noonOf(D0 + 2n) && (await bal(manna, STRANGER)) === e.tip);
   await invariants('after Tuesday');
 
@@ -294,18 +304,27 @@ async function run(w, h) {
   const pm = await deploy(ART.MockPoolManager, [], []);
   const v4 = await deploy(ART.V4Swapper, ['address', 'address', 'address', 'address'], [pm, usdg, manna, OWNER]);
   const HOOK_ADDR = '0x' + 'e5'.repeat(20);
-  await send(OWNER, v4, 'setPoolKey(uint24,int24,address)', 0n, 200n, HOOK_ADDR);
+  await send(OWNER, v4, 'setPoolKey(uint24,int24,address,uint16)', 0n, 200n, HOOK_ADDR, 200n);
+  check('setPoolKey records the hook fee + creator tax (2%)', (await viewBig(v4, 'feeBps()')) === 200n);
   const usdgIs0 = (await viewBig(v4, 'usdgIsCurrency0()')) === 1n;
   check(`v4 pool key sorted (USDG is currency${usdgIs0 ? 0 : 1})`, usdgIs0 === (BigInt(usdg) < BigInt(manna)));
   // 1 USDG (1e6 raw) buys 2,000 MANNA (2e21 raw).
   const Q192 = 1n << 192n;
   const sqrtP = usdgIs0 ? isqrt((2n * 10n ** 21n * Q192) / 10n ** 6n) : isqrt((10n ** 6n * Q192) / (2n * 10n ** 21n));
   const keyTuple = usdgIs0 ? [usdg, manna, 0n, 200n, HOOK_ADDR] : [manna, usdg, 0n, 200n, HOOK_ADDR];
-  await send(OWNER, pm, 'setSqrtPrice((address,address,uint24,int24,address),uint160,int24)', keyTuple, sqrtP, 0n);
+  // Liquidity such that the pool holds about 1,000,000 USDG at this price (a full-range position).
+  const Q96 = 1n << 96n;
+  const depthWanted = 1_000_000n * USDG_UNIT;
+  const liqBig = usdgIs0 ? (depthWanted * sqrtP) / Q96 : (depthWanted * Q96) / sqrtP;
+  await send(OWNER, pm, 'setSqrtPrice((address,address,uint24,int24,address),uint160,int24,uint128)', keyTuple, sqrtP, 0n, liqBig);
   await mint(manna, pm, 10_000_000_000n * TOKEN_UNIT);
   check('sqrtPriceX96() reads the slot0 word through extsload', (await viewBig(v4, 'sqrtPriceX96()')) === sqrtP);
+  check('liquidity() reads the pool liquidity word', (await viewBig(v4, 'liquidity()')) === liqBig);
+  const depth = await viewBig(v4, 'usdgDepth()');
+  check(`usdgDepth() ≈ 1,000,000 USDG (${depth})`, relErr(depth, depthWanted) < 1e-6);
+  check('maxSpend() == 1% of the depth', (await viewBig(v4, 'maxSpend()')) === depth / 100n);
   const q = await viewBig(v4, 'quoteBuy(uint256)', 1_000n * USDG_UNIT);
-  check(`quoteBuy(1,000 USDG) ≈ 2,000,000 MANNA (${q / TOKEN_UNIT})`, relErr(q, 2_000_000n * TOKEN_UNIT) < 1e-6);
+  check(`quoteBuy(1,000 USDG) ≈ 2,000,000 MANNA less the 2% fee (${q / TOKEN_UNIT})`, relErr(q, 1_960_000n * TOKEN_UNIT) < 1e-6);
   await send(OWNER, mannaC, 'setAddresses(address,address,address,address,address)', TREASURY, '0x' + '0'.repeat(40), v4, v3, escrow);
   await send(HOOK, escrow, 'creditToken(address,address,uint256)', mannaC, usdg, 3_000n * USDG_UNIT);
   setTime(noonOf(D7 + 2n));
@@ -314,9 +333,9 @@ async function run(w, h) {
   recordFell(D7 + 2n, e.fell);
   check('dawn buys through the v4 adapter (unlock -> swap -> settle -> take)', !r.reverted && e.buyFailed === 0 && e.bought > 0n, revertName(r));
   {
-    const quoteSpent = await viewBig(v4, 'quoteBuy(uint256)', e.spent);
-    const expect = quoteSpent - (quoteSpent * 200n) / 10000n; // the mock hook takes 2% of the output, floored like the real one
-    check('bought == quote minus the hook\'s 2%', e.bought === expect, `${e.bought} vs ${expect}`);
+    check('with a deep pool, maxBuy (5,000 USDG) binds, not the depth cap', e.spent === 5_000n * USDG_UNIT, `${e.spent}`);
+    const expect = await viewBig(v4, 'quoteBuy(uint256)', e.spent); // the quote is net of the hook's 2%, like the delivery
+    check('bought == the net quote exactly', e.bought === expect, `${e.bought} vs ${expect}`);
     check('the PoolManager received exactly the USDG spent', (await bal(usdg, pm)) === e.spent);
     check('the adapter holds nothing afterwards', (await bal(usdg, v4)) === 0n && (await bal(manna, v4)) === 0n);
   }
@@ -326,11 +345,12 @@ async function run(w, h) {
   await send(OWNER, mannaC, 'setAddresses(address,address,address,address,address)', TREASURY, '0x' + '0'.repeat(40), failing, v3, escrow);
   await send(HOOK, escrow, 'creditToken(address,address,uint256)', mannaC, usdg, 1_000n * USDG_UNIT);
   setTime(noonOf(D7 + 3n));
+  const carryBeforeFail = await viewBig(mannaC, 'carry()');
   r = await send(CALLER, mannaC, 'dawn()');
   e = dawnLogs(r);
   check('a buyer that reverts does not stop the dawn: BuyFailed, nothing bought', !r.reverted && e.buyFailed === 1 && e.bought === 0n && e.spent === 0n, revertName(r));
   const carried = await viewBig(mannaC, 'carry()');
-  check('the whole budget carried to tomorrow', carried === e.income - e.toTreasury - e.toReserve - e.toCharity && carried > 0n);
+  check('the whole budget carried to tomorrow, on top of what was already carried', carried === carryBeforeFail + e.income - e.toTreasury - e.toReserve - e.toCharity && carried > 0n, `${carried} vs ${carryBeforeFail} + ${e.income - e.toTreasury - e.toReserve - e.toCharity}`);
   check('treasury, reserve and charity were still paid', e.toTreasury === (e.income * 2000n) / BPS);
   await invariants('after a failed buy');
 
@@ -341,6 +361,22 @@ async function run(w, h) {
   e = dawnLogs(r);
   recordFell(D7 + 4n, e.fell);
   check('with maxBuy = 100 USDG the dawn spends exactly 100 and carries the rest', !r.reverted && e.spent === 100n * USDG_UNIT && (await viewBig(mannaC, 'carry()')) === carried + e.income - e.toTreasury - e.toReserve - e.toCharity - e.spent, revertName(r));
+  // A thin pool: 100,000 USDG of depth caps the buy at 1,000 USDG, under maxBuy.
+  {
+    const thin = 100_000n * USDG_UNIT;
+    const liqThin = usdgIs0 ? (thin * sqrtP) / Q96 : (thin * Q96) / sqrtP;
+    await send(OWNER, pm, 'setSqrtPrice((address,address,uint24,int24,address),uint160,int24,uint128)', keyTuple, sqrtP, 0n, liqThin);
+    await send(OWNER, mannaC, 'setDial((uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16),uint256)', [2000n, 1000n, 500n, 1000n, 7000n, 50n, 500n, 300n], 5_000n * USDG_UNIT);
+    await send(HOOK, escrow, 'creditToken(address,address,uint256)', mannaC, usdg, 5_000n * USDG_UNIT);
+    setTime(noonOf(D7 + 5n));
+    r = await send(CALLER, mannaC, 'dawn()');
+    e = dawnLogs(r);
+    recordFell(D7 + 5n, e.fell);
+    const cap = await viewBig(v4, 'maxSpend()');
+    check(`with a thin pool the depth cap binds: spent == maxSpend (${cap / USDG_UNIT} USDG), the rest carried`, !r.reverted && relErr(cap, 1_000n * USDG_UNIT) < 1e-6 && e.spent === cap && (await viewBig(mannaC, 'carry()')) > 0n, revertName(r) || `${e.spent} vs ${cap}`);
+    check('a sandwich would pay 2% twice on its round trip for a move under 2%: the cap is the defence, not the quote', (2n * cap * 10000n) / thin <= 200n);
+    await send(OWNER, pm, 'setSqrtPrice((address,address,uint24,int24,address),uint160,int24,uint128)', keyTuple, sqrtP, 0n, liqBig);
+  }
   r = await send(OWNER, mannaC, 'setDial((uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16),uint256)', [6000n, 3000n, 2000n, 1000n, 7000n, 50n, 500n, 300n], 5_000n * USDG_UNIT);
   check('a dial whose treasury + reserve + charity exceed 100% is refused (BadDial)', r.reverted && errorIs(r.ret, 'BadDial()'));
   r = await send(OWNER, mannaC, 'setDial((uint16,uint16,uint16,uint16,uint16,uint16,uint16,uint16),uint256)', [2000n, 1000n, 500n, 1000n, 7000n, 2000n, 500n, 300n], 5_000n * USDG_UNIT);
@@ -380,6 +416,9 @@ async function run(w, h) {
   const spAfter = await viewBig(vaultPons, 'convertToAssets(uint256)', 10n ** 24n);
   check('the PONS Storehouse share price fell below its high-water mark', spAfter < spBefore && spAfter < hwmBefore);
   const ponsVaultBefore = await viewBig(vaultPons, 'totalAssets()');
+  const capR = await viewBig(mannaC, 'restoreCap(uint256)', 0n);
+  const valuePons = (await viewBig(mannaC, 'storehouseValueUsd()'));
+  check(`restoreCap(PONS) == reserve * PONS value / total value (${capR} of ${reserveBefore})`, capR > 0n && capR < reserveBefore && valuePons > 0n);
   r = await send(STRANGER, mannaC, 'restore(address)', vaultPons);
   check('restore() buys PONS with the Reserve and gives it to the Storehouse', !r.reverted, revertName(r));
   {
@@ -390,7 +429,9 @@ async function run(w, h) {
     const totalSupply = await viewBig(vaultPons, 'totalSupply()');
     const deficit = ((hwmBefore - spAfter) * totalSupply) / unit;
     const needed = (deficit * 10n ** 36n) / pNew;
-    check(`spent == min(needed, reserve) (${spent} of ${needed} needed)`, spent === (needed < reserveBefore ? needed : reserveBefore));
+    check(`spent == min(needed, the Storehouse's cap) (${spent} of ${needed} needed, cap ${capR})`, spent === (needed < capR ? needed : capR));
+    const r2 = await send(STRANGER, mannaC, 'restore(address)', vaultPons);
+    check('a second restore() the same day reverts RestoreCooldown()', r2.reverted && errorIs(r2.ret, 'RestoreCooldown()'));
     check('the Reserve shrank by what was spent', (await viewBig(mannaC, 'reserve()')) === reserveBefore - spent);
     check(`the Storehouse received the PONS bought (${donated / TOKEN_UNIT} PONS)`, (await viewBig(vaultPons, 'totalAssets()')) === ponsVaultBefore + donated && donated > 0n);
     check('the share price recovered toward the mark', (await viewBig(vaultPons, 'convertToAssets(uint256)', unit)) > spAfter);
@@ -437,6 +478,10 @@ async function run(w, h) {
   r = await send(L3, mannaC, 'leave(address,uint256)', vaultCat, l3s / 4n);
   check('leaving an inactive Storehouse still works', !r.reverted, revertName(r));
   await send(OWNER, mannaC, 'setStorehouseActive(address,bool)', vaultCat, true);
+  r = await send(STRANGER, mannaC, 'setStorehouseOracle(address,address)', vaultPons, oraclePons);
+  check('setStorehouseOracle from a stranger reverts NotOwner()', r.reverted && errorIs(r.ret, 'NotOwner()'));
+  r = await send(OWNER, mannaC, 'setStorehouseOracle(address,address)', vaultPons, oraclePons);
+  check('the owner can point a Storehouse at a new Prophet', !r.reverted && (await sh(0)).oracle.toLowerCase() === oraclePons.toLowerCase(), revertName(r));
   const resNow = await viewBig(mannaC, 'reserve()');
   r = await send(OWNER, mannaC, 'releaseReserve(uint256)', resNow / 2n);
   check('releaseReserve moves half the Reserve back into income', !r.reverted && (await viewBig(mannaC, 'reserve()')) === resNow - resNow / 2n, revertName(r));

@@ -25,10 +25,10 @@ falls, so no keeper needs to be paid to run it:
    is split: 20% to the treasury, 10% to Joseph's Reserve (only until the Reserve reaches its
    target share of the Storehouses' value), 5% held for the next Jubilee's charity payment. The
    rest, plus anything carried from yesterday, is today's buy budget.
-4. **Buy.** Up to `maxBuy` (5,000 USDG to start) of the budget buys MANNA through the buyer
-   adapter — the Pons curve before graduation, the graduated Uniswap v4 pool after — at no worse
-   than 95% of the adapter's own quote. Whatever the cap or a failed buy leaves unspent carries to
-   tomorrow; nothing is lost.
+4. **Buy.** Up to `maxBuy` (5,000 USDG to start), and never more than 1% of the venue's own USDG
+   depth, of the budget buys MANNA through the buyer adapter — the Pons curve before graduation,
+   the graduated Uniswap v4 pool after — at no worse than 95% of the adapter's fee-net quote.
+   Whatever the caps or a failed buy leave unspent carries to tomorrow; nothing is lost.
 5. **Fall.** The caller keeps 0.5% of the MANNA bought. Of the rest, 70% goes to the staking pool
    and 30% is split across Storehouses weighted by how much USDG-value of each Giant is actually
    borrowed right now, then pro rata by staked shares within a Storehouse. If nobody has staked
@@ -143,7 +143,7 @@ MANNA balance (a bare transfer to the contract, outside a dawn) into the stakers
 | Treasury | 20% of each dawn's income | Dial-settable, not on Sunday |
 | Joseph's Reserve | 10% of income | Only until the Reserve reaches 10% of the Storehouses' value (also a dial) |
 | Charity (held for Jubilee) | 5% of income | Paid out at the next Jubilee |
-| The buy | Rest of income + carry, capped at `maxBuy` (5,000 USDG) | Min-out = 95% of the adapter's quote; the remainder carries |
+| The buy | Rest of income + carry, capped at `maxBuy` (5,000 USDG) and at 1% of the venue's USDG depth | Min-out = 95% of the adapter's fee-net quote; the remainder carries |
 | Caller's tip | 0.5% of the MANNA bought | Paid to whoever calls `dawn()` |
 | Stakers | 70% of the bought MANNA after the tip | Redirected to lenders if nobody has staked |
 | Lenders | 30% of the bought MANNA after the tip | Weighted by borrowed USD value, then by staked shares |
@@ -166,10 +166,12 @@ changed by the owner (`setDial`) on any day but Sunday.
   when `restore()` buys a Giant back for a Storehouse sitting below its high-water mark. A loss
   larger than the Reserve's balance is not made whole; the Storehouse's own share price carries the
   rest, permanently, exactly as `docs/borrow-the-meme.md` warned it sometimes will.
-- **The buyback has bounded sandwich exposure.** Each dawn's buy is capped at `maxBuy` and requires
-  at least 95% of the adapter's own pre-trade quote. A sandwich can cost at most that slippage on
-  that one day's capped notional — never the whole treasury, and a failed buy simply carries to
-  tomorrow rather than accepting a worse price.
+- **The buyback cannot be sandwiched for profit, by construction.** A quote read from the same pool
+  in the same transaction is no defence: an attacker moves the price first and the quote moves
+  with it. So each dawn's buy is capped at 1% of the pool's own USDG depth (`maxSpend`), which
+  moves the price about 2%, less than the 2 × 2% the hook charges a sandwich for its round trip.
+  The 95%-of-quote minimum only guards against a broken adapter. The cost of the rule is pace: a
+  thin pool takes the budget in small daily bites and the rest carries.
 - **Owner powers, and their limits.** The owner sets the dials, the treasury/charity/adapter/escrow
   addresses, and which Storehouses are active — all frozen on Sundays. The owner **cannot** move a
   lender's staked vault shares or a staker's staked MANNA (there is no such function), **cannot**

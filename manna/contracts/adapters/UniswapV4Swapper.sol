@@ -18,14 +18,19 @@ contract UniswapV4Swapper is IBuyer, IUnlockCallback {
     error Slippage();
     error TransferFailed();
     error Reentrancy();
+    error BadFee();
 
-    event PoolKeySet(address currency0, address currency1, uint24 fee, int24 tickSpacing, address hooks);
+    event PoolKeySet(address currency0, address currency1, uint24 fee, int24 tickSpacing, address hooks, uint16 feeBps);
+    event ImpactCapSet(uint16 impactCapBps);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     uint160 private constant MIN_SQRT_LIMIT = 4295128739 + 1;
     uint160 private constant MAX_SQRT_LIMIT = 1461446703485210103287273052203988822378723970342 - 1;
-    /// @dev PoolManager's `_pools` mapping lives at storage slot 6 (v4-core StateLibrary.POOLS_SLOT).
+    /// @dev PoolManager's `_pools` mapping lives at storage slot 6 (v4-core StateLibrary.POOLS_SLOT); a pool's
+    /// liquidity sits three words after its slot0 (StateLibrary.LIQUIDITY_OFFSET).
     bytes32 private constant POOLS_SLOT = bytes32(uint256(6));
+    uint256 private constant LIQUIDITY_OFFSET = 3;
+    uint256 private constant BPS = 10000;
 
     IPoolManager public immutable poolManager;
     address public immutable usdg;
@@ -36,6 +41,13 @@ contract UniswapV4Swapper is IBuyer, IUnlockCallback {
     address public owner;
     PoolKey public key;
     bool public keySet;
+    /// @notice What the pool's hook takes out of a buy's output: its hook fee plus the coin's creator tax
+    /// (read them from the hook's `launches(poolId)`), so quotes are net of fees.
+    uint16 public feeBps;
+    /// @notice The share of the pool's USDG depth one buy may spend. At 1% the buy moves the price about 2%,
+    /// less than the 2 x (hook fee + creator tax) a sandwich pays for its round trip, so sandwiching a dawn
+    /// cannot profit whatever the attacker does to the spot price first.
+    uint16 public impactCapBps = 100;
     address private _buyer;
 
     modifier onlyOwner() {
@@ -61,8 +73,10 @@ contract UniswapV4Swapper is IBuyer, IUnlockCallback {
         owner = newOwner;
     }
 
-    /// @notice Fixes the pool: currencies are derived from `usdg`/`token`, the rest from the launch config.
-    function setPoolKey(uint24 fee, int24 tickSpacing, address hooks) external onlyOwner {
+    /// @notice Fixes the pool: currencies are derived from `usdg`/`token`, the rest from the launch config, and
+    /// `feeBps_` is the hook fee plus the creator tax the hook takes from a buy's output.
+    function setPoolKey(uint24 fee, int24 tickSpacing, address hooks, uint16 feeBps_) external onlyOwner {
+        if (feeBps_ >= BPS) revert BadFee();
         key = PoolKey({
             currency0: usdgIsCurrency0 ? usdg : token,
             currency1: usdgIsCurrency0 ? token : usdg,
@@ -71,7 +85,14 @@ contract UniswapV4Swapper is IBuyer, IUnlockCallback {
             hooks: hooks
         });
         keySet = true;
-        emit PoolKeySet(key.currency0, key.currency1, fee, tickSpacing, hooks);
+        feeBps = feeBps_;
+        emit PoolKeySet(key.currency0, key.currency1, fee, tickSpacing, hooks, feeBps_);
+    }
+
+    function setImpactCap(uint16 bps) external onlyOwner {
+        if (bps == 0 || bps > 1000) revert BadFee();
+        impactCapBps = bps;
+        emit ImpactCapSet(bps);
     }
 
     function poolId() public view returns (bytes32) {
@@ -82,6 +103,28 @@ contract UniswapV4Swapper is IBuyer, IUnlockCallback {
     function sqrtPriceX96() public view returns (uint160) {
         bytes32 slot = keccak256(abi.encodePacked(poolId(), POOLS_SLOT));
         return uint160(uint256(poolManager.extsload(slot)));
+    }
+
+    /// @notice The pool's active liquidity, read the way StateLibrary.getLiquidity does.
+    function liquidity() public view returns (uint128) {
+        bytes32 slot = bytes32(uint256(keccak256(abi.encodePacked(poolId(), POOLS_SLOT))) + LIQUIDITY_OFFSET);
+        return uint128(uint256(poolManager.extsload(slot)));
+    }
+
+    /// @notice The USDG the pool's active liquidity holds at the current price, for a full-range position
+    /// (which the Pons graduation position is): L * sqrtP / 2^96 when USDG is currency1, L * 2^96 / sqrtP
+    /// when it is currency0.
+    function usdgDepth() public view returns (uint256) {
+        if (!keySet) return 0;
+        uint256 s = sqrtPriceX96();
+        uint256 l = liquidity();
+        if (s == 0 || l == 0) return 0;
+        return usdgIsCurrency0 ? FullMath.mulDiv(l, 1 << 96, s) : FullMath.mulDiv(l, s, 1 << 96);
+    }
+
+    /// @inheritdoc IBuyer
+    function maxSpend() external view returns (uint256) {
+        return (usdgDepth() * impactCapBps) / BPS;
     }
 
     /// @inheritdoc IBuyer
@@ -95,6 +138,7 @@ contract UniswapV4Swapper is IBuyer, IUnlockCallback {
         } else {
             out = FullMath.mulDiv(FullMath.mulDiv(amountIn, 1 << 96, s), 1 << 96, s);
         }
+        out -= (out * feeBps) / BPS;
     }
 
     /// @inheritdoc IBuyer
