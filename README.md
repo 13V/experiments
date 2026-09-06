@@ -378,6 +378,9 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[Manna, built](manna/README.md)**: the short desk for memecoins as a product: the two-hop TWAP oracle, the Manna
+  contract (dawn, gather, spoil, stake, Reserve, Jubilee), adapters for the Pons curve, the v4 pool and v3 selling,
+  tests against the real Morpho Blue, deploy and launch scripts, and the site. Spec in `manna/SPEC.md`.
 - **[Manna](docs/manna.md)**: the product under its chosen name (Storehouses, slings, the Tape, the morning drop,
   Jubilee), how the fee recipient buys the coin each dawn and rains it on lenders and stakers, and where a 10%
   cut belongs (the tithe on interest, never the Pons creator tax), with the fee streams sized.

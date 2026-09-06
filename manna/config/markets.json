@@ -1,0 +1,43 @@
+[
+ {
+  "symbol": "PONS",
+  "name": "Pons",
+  "pool": "0x10CC6BD38112cAc182db90B6a71d8Bb5939526bA",
+  "token": "",
+  "initialCapUsd": 200000,
+  "lltvBps": 3850,
+  "window": 1800,
+  "fallbackWindow": 600
+ },
+ {
+  "symbol": "CASHCAT",
+  "name": "Cash Cat",
+  "pool": "0xA70fc67C9F69da90B63a0e4C05D229954574E313",
+  "token": "0x020bfc650a365f8bb26819deaabf3e21291018b4",
+  "initialCapUsd": 160000,
+  "lltvBps": 3850,
+  "window": 1800,
+  "fallbackWindow": 600
+ },
+ {
+  "symbol": "AI",
+  "name": "AI",
+  "pool": "0xc4a21f9d6485FC5893DD4A491B320a83DAF4Da1D",
+  "token": "",
+  "initialCapUsd": 100000,
+  "lltvBps": 3850,
+  "window": 1800,
+  "fallbackWindow": 600
+ },
+ {
+  "symbol": "Index",
+  "name": "Index",
+  "pool": "0xD29893fFac8b29eC4Db2cfE0CDB3FE1377c028Ff",
+  "token": "0x56910d4409f3a0c78c64dd8d0545ff0705389870",
+  "initialCapUsd": 40000,
+  "lltvBps": 3850,
+  "window": 1800,
+  "fallbackWindow": 600,
+  "hold": true
+ }
+]

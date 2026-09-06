@@ -114,6 +114,17 @@ key after launch except market listings and the split dial, both announced on Su
 executed on Monday.
 
 Launch: Pons V2 factory, quote USDG, base fee 1%, creator tax 1%, fee recipient the Manna
-contract, supply 144,000,000, dev buy of 2% to 3% locked. The three Storehouses and their
-markets live before the curve opens, with a borrow rate showing on the Tape. The curve is the
-Wilderness; graduation is the Jordan; the first dawn is the morning after.
+contract, dev buy of 2% to 3% locked. Supply is not ours to choose: the factory's only launch
+config fixes it at 1,000,000,000, so the 144,000,000 idea from the theme note is off the table.
+The three Storehouses and their markets live before the curve opens, with a borrow rate showing
+on the Tape. The curve is the Wilderness; graduation is the Jordan; the first dawn is the morning
+after.
+
+## Built
+
+Everything above now exists under `manna/`: the Prophet (`MemeTwapOracle.sol`), the Manna
+contract, the three adapters (a v3 seller for the tithe, a v4 buyer for the graduated pool, a
+curve buyer for the days before graduation), a test suite that runs the whole loop against the
+real Morpho Blue code, the scripts that create the markets, deploy, launch on Pons, call the dawn
+and write the Sunday report, and the site. `manna/README.md` says how to run it and
+`manna/SPEC.md` is the binding description of every rule in this document.

@@ -1,0 +1,33 @@
+{
+ "chainId": 4663,
+ "rpc": "https://rpc.mainnet.chain.robinhood.com",
+ "explorer": "https://robinhoodchain.blockscout.com",
+ "morpho": "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010",
+ "adaptiveCurveIrm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+ "usdg": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+ "usdgDecimals": 6,
+ "weth": "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+ "wethUsdgPool": "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca",
+ "lltvBps": 3850,
+ "pons": {
+  "factory": "0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e",
+  "feeEscrow": "0xd3afeb2a57f70ef218aa82451c51b2fb0416ac9e",
+  "memeHook": "0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044",
+  "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+  "launchConfigId": 0,
+  "supply": "1000000000000000000000000000",
+  "poolFee": 0,
+  "tickSpacing": 200,
+  "launchFeeWei": "500000000000000"
+ },
+ "treasury": "",
+ "charity": "",
+ "manna": "",
+ "token": "",
+ "curve": "",
+ "v3Swapper": "",
+ "v4Swapper": "",
+ "curveSwapper": "",
+ "router": "",
+ "vaults": {}
+}
