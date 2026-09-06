@@ -33,6 +33,15 @@ const TOKEN_PARAMS_T = `(string,string,string,string,${SOCIALS_T},address,uint16
 const LAUNCH_TOKEN_TYPES = [TOKEN_PARAMS_T, 'uint256', 'address', 'address[]'];
 const LAUNCH_TOKEN_SIG = `launchToken(${LAUNCH_TOKEN_TYPES.join(',')})`;
 const TOKEN_LAUNCHED_EVENT = 'TokenLaunched(address,address,address,address,uint256,uint256)';
+const POOL_KEY_T = '(address,address,uint24,int24,address)';
+const LAUNCHED_TOKEN_TYPES = [
+  'address', 'address', 'address', 'address', 'address', 'uint256', 'uint24', 'int24',
+  'uint16', 'bool', 'uint8', 'uint256', 'uint256', 'uint256', 'bool',
+];
+const LAUNCHES_TYPES = [
+  'bool', 'bool', 'address', 'address', 'address', 'address', 'address',
+  'uint16', 'uint16', 'uint16', 'uint16', 'uint16', 'bool',
+];
 
 const isZero = (a) => chain.secp.sameAddress(a, ZERO);
 
@@ -46,6 +55,46 @@ function requireFlag(name) {
   const v = chain.flagValue(name);
   if (!v) throw new Error(`missing required flag ${name}`);
   return v;
+}
+
+/** keccak256(abi.encode(PoolKey)) — exactly UniswapV4Swapper.poolId()'s own formula. */
+function computePoolId(currency0, currency1, fee, tickSpacing, hooks) {
+  const encoded = chain.abiEncode([POOL_KEY_T], [[currency0, currency1, fee, tickSpacing, hooks]]);
+  return '0x' + chain.keccak256(Buffer.from(encoded.slice(2), 'hex')).toString('hex');
+}
+
+/**
+ * The Meme hook's fee (hookFeeBps + creatorTaxBps) UniswapV4Swapper.setPoolKey needs, so its quotes are
+ * net of what the hook actually takes. If the pool is already registered with the hook (post-graduation),
+ * reads its exact per-pool fees from `launches(poolId)`; otherwise falls back to the hook's default
+ * `hookFeeBps()` plus the coin's own on-chain creatorTaxBps (from the factory's `getLaunchedToken`, so this
+ * is correct whether this run just launched the coin or is resuming a partially-completed launch).
+ */
+async function computeHookFeeBps(addresses, factory, token) {
+  const usdgIsCurrency0 = BigInt(addresses.usdg) < BigInt(token);
+  const currency0 = usdgIsCurrency0 ? addresses.usdg : token;
+  const currency1 = usdgIsCurrency0 ? token : addresses.usdg;
+  const fee = BigInt(addresses.pons.poolFee);
+  const tickSpacing = BigInt(addresses.pons.tickSpacing);
+  const hooks = addresses.pons.memeHook;
+  const poolId = computePoolId(currency0, currency1, fee, tickSpacing, hooks);
+
+  await config.sleep(config.RPC_DELAY_MS);
+  const launch = await chain.call(addresses.pons.memeHook, 'launches(bytes32)', [poolId], LAUNCHES_TYPES);
+  const [registered, , , , , , , creatorTaxBpsReg, , , hookFeeBpsReg] = launch;
+  if (registered) {
+    return { feeBps: hookFeeBpsReg + creatorTaxBpsReg, source: `launches(poolId): hookFeeBps=${hookFeeBpsReg} + creatorTaxBps=${creatorTaxBpsReg}` };
+  }
+
+  await config.sleep(config.RPC_DELAY_MS);
+  const [defaultHookFeeBps] = await chain.call(addresses.pons.memeHook, 'hookFeeBps()', [], ['uint256']);
+  await config.sleep(config.RPC_DELAY_MS);
+  const launched = await chain.call(factory, 'getLaunchedToken(address)', [token], LAUNCHED_TOKEN_TYPES);
+  const realCreatorTaxBps = launched[8];
+  return {
+    feeBps: defaultHookFeeBps + realCreatorTaxBps,
+    source: `not yet registered with the hook: default hookFeeBps()=${defaultHookFeeBps} + our creatorTaxBps=${realCreatorTaxBps}`,
+  };
 }
 
 async function main() {
@@ -71,7 +120,7 @@ async function main() {
   console.log('  1. read launchFee() and previewLaunchEconomics(launchConfigId, usdg)');
   console.log('  2. factory.launchToken(...) paying launchFee, creatorFeeRecipient = Manna');
   console.log('  3. parse TokenLaunched -> token, curve; manna.setToken(token)');
-  console.log('  4. deploy PonsCurveSwapper(curve) and UniswapV4Swapper(...) + setPoolKey');
+  console.log('  4. deploy PonsCurveSwapper(curve) and UniswapV4Swapper(...) + setPoolKey(..., feeBps)');
   console.log('  5. manna.setAddresses(treasury, charity, buyer=curveSwapper, seller=v3Swapper, escrow)');
   if (devBuyRaw) console.log(`  6. approve + curve.buy(${devBuyRaw} USDG) for the deployer`);
   console.log('');
@@ -226,10 +275,12 @@ async function main() {
     const poolFee = BigInt(addresses.pons.poolFee);
     const tickSpacing = BigInt(addresses.pons.tickSpacing);
     const hooks = addresses.pons.memeHook;
-    console.log(`  setPoolKey(fee=${poolFee}, tickSpacing=${tickSpacing}, hooks=${hooks})`);
-    const spkArgs = [poolFee, tickSpacing, hooks];
-    config.selfTestAndLog('setPoolKey', ['uint24', 'int24', 'address'], spkArgs);
-    await chain.send({ to: v4SendTarget, data: chain.encodeCall('setPoolKey(uint24,int24,address)', spkArgs) });
+    const { feeBps, source } = await computeHookFeeBps(addresses, factory, tokenForEncoding);
+    console.log(`  hook feeBps: ${feeBps} (${source})`);
+    console.log(`  setPoolKey(fee=${poolFee}, tickSpacing=${tickSpacing}, hooks=${hooks}, feeBps=${feeBps})`);
+    const spkArgs = [poolFee, tickSpacing, hooks, feeBps];
+    config.selfTestAndLog('setPoolKey', ['uint24', 'int24', 'address', 'uint16'], spkArgs);
+    await chain.send({ to: v4SendTarget, data: chain.encodeCall('setPoolKey(uint24,int24,address,uint16)', spkArgs) });
   }
   console.log('');
 

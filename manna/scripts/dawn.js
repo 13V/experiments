@@ -5,9 +5,11 @@
  * Manna — dawn.js
  *
  * Prints the desk's morning status (next dawn, whether it is open right now, the escrow balance
- * waiting to be claimed, fee shares waiting per Storehouse, the carry, and the current buyer), and
- * if dawn is open, calls `dawn()` — permissionless; the caller is tipped 0.5% of what falls — then
- * decodes and prints the `Dawn`/`Fallen` events from the receipt.
+ * waiting to be claimed, fee shares waiting per Storehouse, the carry, the dial's maxBuy, the
+ * current buyer and its `maxSpend()` — the venue-depth cap that, together with maxBuy, bounds what
+ * a dawn can spend — so the operator can see which one binds), and if dawn is open, calls `dawn()`
+ * — permissionless; the caller is tipped 0.5% of what falls — then decodes and prints the
+ * `Dawn`/`Fallen` events from the receipt.
  *
  *   node manna/scripts/dawn.js [--dry-run] [--watch] [--switch-buyer]
  *
@@ -42,7 +44,18 @@ async function readStatus(addresses) {
   await config.sleep(config.RPC_DELAY_MS);
   const [carry] = await chain.call(addresses.manna, 'carry()', [], ['uint256']);
   await config.sleep(config.RPC_DELAY_MS);
+  const [maxBuy] = await chain.call(addresses.manna, 'maxBuy()', [], ['uint256']);
+  await config.sleep(config.RPC_DELAY_MS);
   const [buyer] = await chain.call(addresses.manna, 'buyer()', [], ['address']);
+  let maxSpend = null; // null means "no buyer set" or the venue could not be read, not "zero"
+  if (!chain.secp.sameAddress(buyer, ZERO)) {
+    await config.sleep(config.RPC_DELAY_MS);
+    try {
+      [maxSpend] = await chain.call(buyer, 'maxSpend()', [], ['uint256']);
+    } catch (e) {
+      maxSpend = null;
+    }
+  }
   await config.sleep(config.RPC_DELAY_MS);
   const [count] = await chain.call(addresses.manna, 'storehouseCount()', [], ['uint256']);
 
@@ -67,7 +80,7 @@ async function readStatus(addresses) {
     storehouses.push({ index: i, vault, asset, oracle, active, feeShares, feeAssets, assetDecimals });
   }
 
-  return { nextDawn, dawnOpen, escrowBal, carry, buyer, storehouses };
+  return { nextDawn, dawnOpen, escrowBal, carry, maxBuy, buyer, maxSpend, storehouses };
 }
 
 function labelStorehouse(markets, s) {
@@ -86,6 +99,11 @@ function printStatus(addresses, markets, st) {
   else if (addresses.curveSwapper && chain.secp.sameAddress(st.buyer, addresses.curveSwapper)) buyerLabel = `${st.buyer} (Pons curve)`;
   else if (addresses.v4Swapper && chain.secp.sameAddress(st.buyer, addresses.v4Swapper)) buyerLabel = `${st.buyer} (Uniswap v4)`;
   console.log(`buyer          : ${buyerLabel}`);
+  console.log(`maxBuy (dial)  : ${chain.fromUnits(st.maxBuy, addresses.usdgDecimals)} USDG (the most one dawn may spend, before the venue's own depth cap)`);
+  if (st.maxSpend !== null) {
+    const bound = st.maxSpend < st.maxBuy ? 'the venue depth binds — tighter than maxBuy' : 'maxBuy binds — the venue has more room than that';
+    console.log(`buyer.maxSpend : ${chain.fromUnits(st.maxSpend, addresses.usdgDecimals)} USDG (${bound})`);
+  }
   console.log('fee shares waiting:');
   if (!st.storehouses.length) {
     console.log('  (no Storehouse registered yet — run deploy.js)');

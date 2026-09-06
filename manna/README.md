@@ -78,9 +78,10 @@ Dev dependencies (`solc` 0.8.28, `@ethereumjs/vm` 8.1.1, `@ethereumjs/common` 4.
 installed with `npm install --no-save ...`; nothing in `manna/` has its own.
 
 ```
-NODE_PATH=/home/user/experiments/node_modules node manna/scripts/test.js   # N passed, 0 failed
-node manna/scripts/status.js                                              # read-only
-node manna/scripts/abicheck.js                                            # script signatures vs. compiled ABIs
+export NODE_PATH=/home/user/experiments/node_modules      # solc and the EVM harness live in the repo root
+node manna/scripts/test.js                                # 235 passed, 0 failed
+node manna/scripts/status.js                              # read-only, works before anything is deployed
+node manna/scripts/abicheck.js                            # every hand-rolled signature vs. the compiled ABIs
 
 RPC_URL=... PRIVATE_KEY=... node manna/scripts/create-markets.js --dry-run [--only PONS]
 RPC_URL=... PRIVATE_KEY=... node manna/scripts/deploy.js --dry-run
@@ -89,6 +90,7 @@ RPC_URL=... PRIVATE_KEY=... node manna/scripts/launch.js --dry-run \
   [--website U] [--twitter U] [--telegram U] [--tax-bps 100] [--dev-buy 1000]
 RPC_URL=... PRIVATE_KEY=... node manna/scripts/dawn.js --dry-run --watch --switch-buyer
 node manna/scripts/sunday.js --out manna/site/data/sunday.json
+VERCEL_TOKEN=... python3 manna/deploy-site.py
 ```
 
 Deploy order: **create-markets → deploy → launch → dawn --watch.** Every sending script has

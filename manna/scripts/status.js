@@ -15,6 +15,8 @@
  * `liquidity()`), the Prophet's TWAP price against the pool's spot price and the lag between them,
  * and fee shares waiting at Manna. Then Manna's own numbers: next dawn, last dawn day, reserve vs
  * target, charity accrued, carry, staked/lender pools, escrow balance, and the next Jubilee date.
+ * Finally, any Storehouse whose vault share price sits below its high-water mark (bad debt) with
+ * what `restore()` could spend on it right now (`Manna.restoreCap`).
  */
 
 const chain = require('../../locate/scripts/chain');
@@ -144,6 +146,51 @@ async function printManna(addresses) {
   console.log(`  next Jubilee    : ${new Date(Number(nextJubileeDay) * config.DAY * 1000).toISOString().slice(0, 10)}`);
 }
 
+/** Any Storehouse whose vault share price sits below its high-water mark has taken bad debt; prints
+ * how much `restore()` could spend on it right now (Reserve times that Storehouse's share of value,
+ * at most once a day per Storehouse — see Manna.sol's `restoreCap`/`RestoreCooldown`). */
+async function printRestoreStatus(addresses, markets) {
+  if (!addresses.manna) return;
+  const M = addresses.manna;
+  const [count] = await chain.call(M, 'storehouseCount()', [], ['uint256']);
+  if (count === 0n) return;
+
+  const atRisk = [];
+  for (let i = 0n; i < count; i++) {
+    await config.sleep(config.RPC_DELAY_MS);
+    const s = await chain.call(M, 'storehouseAt(uint256)', [i], [
+      'address', 'address', 'address', 'bool', 'uint256', 'uint256', 'uint256', 'uint256',
+    ]);
+    const [vault, asset, , , , , highWater] = s;
+    await config.sleep(config.RPC_DELAY_MS);
+    const [vaultDecimals] = await chain.call(vault, 'decimals()', [], ['uint8']);
+    const unit = 10n ** BigInt(vaultDecimals);
+    await config.sleep(config.RPC_DELAY_MS);
+    const [sharePrice] = await chain.call(vault, 'convertToAssets(uint256)', [unit], ['uint256']);
+    if (sharePrice >= highWater) continue;
+
+    await config.sleep(config.RPC_DELAY_MS);
+    const [assetDecimalsRaw] = await chain.call(asset, 'decimals()', [], ['uint8']);
+    const assetDecimals = Number(assetDecimalsRaw);
+    await config.sleep(config.RPC_DELAY_MS);
+    const [cap] = await chain.call(M, 'restoreCap(uint256)', [i], ['uint256']);
+    const m = markets.find((mm) => mm.token && chain.secp.sameAddress(mm.token, asset));
+    atRisk.push({ label: m ? m.symbol : vault, sharePrice, highWater, assetDecimals, cap });
+  }
+
+  console.log('\nStorehouses below high-water (restore available):');
+  if (!atRisk.length) {
+    console.log('  none — every Storehouse is at or above its high-water mark.');
+    return;
+  }
+  for (const r of atRisk) {
+    console.log(
+      `  ${r.label}: share price ${config.fmtUnits(r.sharePrice, r.assetDecimals, 6)} < high-water ${config.fmtUnits(r.highWater, r.assetDecimals, 6)}` +
+        ` — restoreCap ${chain.fromUnits(r.cap, addresses.usdgDecimals)} USDG`
+    );
+  }
+}
+
 async function main() {
   const { addresses, markets } = config.load();
   const chainIdHex = await chain.rpc('eth_chainId', []);
@@ -160,6 +207,7 @@ async function main() {
   printTable(headers, aligns, rows);
 
   await printManna(addresses);
+  await printRestoreStatus(addresses, markets);
 }
 
 main().catch((e) => {
