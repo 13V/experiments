@@ -435,6 +435,13 @@
     if (n >= 1) return '$' + trimZeros(n.toFixed(4));
     return '$' + fmtSig(n, 4);
   }
+  // Named wrappers over fmtUnits/parseAmount at the decimal counts this app actually uses, so
+  // call sites read as "a USDG amount" rather than a bare magic number 6/18/24.
+  const fmtUsdg = (raw, dp = 2) => fmtUnits(raw, 6, dp);
+  const fmtToken = (raw, dp = 4) => fmtUnits(raw, 18, dp); // a Giant, or MANNA itself: both 18dp ERC20s
+  const fmtShares = (raw, dp = 4) => fmtUnits(raw, 24, dp); // LocateVault decimals = asset(18) + offset(6)
+  const parseUsdg = (str) => parseAmount(str, 6);
+  const parseToken = (str) => parseAmount(str, 18);
   const shortAddr = (a) => (typeof a === 'string' && a.length > 12 ? a.slice(0, 6) + '…' + a.slice(-4) : a || DASH);
   /** A WAD health factor -> "1.42", "∞" when there is no borrow. */
   function fmtHf(wad) {
@@ -551,6 +558,7 @@
     CUSTOM_ERRORS, decodeRevert, extractRevertData, describeError,
     makeRpc, sleep,
     DASH, toNumber, fmtUnits, fmtSig, fmtCompact, fmtCompactUnits, fmtNum, fmtUsd, fmtUsdRaw, fmtPct, fmtSignedPct, fmtPrice, shortAddr, fmtHf,
+    fmtUsdg, fmtToken, fmtShares, parseUsdg, parseToken,
     fmtCountdown, fmtDuration, fmtDate, fmtDay, parseAmount, signClass,
     E12, E18, E36, usdgPerGiant, giantToUsdRaw, giantToUsd, usdToGiantRaw, maxBorrowRaw, liqPriceWad, healthWad, lltvWad, aprFromRate, apyFromApr,
     DAY, DAWN_SECONDS, SPOIL_DAYS, JUBILEE_DAYS, nowSec, todayIndex, isSunday, localNextDawn,
