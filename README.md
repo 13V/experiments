@@ -378,6 +378,9 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[Pons graduates with real tech](docs/pons-tech.md)**: the Pons launches above $1M that have a product (Delta,
+  Touch Grass, ORBIO, PARE, Voxelithic, Arbitrage Ape), what they are built on and how their tokens earn, next to
+  BOW and OTER; the pattern they share, what none of them do, and what to build if BOW is the model.
 - **[Products and tools](docs/tools.md)**: eight tools ranked against the needs and the incumbents, led by the
   short desk, with Gas Pass for 29 September, the tape bot, a viral report card, graduation odds, a weekend
   router, a holder's portfolio, and launch templates for other creators.
