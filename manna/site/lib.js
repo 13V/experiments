@@ -294,6 +294,8 @@
   // =========================================================================================
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  const RPC_TIMEOUT_MS = 12000;
+
   function makeRpc(url) {
     let nextId = 1;
     let batchSupported = null; // unknown until the first batch reply
@@ -304,9 +306,21 @@
       err.data = e && e.data;
       return err;
     }
+    /** fetch() has no built-in timeout, and a stalled connection (a dead node, a proxy that black-holes
+     *  the request) would otherwise hang the caller forever. Abort after RPC_TIMEOUT_MS so every read
+     *  fails cleanly and the UI can fall back to its dash rather than a spinner that never resolves. */
     async function post(payload) {
       for (let attempt = 0; ; attempt++) {
-        const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+        const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = ac ? setTimeout(() => ac.abort(), RPC_TIMEOUT_MS) : null;
+        let res;
+        try {
+          res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: ac ? ac.signal : undefined });
+        } catch (e) {
+          throw (e && e.name === 'AbortError') ? new Error('RPC timed out') : e;
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
         if (res.status === 429 && attempt === 0) { await sleep(1500); continue; }
         if (!res.ok) throw new Error('RPC HTTP ' + res.status);
         return res.json();
@@ -320,17 +334,26 @@
     }
     const call = (to, data) => rpc('eth_call', [{ to, data }, 'latest']);
 
-    /** [{to,data}] -> [{ok:true,result} | {ok:false,error}], one HTTP request per 25 calls when batching works. */
+    /**
+     * [{to,data}] -> [{ok:true,result} | {ok:false,error}], one HTTP request per 25 calls when batching works.
+     *
+     * A batch attempt can fail two very different ways, handled differently: the node answers but not
+     * with an array (it simply doesn't speak batched JSON-RPC) — cheap and safe to retry that chunk one
+     * call at a time. Or the POST itself throws (network error, or our own RPC_TIMEOUT_MS abort) — the
+     * endpoint is unreachable right now, not merely batch-shy, so a serial retry would face the same
+     * wall and only double the wait; fail the whole chunk immediately instead. Either way the next
+     * chunk (or the next callMany altogether) gets a fresh attempt, in case it was transient.
+     */
     async function callMany(calls) {
       const out = new Array(calls.length);
       const CHUNK = 25;
       for (let i = 0; i < calls.length; i += CHUNK) {
         const slice = calls.slice(i, i + CHUNK);
-        let done = false;
+        let handled = false;
         if (batchSupported !== false) {
+          const base = nextId;
+          nextId += slice.length;
           try {
-            const base = nextId;
-            nextId += slice.length;
             const payload = slice.map((c, k) => ({ jsonrpc: '2.0', id: base + k, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] }));
             const j = await post(payload);
             if (Array.isArray(j)) {
@@ -342,15 +365,16 @@
                     : { ok: true, result: r.result };
               });
               batchSupported = true;
-              done = true;
+              handled = true;
             } else {
-              batchSupported = false;
+              batchSupported = false; // a real reply, just not an array: no batching support, not an outage
             }
           } catch (e) {
-            if (batchSupported === null) batchSupported = false;
+            for (let k = 0; k < slice.length; k++) out[i + k] = { ok: false, error: e };
+            handled = true;
           }
         }
-        if (!done) {
+        if (!handled) {
           for (let k = 0; k < slice.length; k++) {
             try { out[i + k] = { ok: true, result: await call(slice[k].to, slice[k].data) }; }
             catch (e) { out[i + k] = { ok: false, error: e }; }
