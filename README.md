@@ -378,6 +378,10 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[A Christian theme for the short desk](docs/christian-theme.md)**: what faith coins have done (twenty JESUS
+  launches on Pons at zero, one survivor anywhere), why the desk fits anyway (its 10% fee is a tithe), the
+  vocabulary for every mechanic, the usury objection answered, the lines not to cross, and the fee split and
+  cadence that change against the BOW-shaped plan.
 - **[Pons graduates with real tech](docs/pons-tech.md)**: the Pons launches above $1M that have a product (Delta,
   Touch Grass, ORBIO, PARE, Voxelithic, Arbitrage Ape), what they are built on and how their tokens earn, next to
   BOW and OTER; the pattern they share, what none of them do, and what to build if BOW is the model.
