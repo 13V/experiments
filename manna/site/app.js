@@ -1255,6 +1255,7 @@
 
     async function loadLedger() {
       if (!manna) {
+        clear(ledgerRows);
         ledgerRows.appendChild(notice('The Manna contract is not deployed yet.', 'warn'));
         jubileeBtn.remove();
         return;
@@ -1298,25 +1299,32 @@
         'Generated ' + (json.generatedAt ? new Date(json.generatedAt).toUTCString() : M.DASH)
         + (json.week ? ' — week of ' + new Date(json.week.from).toUTCString().slice(0, 16) + ' to ' + new Date(json.week.to).toUTCString().slice(0, 16) : '')));
 
+      // The report is written by an external script, not the chain — numbers may arrive as JSON
+      // numbers or as numeric strings (common for values that started life as BigInt). Coerce either
+      // to a Number, or null on anything unparsable, so the fmt* helpers show a dash rather than NaN.
+      const num = (v) => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+
       if (Array.isArray(json.markets) && json.markets.length) {
         const tbody = h('tbody', {});
         json.markets.forEach((row) => tbody.appendChild(h('tr', {},
           h('td', { class: 'sym' }, row.symbol || M.DASH),
-          h('td', { class: 'num mono' }, M.fmtPct(row.rateApr)),
-          h('td', { class: 'num mono' }, M.fmtPct(row.utilisation)),
-          h('td', { class: 'num mono' }, M.fmtUsd(row.shortInterestUsd, true)),
-          h('td', { class: 'num mono' }, M.fmtUsd(row.capUsd, true)))));
+          h('td', { class: 'num mono' }, M.fmtPct(num(row.rateApr))),
+          h('td', { class: 'num mono' }, M.fmtPct(num(row.utilisation))),
+          h('td', { class: 'num mono' }, M.fmtUsd(num(row.shortInterestUsd), true)),
+          h('td', { class: 'num mono' }, M.fmtUsd(num(row.capUsd), true)))));
         reportBody.appendChild(h('div', { class: 'table-wrap' }, h('table', {},
           h('thead', {}, h('tr', {}, h('th', {}, 'Giant'), h('th', { class: 'num' }, 'Rate'), h('th', { class: 'num' }, 'Util.'), h('th', { class: 'num' }, 'Short interest'), h('th', { class: 'num' }, 'Cap'))),
           tbody)));
+      } else {
+        reportBody.appendChild(notice('No markets were live for this report.', 'plain'));
       }
       if (json.manna) {
         const mn = json.manna;
         const rows = h('div', { class: 'rows', style: 'margin-top:14px' });
-        rows.appendChild(rowEl('Fallen / gathered / spoiled', [mn.fallen, mn.gathered, mn.spoiled].map((v) => M.fmtNum(v, 2)).join(' / ')));
-        rows.appendChild(rowEl('Reserve', M.fmtUsd(mn.reserve, true)));
-        rows.appendChild(rowEl('Charity accrued', M.fmtUsd(mn.charityAccrued, true)));
-        rows.appendChild(rowEl('Staked pool', M.fmtNum(mn.stakedPool, 2)));
+        rows.appendChild(rowEl('Fallen / gathered / spoiled', [mn.fallen, mn.gathered, mn.spoiled].map((v) => M.fmtNum(num(v), 2)).join(' / ')));
+        rows.appendChild(rowEl('Reserve', M.fmtUsd(num(mn.reserve), true)));
+        rows.appendChild(rowEl('Charity accrued', M.fmtUsd(num(mn.charityAccrued), true)));
+        rows.appendChild(rowEl('Staked pool', M.fmtNum(num(mn.stakedPool), 2)));
         reportBody.appendChild(rows);
       }
       if (Array.isArray(json.notes) && json.notes.length) {
