@@ -378,6 +378,9 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **[Manna](docs/manna.md)**: the product under its chosen name (Storehouses, slings, the Tape, the morning drop,
+  Jubilee), how the fee recipient buys the coin each dawn and rains it on lenders and stakers, and where a 10%
+  cut belongs (the tithe on interest, never the Pons creator tax), with the fee streams sized.
 - **[A Christian theme for the short desk](docs/christian-theme.md)**: what faith coins have done (twenty JESUS
   launches on Pons at zero, one survivor anywhere), why the desk fits anyway (its 10% fee is a tithe), the
   vocabulary for every mechanic, the usury objection answered, the lines not to cross, and the fee split and

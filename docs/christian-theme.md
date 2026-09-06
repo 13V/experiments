@@ -39,15 +39,15 @@ Almost every other part has a name waiting for it:
 | Mechanic | Name | Source |
 |---|---|---|
 | The 10% fee on interest | the Tithe | Leviticus 27:30; Malachi 3:10, "bring the whole tithe into the storehouse" |
-| The lender vault, USDG in, interest out | the Storehouse | Malachi 3:10; Genesis 41, Joseph's granaries |
+| The lender vaults, one per Giant: the meme goes in, the shorts' interest comes out | the Storehouse | Malachi 3:10; Genesis 41, Joseph's granaries |
 | The bad-debt backstop slice | Joseph's Reserve, laid up in the fat years for the lean | Genesis 41:34-36 |
 | The charity slice | the tithe of the tithe, what the Levites owed on what they received | Numbers 18:26 |
 | A short | a sling; the top memes are the Giants | 1 Samuel 17:40, five smooth stones, five launch markets |
 | The two-hop 30-minute TWAP | the Prophet; a manipulated print is a false prophet, tested by whether it comes to pass | Deuteronomy 18:22; Matthew 7:15 |
 | Community liquidators through the Morpho callback | the Watchmen, who sound the trumpet | Ezekiel 33:6 |
 | Liquidation itself | the verse about collateral: "if you have nothing to pay, why should your bed be taken from under you" | Proverbs 22:26-27, printed on the borrow page |
-| USDG streamed per second to stakers | Manna: it falls daily, it cannot be hoarded, so there is no lockup and you claim when you like | Exodus 16:4, 16:19-21 |
-| Buyback and burn | the Refiner's fire, from the same chapter as the tithe | Malachi 3:2-3 |
+| The morning drop of bought-back coin on lenders and stakers | Manna: it falls each morning, it cannot be hoarded, and what is not gathered in seven days spoils | Exodus 16:4, 16:19-21 |
+| The spoiled Manna, burned | the Refiner's fire, from the same chapter as the tithe | Malachi 3:2-3 |
 | The Pons curve, then graduation into the locked v4 pool | the Wilderness, then crossing the Jordan | Numbers 14:33; Joshua 3 |
 | The weekly on-chain report of shorts opened, liquidations, Manna paid | Sunday Service, and no parameter changes on Sundays | Exodus 20:8-10 |
 | The big beat every seventh Sunday: the burn and the charity transfer in one transaction | Jubilee | Leviticus 25:8-10; Deuteronomy 15:1-2 |
@@ -67,8 +67,9 @@ Manna falls, the Refiner burns, Sunday reports, Jubilee comes round.
 | TALENT | the parable that defends interest (below) | reads as a talent show |
 | JESUS, GOD, CHRIST | none | tried twenty times here at zero; blasphemous to the audience you want; nothing to say |
 
-Recommendation: the coin is **TITHE**, the vault is **the Storehouse**, a short is **a sling**,
-the payout is **Manna**. The desk's site can be plain about being a memecoin with a product.
+Chosen: the coin is **MANNA**, the vaults are **Storehouses**, a short is **a sling**, the 10%
+fee on interest is **the tithe**. The product and the money flows are in `manna.md`. The desk's
+site can be plain about being a memecoin with a product.
 
 ## The objection, answered before anyone raises it
 
@@ -114,19 +115,18 @@ happen, and it is the best engagement the coin will get.
 
 Nothing in the contracts. The changes are names, one fee slice, and cadence:
 
-- **The Tithe split**, replacing BOW's 35/30/25/10: Manna to stakers 30%, Joseph's Reserve 30%,
-  the Refiner's fire 20%, treasury 10%, the tithe of the tithe 10%. The treasury takes less than
-  BOW's because the coin's own Pons fees (base fee plus a 1% creator tax, paid in USDG) already
-  fund it; split those fees half to treasury, half to Manna.
+- **The split**, worked out with numbers in `manna.md`: the coin's Pons fees and the desk's tithe
+  are pooled every morning, 20% to treasury, 10% to Joseph's Reserve, 5% to charity, and the rest
+  buys MANNA that falls on stakers and Storehouses.
 - **Sunday Service**: a signed weekly report posted on chain and on the site; no market listings
   or parameter changes on Sundays.
-- **Jubilee**: every seventh Sunday, one transaction burns the accumulated Refiner's fire and
-  sends the tithe of the tithe. The first Jubilee is a date the community can count down to.
+- **Jubilee**: every seventh Sunday, one transaction sends the charity slice and publishes seven
+  weeks of Manna fallen, gathered and spoiled. The first Jubilee is a date the community can count down to.
 - **Launch story**: the Storehouse live before the curve opens, with three Giants (PONS, CASHCAT,
   AI) showing a borrow rate; the fourth and fifth stones (Index, then BONER) when their pools'
   observation cardinality clears 1,800. The curve is the Wilderness; graduation is the Jordan;
   the first Sunday Service is the Sunday after.
-- **Pairing**: USDG, so Manna and the Storehouse are the same asset; SPY if the narrative is worth
+- **Pairing**: USDG, so the coin's fees arrive in the asset the morning buyback spends; SPY if the narrative is worth
   a swap. Team allocation 2% to 3%, locked, as PARE did, and the team tithes its own allocation
   to the same recipient the stakers choose.
 
