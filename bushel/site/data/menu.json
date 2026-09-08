@@ -1,0 +1,1627 @@
+{
+ "readAt": "2026-09-08T15:36:57Z",
+ "chainId": 4663,
+ "factory": "0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e",
+ "head": 57800740,
+ "window": {
+  "requestedBlocks": 100000,
+  "scannedBlocks": 100000,
+  "spanSeconds": 10093,
+  "spanHours": 2.803611111111111
+ },
+ "launchConfig": {
+  "id": 0,
+  "supply": "1000000000000000000000000000",
+  "curveFeeBps": 100,
+  "tokensOnCurve": "714300000000000000000000000"
+ },
+ "launchFeeWei": "500000000000000",
+ "launchFeeEth": "0.0005",
+ "totalLaunches": 7734,
+ "launchesPerDay": 66206.04379272764,
+ "openingSpread": {
+  "minSymbol": "TTWO",
+  "min": 3179.3764730586386,
+  "maxSymbol": "DELL",
+  "max": 7016.2411267238185,
+  "ratio": 2.2067978379339337
+ },
+ "assets": [
+  {
+   "symbol": "ETH",
+   "name": "native ether",
+   "address": "0x0000000000000000000000000000000000000000",
+   "decimals": 18,
+   "logoUrl": null,
+   "kind": "crypto",
+   "market": {
+    "usd": 2489.052,
+    "liquidity": 32319576.48,
+    "vol24": 564964600.97,
+    "venue": "uniswap v3",
+    "pairAddress": "0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca"
+   },
+   "launch": {
+    "phantomQuote": 1.68,
+    "graduationThreshold": 4.2,
+    "openingUsd": 5854.133221335573,
+    "graduationUsd": 10454.0184,
+    "derived": "threshold from its own launch logs, quote as threshold / 2.50 (the ratio every asset with a row shows)"
+   },
+   "demand": {
+    "launches": 2230,
+    "perDay": 19089.66610522144
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "USDG",
+   "name": "Robinhood USD",
+   "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+   "decimals": 6,
+   "logoUrl": null,
+   "kind": "stable",
+   "market": {
+    "usd": 0.9974,
+    "liquidity": 8705123.01,
+    "vol24": 29563386.68,
+    "venue": "uniswap v4",
+    "pairAddress": "0xbac3aa3b91584a53a579b3c999a56756e954e59247e497bad1d25a4334bde551"
+   },
+   "launch": {
+    "phantomQuote": 3236,
+    "graduationThreshold": 8090,
+    "openingUsd": 4518.530589388212,
+    "graduationUsd": 8068.965999999999,
+    "derived": null
+   },
+   "demand": {
+    "launches": 408,
+    "perDay": 3492.6384623006043
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SPY",
+   "name": "SPDR S&P 500 ETF Trust",
+   "address": "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x117cc2133c37b721f49de2a7a74833232b3b4c0c.png",
+   "kind": "index",
+   "market": {
+    "usd": 770.75,
+    "liquidity": 8268137.32,
+    "vol24": 6427652.51,
+    "venue": "uniswap v4",
+    "pairAddress": "0xfe2a80bb5618fd14984b92ca6d45bf5ba67443ddb1435e28b2e48df2fc1526cd"
+   },
+   "launch": {
+    "phantomQuote": 4.36,
+    "graduationThreshold": 10.9,
+    "openingUsd": 4704.563908721826,
+    "graduationUsd": 8401.175000000001,
+    "derived": null
+   },
+   "demand": {
+    "launches": 55,
+    "perDay": 470.82136133954225
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "NVDA",
+   "name": "NVIDIA",
+   "address": "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec.png",
+   "kind": "equity",
+   "market": {
+    "usd": 227.023,
+    "liquidity": 6914870.07,
+    "vol24": 33946283.98,
+    "venue": "uniswap v3",
+    "pairAddress": "0xd4EB21209C4D6093f80B5b84f5C45cc093EA14a3"
+   },
+   "launch": {
+    "phantomQuote": 16.64,
+    "graduationThreshold": 41.6,
+    "openingUsd": 5288.622035559289,
+    "graduationUsd": 9444.1568,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4379,
+    "perDay": 37485.94075101555
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "GLD",
+   "name": "SPDR Gold Trust",
+   "address": "0xC9a981FEE1F9DEc688bb123ccDeCc63D0deBFC4e",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xc9a981fee1f9dec688bb123ccdecc63d0debfc4e.png",
+   "kind": "commodity",
+   "market": {
+    "usd": 404.68,
+    "liquidity": 4599377.52,
+    "vol24": 1988229.65,
+    "venue": "uniswap v3",
+    "pairAddress": "0x7A6A053eCCf1446A2633E05aA6D40D09381997ec"
+   },
+   "launch": {
+    "phantomQuote": 9.976238779829234,
+    "graduationThreshold": 24.940596949573088,
+    "openingUsd": 5651.944994289927,
+    "graduationUsd": 10092.960773553237,
+    "derived": null
+   },
+   "demand": {
+    "launches": 28,
+    "perDay": 239.69087486376696
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SGOV",
+   "name": "iShares 0-3 Month Treasury Bond",
+   "address": "0x92FD66527192E3e61d4DDd13322Aa222DE86F9B5",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x92fd66527192e3e61d4ddd13322aa222de86f9b5.png",
+   "kind": "bond",
+   "market": {
+    "usd": 101.35,
+    "liquidity": 4357980.67,
+    "vol24": 3877199.93,
+    "venue": "uniswap v3",
+    "pairAddress": "0xfAb520051f96F4D2a32c22B6a3dD7fFfdf231bFe"
+   },
+   "launch": {
+    "phantomQuote": 41.12662340247641,
+    "graduationThreshold": 102.81655850619103,
+    "openingUsd": 5835.339887779623,
+    "graduationUsd": 10420.45820460246,
+    "derived": null
+   },
+   "demand": {
+    "launches": 12,
+    "perDay": 102.72466065590012
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "AMC",
+   "name": "AMC Entertainment",
+   "address": "0x05a3d1Cd21d0C88145E82600E62e7E496e0F222B",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x05a3d1cd21d0c88145e82600e62e7e496e0f222b.png",
+   "kind": "equity",
+   "market": {
+    "usd": 2.48,
+    "liquidity": 3885802.5,
+    "vol24": 6749169.31,
+    "venue": "uniswap v4",
+    "pairAddress": "0x27ccf0a6d1ee74840220715bcca7d3b01e0d33aa30d0259b47ae1585b3f4c071"
+   },
+   "launch": {
+    "phantomQuote": 1536.0258736059486,
+    "graduationThreshold": 3840.064684014871,
+    "openingUsd": 5332.97517365638,
+    "graduationUsd": 9523.36041635688,
+    "derived": null
+   },
+   "demand": {
+    "launches": 6,
+    "perDay": 51.36233032795006
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SPCX",
+   "name": "Space Exploration Technologies Corp. Class A Common Stock",
+   "address": "0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea.png",
+   "kind": "equity",
+   "market": {
+    "usd": 150.76,
+    "liquidity": 2357888.82,
+    "vol24": 1135513.2,
+    "venue": "uniswap v4",
+    "pairAddress": "0xcb6ffbcc84359535c2cc0a5688c0a76520ea6e0a4820fddd3ac8d7880e576370"
+   },
+   "launch": {
+    "phantomQuote": 28.88,
+    "graduationThreshold": 72.2,
+    "openingUsd": 6095.406411871762,
+    "graduationUsd": 10884.872,
+    "derived": null
+   },
+   "demand": {
+    "launches": 135,
+    "perDay": 1155.6524323788765
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "RDDT",
+   "name": "Reddit",
+   "address": "0x05b37Fb53A299a1b874A619e1c4C404D52C36F4C",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x05b37fb53a299a1b874a619e1c4c404d52c36f4c.png",
+   "kind": "equity",
+   "market": {
+    "usd": 154.32,
+    "liquidity": 1854960.07,
+    "vol24": 458642.68,
+    "venue": "uniswap v3",
+    "pairAddress": "0xa8744E76aED23B05F0126335E7BD38f7935D19fe"
+   },
+   "launch": {
+    "phantomQuote": 16.93886097152429,
+    "graduationThreshold": 42.34715242881072,
+    "openingUsd": 3659.5338444989893,
+    "graduationUsd": 6535.01256281407,
+    "derived": null
+   },
+   "demand": {
+    "launches": 8,
+    "perDay": 68.48310710393342
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "MU",
+   "name": "Micron Technology",
+   "address": "0xfF080c8ce2E5feadaCa0Da81314Ae59D232d4afD",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xff080c8ce2e5feadaca0da81314ae59d232d4afd.png",
+   "kind": "equity",
+   "market": {
+    "usd": 1019.66,
+    "liquidity": 1821335.07,
+    "vol24": 3730574.56,
+    "venue": "uniswap v3",
+    "pairAddress": "0xd057B1Bc54917855BBee58eAd58647f47caB35E5"
+   },
+   "launch": {
+    "phantomQuote": 3.6713838567172363,
+    "graduationThreshold": 9.17845964179309,
+    "openingUsd": 5240.8837510013955,
+    "graduationUsd": 9358.908158350741,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "HIMS",
+   "name": "Hims & Hers Health",
+   "address": "0xCceE82fE024c36fA15E1005edE3E9e4787e23D09",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xccee82fe024c36fa15e1005ede3e9e4787e23d09.png",
+   "kind": "equity",
+   "market": {
+    "usd": 28.059,
+    "liquidity": 1605118.57,
+    "vol24": 2521281.72,
+    "venue": "uniswap v3",
+    "pairAddress": "0xC8C90d3a1c1a24967E773ac2aD0d456BA3E31F64"
+   },
+   "launch": {
+    "phantomQuote": 141.95680166147457,
+    "graduationThreshold": 354.8920041536864,
+    "openingUsd": 5576.32073053243,
+    "graduationUsd": 9957.914744548287,
+    "derived": null
+   },
+   "demand": {
+    "launches": 11,
+    "perDay": 94.16427226790844
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "QQQ",
+   "name": "Invesco QQQ",
+   "address": "0xD5f3879160bc7c32ebb4dC785F8a4F505888de68",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xd5f3879160bc7c32ebb4dc785f8a4f505888de68.png",
+   "kind": "index",
+   "market": {
+    "usd": 718.89,
+    "liquidity": 1549636.17,
+    "vol24": 2283515.01,
+    "venue": "uniswap v4",
+    "pairAddress": "0xf38009b348295f907c1f2e22aba84d731de3b7360d312881df1c206e85ea3b0b"
+   },
+   "launch": {
+    "phantomQuote": 4.458589950261095,
+    "graduationThreshold": 11.146474875652737,
+    "openingUsd": 4487.240276274952,
+    "graduationUsd": 8013.089323357996,
+    "derived": null
+   },
+   "demand": {
+    "launches": 22,
+    "perDay": 188.3285445358169
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "cbBTC",
+   "name": "Coinbase Wrapped BTC",
+   "address": "0xcec185eb182c47d1ba1efc84e6959e18cd620be4",
+   "decimals": 8,
+   "logoUrl": null,
+   "kind": "commodity",
+   "market": {
+    "usd": 78508.92,
+    "liquidity": 1440684.2,
+    "vol24": 1079801.44,
+    "venue": "uniswap v4",
+    "pairAddress": "0x94c62eebf6454231b2fcd0259ede448ae3c6ad8617718cd88dab20b30cfae48a"
+   },
+   "launch": {
+    "phantomQuote": 0.052739,
+    "graduationThreshold": 0.13184752,
+    "openingUsd": 5796.558773456531,
+    "graduationUsd": 10351.2063998784,
+    "derived": null
+   },
+   "demand": {
+    "launches": 11,
+    "perDay": 94.16427226790844
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "AAPL",
+   "name": "Apple",
+   "address": "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xaf3d76f1834a1d425780943c99ea8a608f8a93f9.png",
+   "kind": "equity",
+   "market": {
+    "usd": 316.52,
+    "liquidity": 1432585.46,
+    "vol24": 1579098.32,
+    "venue": "uniswap v4",
+    "pairAddress": "0xc748f4671a867db48b552f6b7650bf3255e05f80f00e3f7aad1b17ccb7898fdb"
+   },
+   "launch": {
+    "phantomQuote": 9.68,
+    "graduationThreshold": 24.2,
+    "openingUsd": 4289.393252134957,
+    "graduationUsd": 7659.784,
+    "derived": null
+   },
+   "demand": {
+    "launches": 62,
+    "perDay": 530.744080055484
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "CRCL",
+   "name": "Circle Internet Group",
+   "address": "0xdF0992E440dD0be65BD8439b609d6D4366bf1CB5",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xdf0992e440dd0be65bd8439b609d6d4366bf1cb5.png",
+   "kind": "equity",
+   "market": {
+    "usd": 97.33,
+    "liquidity": 1316346.83,
+    "vol24": 1133022.28,
+    "venue": "uniswap v3",
+    "pairAddress": "0x654E4143e82a5824445Ade0824351C2A9ACD95a8"
+   },
+   "launch": {
+    "phantomQuote": 47.96066805845511,
+    "graduationThreshold": 119.90167014613779,
+    "openingUsd": 6535.085849264225,
+    "graduationUsd": 11670.02955532359,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "GME",
+   "name": "GameStop",
+   "address": "0x1b0E319c6A659F002271B69dB8A7df2F911c153E",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x1b0e319c6a659f002271b69db8a7df2f911c153e.png",
+   "kind": "equity",
+   "market": {
+    "usd": 18.91,
+    "liquidity": 1303536.27,
+    "vol24": 1056988.86,
+    "venue": "uniswap v3",
+    "pairAddress": "0xE9713f453aDB9245B19559790c96F470a18F2fDF"
+   },
+   "launch": {
+    "phantomQuote": 147.6,
+    "graduationThreshold": 369,
+    "openingUsd": 3907.484250314993,
+    "graduationUsd": 6977.79,
+    "derived": null
+   },
+   "demand": {
+    "launches": 51,
+    "perDay": 436.57980778757553
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "LLY",
+   "name": "Eli Lilly",
+   "address": "0x8005d266423c7ea827372c9c864491e5786600ea",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x8005d266423c7ea827372c9c864491e5786600ea.png",
+   "kind": "equity",
+   "market": {
+    "usd": 1130.32,
+    "liquidity": 1294664.14,
+    "vol24": 589121.42,
+    "venue": "uniswap v3",
+    "pairAddress": "0xF4274130137eeE20bAD928B593d992716516CEB9"
+   },
+   "launch": {
+    "phantomQuote": 3.490909655172414,
+    "graduationThreshold": 8.727274137931035,
+    "openingUsd": 5524.072520557865,
+    "graduationUsd": 9864.612503586208,
+    "derived": null
+   },
+   "demand": {
+    "launches": 3,
+    "perDay": 25.68116516397503
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "COST",
+   "name": "Costco",
+   "address": "0x4EA005168D7F09a7A0Ba9D1DEf21a479950E44C2",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x4ea005168d7f09a7a0ba9d1def21a479950e44c2.png",
+   "kind": "equity",
+   "market": {
+    "usd": 911.92,
+    "liquidity": 1171481.74,
+    "vol24": 385244.52,
+    "venue": "uniswap v3",
+    "pairAddress": "0x0a2121A50A09eD0796ae81F9c53fF9398355a398"
+   },
+   "launch": {
+    "phantomQuote": 3.388162372132469,
+    "graduationThreshold": 8.470405930331173,
+    "openingUsd": 4325.539731758422,
+    "graduationUsd": 7724.332575987603,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "MSTR",
+   "name": "Strategy Inc.",
+   "address": "0xec262a75e413fAfD0dF80480274532C79D42da09",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xec262a75e413fafd0df80480274532c79d42da09.png",
+   "kind": "equity",
+   "market": {
+    "usd": 137.74,
+    "liquidity": 1121204.09,
+    "vol24": 4801977,
+    "venue": "uniswap v4",
+    "pairAddress": "0x319bac87e616a89e241c10aeb8afd4892a852cdd8b373cd9765ecddc40b87cfe"
+   },
+   "launch": {
+    "phantomQuote": 31.99209095402867,
+    "graduationThreshold": 79.98022738507167,
+    "openingUsd": 6169.10346914169,
+    "graduationUsd": 11016.476520019773,
+    "derived": null
+   },
+   "demand": {
+    "launches": 16,
+    "perDay": 136.96621420786684
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "AMZN",
+   "name": "Amazon",
+   "address": "0x12f190a9F9d7D37a250758b26824B97CE941bF54",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x12f190a9f9d7d37a250758b26824b97ce941bf54.png",
+   "kind": "equity",
+   "market": {
+    "usd": 256.43,
+    "liquidity": 1067882.1,
+    "vol24": 953548.68,
+    "venue": "uniswap v3",
+    "pairAddress": "0x8AC92DA74AB5F3b1d024Dc1943Ad7e15Dc4179Ef"
+   },
+   "launch": {
+    "phantomQuote": 11.732116436857082,
+    "graduationThreshold": 29.3302910921427,
+    "openingUsd": 4211.769029683972,
+    "graduationUsd": 7521.166544758153,
+    "derived": null
+   },
+   "demand": {
+    "launches": 20,
+    "perDay": 171.20776775983356
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "TSLA",
+   "name": "Tesla",
+   "address": "0x322F0929c4625eD5bAd873c95208D54E1c003b2d",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x322f0929c4625ed5bad873c95208d54e1c003b2d.png",
+   "kind": "equity",
+   "market": {
+    "usd": 366.68,
+    "liquidity": 1065294.6,
+    "vol24": 2631086.89,
+    "venue": "uniswap v3",
+    "pairAddress": "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3"
+   },
+   "launch": {
+    "phantomQuote": 10.4,
+    "graduationThreshold": 26,
+    "openingUsd": 5338.754024919502,
+    "graduationUsd": 9533.68,
+    "derived": null
+   },
+   "demand": {
+    "launches": 40,
+    "perDay": 342.4155355196671
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "GOOGL",
+   "name": "Alphabet Class A",
+   "address": "0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3.png",
+   "kind": "equity",
+   "market": {
+    "usd": 337.64,
+    "liquidity": 915923.07,
+    "vol24": 670386.88,
+    "venue": "uniswap v4",
+    "pairAddress": "0xd4ecb79fdc521d7725d22b33ed43cb4e47aa96bfad76aa29577e3151f723ac5e"
+   },
+   "launch": {
+    "phantomQuote": 9.68,
+    "graduationThreshold": 24.2,
+    "openingUsd": 4575.605767884642,
+    "graduationUsd": 8170.887999999999,
+    "derived": null
+   },
+   "demand": {
+    "launches": 34,
+    "perDay": 291.05320519171704
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "USO",
+   "name": "United States Oil Fund",
+   "address": "0xa30FA36Db767ad9eD3f7a60fC79526fB4d56D344",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344.png",
+   "kind": "commodity",
+   "market": {
+    "usd": 144.43,
+    "liquidity": 849099.5,
+    "vol24": 1393804.33,
+    "venue": "uniswap v3",
+    "pairAddress": "0x02175608F1b5E6b5ed221cCFdC7Be197D111D915"
+   },
+   "launch": {
+    "phantomQuote": 28.719540425531918,
+    "graduationThreshold": 71.79885106382979,
+    "openingUsd": 5807.0323724759555,
+    "graduationUsd": 10369.908059148936,
+    "derived": null
+   },
+   "demand": {
+    "launches": 7,
+    "perDay": 59.92271871594174
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "META",
+   "name": "Meta Platforms",
+   "address": "0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xc0d6457c16cc70d6790dd43521c899c87ce02f35.png",
+   "kind": "equity",
+   "market": {
+    "usd": 616.8,
+    "liquidity": 744225.4,
+    "vol24": 312367.34,
+    "venue": "uniswap v4",
+    "pairAddress": "0x5875d407a42965b0e768c8925cea290e06fa50603ef34fc99eb92a1050e6ae36"
+   },
+   "launch": {
+    "phantomQuote": 5.4271580439404685,
+    "graduationThreshold": 13.56789510985117,
+    "openingUsd": 4686.365786787737,
+    "graduationUsd": 8368.6777037562,
+    "derived": null
+   },
+   "demand": {
+    "launches": 7,
+    "perDay": 59.92271871594174
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "MSFT",
+   "name": "Microsoft",
+   "address": "0xe93237C50D904957Cf27E7B1133b510C669c2e74",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xe93237c50d904957cf27e7b1133b510c669c2e74.png",
+   "kind": "equity",
+   "market": {
+    "usd": 492.34,
+    "liquidity": 619762.41,
+    "vol24": 798879.14,
+    "venue": "uniswap v3",
+    "pairAddress": "0xeb60bCD1D920ad6E102690CCFC6fB488899E1510"
+   },
+   "launch": {
+    "phantomQuote": 6.431455767077268,
+    "graduationThreshold": 16.07863941769317,
+    "openingUsd": 4432.959446119029,
+    "graduationUsd": 7916.157330907055,
+    "derived": null
+   },
+   "demand": {
+    "launches": 12,
+    "perDay": 102.72466065590012
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "AMD",
+   "name": "AMD",
+   "address": "0x86923f96303D656E4aa86D9d42D1e57ad2023fdC",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x86923f96303d656e4aa86d9d42d1e57ad2023fdc.png",
+   "kind": "equity",
+   "market": {
+    "usd": 504.94,
+    "liquidity": 599736.75,
+    "vol24": 365920.41,
+    "venue": "uniswap v4",
+    "pairAddress": "0xde9f85fdd9e05a943a52f2c69ffafe3064a3287df03d02c9b431bc92d4781274"
+   },
+   "launch": {
+    "phantomQuote": 6.666201836383609,
+    "graduationThreshold": 16.66550459095902,
+    "openingUsd": 4712.350490359148,
+    "graduationUsd": 8415.079888158847,
+    "derived": null
+   },
+   "demand": {
+    "launches": 41,
+    "perDay": 350.9759239076588
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "TAO",
+   "name": "Bittensor",
+   "address": "0xf3081494b87e8d5fb7960f066e931d1d0e6e3d67",
+   "decimals": 18,
+   "logoUrl": null,
+   "kind": "crypto",
+   "market": {
+    "usd": 257.71,
+    "liquidity": 544756.4,
+    "vol24": 248952.82,
+    "venue": "uniswap v3",
+    "pairAddress": "0x3f048149F291f459A38FE1d937a361B153CbA43E"
+   },
+   "launch": {
+    "phantomQuote": 15.730043264210055,
+    "graduationThreshold": 39.32510816052514,
+    "openingUsd": 5675.191725632889,
+    "graduationUsd": 10134.473624048933,
+    "derived": null
+   },
+   "demand": {
+    "launches": 2,
+    "perDay": 17.120776775983355
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "COIN",
+   "name": "Coinbase",
+   "address": "0x6330D8C3178a418788dF01a47479c0ce7CCF450b",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x6330d8c3178a418788df01a47479c0ce7ccf450b.png",
+   "kind": "equity",
+   "market": {
+    "usd": 180.98,
+    "liquidity": 542625.31,
+    "vol24": 1092757.14,
+    "venue": "uniswap v3",
+    "pairAddress": "0x6707aeAc7D0e519B083219d27BB427364363183A"
+   },
+   "launch": {
+    "phantomQuote": 20.98826938136257,
+    "graduationThreshold": 52.47067345340642,
+    "openingUsd": 5317.733435025897,
+    "graduationUsd": 9496.142481597493,
+    "derived": null
+   },
+   "demand": {
+    "launches": 8,
+    "perDay": 68.48310710393342
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "DJT",
+   "name": "Trump Media & Technology Group",
+   "address": "0x1D11f0496982706C5e14A514D4E79F2e6BdE4516",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x1d11f0496982706c5e14a514d4e79f2e6bde4516.png",
+   "kind": "equity",
+   "market": {
+    "usd": 9.16,
+    "liquidity": 507427.15,
+    "vol24": 879322.01,
+    "venue": "uniswap v3",
+    "pairAddress": "0x31a89afd92F9397465649AD03226c52292fc1ae5"
+   },
+   "launch": {
+    "phantomQuote": 366.86488065753315,
+    "graduationThreshold": 917.162201643833,
+    "openingUsd": 4704.581137929446,
+    "graduationUsd": 8401.20576705751,
+    "derived": null
+   },
+   "demand": {
+    "launches": 25,
+    "perDay": 214.00970969979193
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "TSM",
+   "name": "Taiwan Semiconductor Manufacturing",
+   "address": "0x58FfE4a942d3885bAa22D7520691F611EF09e7AA",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x58ffe4a942d3885baa22d7520691f611ef09e7aa.png",
+   "kind": "equity",
+   "market": {
+    "usd": 439.93,
+    "liquidity": 498642.96,
+    "vol24": 834812.47,
+    "venue": "uniswap v4",
+    "pairAddress": "0x4c862e5846659b086fe73896bbb9058513417e4e6938a1be93aeb7a768fa5754"
+   },
+   "launch": {
+    "phantomQuote": 9.781292753623188,
+    "graduationThreshold": 24.453231884057974,
+    "openingUsd": 6024.197285596316,
+    "graduationUsd": 10757.710302753625,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "DELL",
+   "name": "Dell",
+   "address": "0x941AE714EC6D8130c7B75d67160Ca08f1e7d11Dd",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x941ae714ec6d8130c7b75d67160ca08f1e7d11dd.png",
+   "kind": "equity",
+   "market": {
+    "usd": 525.99,
+    "liquidity": 480208.14,
+    "vol24": 178482.56,
+    "venue": "uniswap v3",
+    "pairAddress": "0xc30c89cB7815A1488b7998D15eEC73961707Fc5a"
+   },
+   "launch": {
+    "phantomQuote": 9.52812988235294,
+    "graduationThreshold": 23.820324705882353,
+    "openingUsd": 7016.2411267238185,
+    "graduationUsd": 12529.25259204706,
+    "derived": null
+   },
+   "demand": {
+    "launches": 5,
+    "perDay": 42.80194193995839
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "PLTR",
+   "name": "Palantir Technologies",
+   "address": "0x894E1EC2D74FFE5AEF8Dc8A9e84686acCB964F2A",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a.png",
+   "kind": "equity",
+   "market": {
+    "usd": 172.82,
+    "liquidity": 453039.49,
+    "vol24": 279751.33,
+    "venue": "uniswap v4",
+    "pairAddress": "0xee430ee1003e1985e1828a01b9a20dad67ad4302994fe2abb4a173de4ac54623"
+   },
+   "launch": {
+    "phantomQuote": 18.826050105361745,
+    "graduationThreshold": 47.06512526340436,
+    "openingUsd": 4554.834074210579,
+    "graduationUsd": 8133.794948021541,
+    "derived": null
+   },
+   "demand": {
+    "launches": 17,
+    "perDay": 145.52660259585852
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SLV",
+   "name": "iShares Silver Trust",
+   "address": "0x411eFb0E7f985935DAec3D4C3ebaEa0d0AD7D89f",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x411efb0e7f985935daec3d4c3ebaea0d0ad7d89f.png",
+   "kind": "commodity",
+   "market": {
+    "usd": 59.95,
+    "liquidity": 375561.73,
+    "vol24": 380734.87,
+    "venue": "uniswap v3",
+    "pairAddress": "0x8cB787e6c315D464775289BaD00FDD67d53Ecb3D"
+   },
+   "launch": {
+    "phantomQuote": 69.11859484777519,
+    "graduationThreshold": 172.79648711943796,
+    "openingUsd": 5801.007645420864,
+    "graduationUsd": 10359.149402810306,
+    "derived": null
+   },
+   "demand": {
+    "launches": 0,
+    "perDay": 0
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "TTWO",
+   "name": "Take-Two Interactive Software",
+   "address": "0x5e81213613b6B86EaB4c6c50d718d34359459786",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x5e81213613b6b86eab4c6c50d718d34359459786.png",
+   "kind": "equity",
+   "market": {
+    "usd": 213.13,
+    "liquidity": 327082.49,
+    "vol24": 623016.54,
+    "venue": "uniswap v3",
+    "pairAddress": "0xD9Ab4b7fAe6DC2f7020134Ec744A8F53Ef3E5E24"
+   },
+   "launch": {
+    "phantomQuote": 10.65560275280714,
+    "graduationThreshold": 26.63900688201785,
+    "openingUsd": 3179.3764730586386,
+    "graduationUsd": 5677.571536764464,
+    "derived": null
+   },
+   "demand": {
+    "launches": 3,
+    "perDay": 25.68116516397503
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "LULU",
+   "name": "Lululemon",
+   "address": "0x4e62068525Ab11FE768e29dfD00ef909B9803016",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x4e62068525ab11fe768e29dfd00ef909b9803016.png",
+   "kind": "equity",
+   "market": {
+    "usd": 100.56,
+    "liquidity": 310733.19,
+    "vol24": 1101442.28,
+    "venue": "uniswap v3",
+    "pairAddress": "0x0F4227D27082B3BCA6818381b9ea6460275e49f4"
+   },
+   "launch": {
+    "phantomQuote": 33.486666111435,
+    "graduationThreshold": 83.71666527858748,
+    "openingUsd": 4714.292515981945,
+    "graduationUsd": 8418.547860414757,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SNDK",
+   "name": "Sandisk Corporation",
+   "address": "0xB90A19fF0Af67f7779afF50A882A9CfF42446400",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xb90a19ff0af67f7779aff50a882a9cff42446400.png",
+   "kind": "equity",
+   "market": {
+    "usd": 1778.22,
+    "liquidity": 288498.18,
+    "vol24": 190058.72,
+    "venue": "uniswap v4",
+    "pairAddress": "0x2707cb88a6a40fa0f948f58958051ba097d6f6a3cf7f87929bd68ccc5becea24"
+   },
+   "launch": {
+    "phantomQuote": 2.652177326252598,
+    "graduationThreshold": 6.630443315631494,
+    "openingUsd": 6602.484621432024,
+    "graduationUsd": 11790.386912722235,
+    "derived": null
+   },
+   "demand": {
+    "launches": 11,
+    "perDay": 94.16427226790844
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "NFLX",
+   "name": "Netflix",
+   "address": "0xE0444EF8BF4eD74f74FD73686e2ddF4C1c5591E8",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xe0444ef8bf4ed74f74fd73686e2ddf4c1c5591e8.png",
+   "kind": "equity",
+   "market": {
+    "usd": 76.46,
+    "liquidity": 272042.72,
+    "vol24": 219068.36,
+    "venue": "uniswap v3",
+    "pairAddress": "0x59895C0302F41aEaa129D2fa2442CEc01E7eF45E"
+   },
+   "launch": {
+    "phantomQuote": 52.12121854304636,
+    "graduationThreshold": 130.3030463576159,
+    "openingUsd": 5579.15213467916,
+    "graduationUsd": 9962.97092450331,
+    "derived": null
+   },
+   "demand": {
+    "launches": 7,
+    "perDay": 59.92271871594174
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "RBLX",
+   "name": "Roblox",
+   "address": "0xF0C4BF4C582cb3836e98394b1d4e7B7281101bE8",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xf0c4bf4c582cb3836e98394b1d4e7b7281101be8.png",
+   "kind": "equity",
+   "market": {
+    "usd": 44.095,
+    "liquidity": 262058.06,
+    "vol24": 359416.06,
+    "venue": "uniswap v3",
+    "pairAddress": "0x2ef5945cd5664876b6481FdacFaA2942995a4DA8"
+   },
+   "launch": {
+    "phantomQuote": 99.56860585197936,
+    "graduationThreshold": 248.92151462994838,
+    "openingUsd": 6146.5458141439585,
+    "graduationUsd": 10976.194187607573,
+    "derived": null
+   },
+   "demand": {
+    "launches": 5,
+    "perDay": 42.80194193995839
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SNAP",
+   "name": "Snap",
+   "address": "0xF6589F11Bc40b669e584073F428B05562F568733",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xf6589f11bc40b669e584073f428b05562f568733.png",
+   "kind": "equity",
+   "market": {
+    "usd": 5.44,
+    "liquidity": 243521.1,
+    "vol24": 1514865.23,
+    "venue": "uniswap v4",
+    "pairAddress": "0x2e4cc4c65587faca7a08b69a13c86ca8c86599d90ad818ceaa1a875176f5fb52"
+   },
+   "launch": {
+    "phantomQuote": 719.2744186046511,
+    "graduationThreshold": 1798.186046511628,
+    "openingUsd": 5477.884414404735,
+    "graduationUsd": 9782.132093023258,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "BABA",
+   "name": "Alibaba",
+   "address": "0xad25Ac6C84D497db898fa1E8387bf6Af3532a1c4",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xad25ac6c84d497db898fa1e8387bf6af3532a1c4.png",
+   "kind": "equity",
+   "market": {
+    "usd": 112.25,
+    "liquidity": 241952.27,
+    "vol24": 370327.15,
+    "venue": "uniswap v3",
+    "pairAddress": "0xa57ab582b310dd6f9e934EA1EEEa152741545E6A"
+   },
+   "launch": {
+    "phantomQuote": 36.51387062566278,
+    "graduationThreshold": 91.28467656415694,
+    "openingUsd": 5738.040008022746,
+    "graduationUsd": 10246.704944326617,
+    "derived": null
+   },
+   "demand": {
+    "launches": 3,
+    "perDay": 25.68116516397503
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "IBM",
+   "name": "IBM",
+   "address": "0x980dcf6766FA79f5Cf0c4AAdb3ab477ff15a9619",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x980dcf6766fa79f5cf0c4aadb3ab477ff15a9619.png",
+   "kind": "equity",
+   "market": {
+    "usd": 232.74,
+    "liquidity": 177887.71,
+    "vol24": 871190.34,
+    "venue": "uniswap v3",
+    "pairAddress": "0x8cD848ce18b829C5c769AFf27164078bB52e0E97"
+   },
+   "launch": {
+    "phantomQuote": 17.55644614404079,
+    "graduationThreshold": 43.89111536010197,
+    "openingUsd": 5720.407777634122,
+    "graduationUsd": 10215.218188910134,
+    "derived": null
+   },
+   "demand": {
+    "launches": 2,
+    "perDay": 17.120776775983355
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SHOP",
+   "name": "Shopify",
+   "address": "0xF53F66751B1Eff985311b693531E3290F600c410",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xf53f66751b1eff985311b693531e3290f600c410.png",
+   "kind": "equity",
+   "market": {
+    "usd": 133.23,
+    "liquidity": 158118.54,
+    "vol24": 449934.33,
+    "venue": "uniswap v4",
+    "pairAddress": "0x8baff387b51c50e2747e85bcddf87da78fee6efb45629743e1af4dfb07ad13ee"
+   },
+   "launch": {
+    "phantomQuote": 28.03575519066359,
+    "graduationThreshold": 70.08938797665898,
+    "openingUsd": 5229.180546062033,
+    "graduationUsd": 9338.009160130276,
+    "derived": null
+   },
+   "demand": {
+    "launches": 0,
+    "perDay": 0
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "BULL",
+   "name": "Webull",
+   "address": "0xceF9027c7d6985b85f0BA431125073529A947A68",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xcef9027c7d6985b85f0ba431125073529a947a68.png",
+   "kind": "equity",
+   "market": {
+    "usd": 9.59,
+    "liquidity": 149561.07,
+    "vol24": 247376.86,
+    "venue": "uniswap v4",
+    "pairAddress": "0xdfc620485cebd394955e7cde9e3d336ec8dabe24a7c80c4b9de71ea896208e79"
+   },
+   "launch": {
+    "phantomQuote": 421.83865237366007,
+    "graduationThreshold": 1054.5966309341504,
+    "openingUsd": 5663.492476919222,
+    "graduationUsd": 10113.581690658502,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "SKHY",
+   "name": "SK hynix Inc. American Depositary Shares",
+   "address": "0x84CAb63bc87912E71ad199ff14A0bA45de68FeF8",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x84cab63bc87912e71ad199ff14a0ba45de68fef8.png",
+   "kind": "equity",
+   "market": {
+    "usd": 189.67,
+    "liquidity": 144767.92,
+    "vol24": 88850.2,
+    "venue": "uniswap v4",
+    "pairAddress": "0x994db79a9e80b73d726171d0e834dfe6fdce7987539dcf5cceef7b2b95c5fd95"
+   },
+   "launch": {
+    "phantomQuote": 25.186311730314713,
+    "graduationThreshold": 62.96577932578679,
+    "openingUsd": 6687.7890884625385,
+    "graduationUsd": 11942.71936472198,
+    "derived": null
+   },
+   "demand": {
+    "launches": 2,
+    "perDay": 17.120776775983355
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "RIVN",
+   "name": "Rivian Automotive",
+   "address": "0xB1BF26c1D20ff267A4f93550d1E0d06ac40a114B",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xb1bf26c1d20ff267a4f93550d1e0d06ac40a114b.png",
+   "kind": "equity",
+   "market": {
+    "usd": 15.78,
+    "liquidity": 141013.78,
+    "vol24": 116942,
+    "venue": "uniswap v3",
+    "pairAddress": "0xb30A75B200D98A600a3766869344928E35823E23"
+   },
+   "launch": {
+    "phantomQuote": 257.5748878923767,
+    "graduationThreshold": 643.9372197309417,
+    "openingUsd": 5690.230618706012,
+    "graduationUsd": 10161.32932735426,
+    "derived": null
+   },
+   "demand": {
+    "launches": 0,
+    "perDay": 0
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "MRNA",
+   "name": "Moderna",
+   "address": "0x43B07D15cE533bEc5476d70C22a78a1B2B662155",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x43b07d15ce533bec5476d70c22a78a1b2b662155.png",
+   "kind": "equity",
+   "market": {
+    "usd": 145.52,
+    "liquidity": 130044.32,
+    "vol24": 114204.89,
+    "venue": "uniswap v3",
+    "pairAddress": "0xA34d0667334074DF2d5BfD259e79E6B9cf1fA8Bf"
+   },
+   "launch": {
+    "phantomQuote": 26.66099065048737,
+    "graduationThreshold": 66.65247662621842,
+    "openingUsd": 5431.481673609019,
+    "graduationUsd": 9699.268398647304,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "INDA",
+   "name": "iShares MSCI India ETF",
+   "address": "0xACEF2e09adb47aD6aBeBAD9fF06689E60615C2B6",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xacef2e09adb47ad6abebad9ff06689e60615c2b6.png",
+   "kind": "regional",
+   "market": {
+    "usd": 49.13,
+    "liquidity": 120942.12,
+    "vol24": 198086.1,
+    "venue": "uniswap v4",
+    "pairAddress": "0x7d0895d8162b0be326ef944faeb5a84f4a08377b9bc9f010e38fa4d268a94469"
+   },
+   "launch": {
+    "phantomQuote": 82.69607925547885,
+    "graduationThreshold": 206.74019813869708,
+    "openingUsd": 5687.887965591034,
+    "graduationUsd": 10157.145934554188,
+    "derived": null
+   },
+   "demand": {
+    "launches": 3,
+    "perDay": 25.68116516397503
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "JNJ",
+   "name": "Johnson & Johnson",
+   "address": "0x03DfbBE0AC4E7bCDaFd08eD41A400326B77D8c80",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x03dfbbe0ac4e7bcdafd08ed41a400326b77d8c80.png",
+   "kind": "equity",
+   "market": {
+    "usd": 271.34,
+    "liquidity": 108236.63,
+    "vol24": 8831.24,
+    "venue": "uniswap v4",
+    "pairAddress": "0x939699357c3dfe97e84bce4ac71470ded8af8b7e2b52de4c216394b5849f8298"
+   },
+   "launch": {
+    "phantomQuote": 14.609730751062825,
+    "graduationThreshold": 36.52432687765706,
+    "openingUsd": 5549.775083289076,
+    "graduationUsd": 9910.510854983466,
+    "derived": null
+   },
+   "demand": {
+    "launches": 2,
+    "perDay": 17.120776775983355
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "FIG",
+   "name": "Figma",
+   "address": "0x41F4267525a8AFf329540eF24fD83d9044758B33",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x41f4267525a8aff329540ef24fd83d9044758b33.png",
+   "kind": "equity",
+   "market": {
+    "usd": 23.093,
+    "liquidity": 107315.72,
+    "vol24": 65259.77,
+    "venue": "uniswap v4",
+    "pairAddress": "0xaee7f2e61946d4e2a096f44dc686c5b6ba8b2ce0857fa167f2e95c3d2eeb62b8"
+   },
+   "launch": {
+    "phantomQuote": 156.2667703070346,
+    "graduationThreshold": 390.66692576758646,
+    "openingUsd": 5052.034896682556,
+    "graduationUsd": 9021.671316750873,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "BE",
+   "name": "Bloom Energy",
+   "address": "0x822CC93fFD030293E9842c30BBD678F530701867",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x822cc93ffd030293e9842c30bbd678f530701867.png",
+   "kind": "equity",
+   "market": {
+    "usd": 277.047,
+    "liquidity": 105982.15,
+    "vol24": 283286.35,
+    "venue": "uniswap v3",
+    "pairAddress": "0x1baD145C8F06444E0dF81c28257cd20231Bd1f16"
+   },
+   "launch": {
+    "phantomQuote": 16.82031182576837,
+    "graduationThreshold": 42.05077956442092,
+    "openingUsd": 6523.893224686617,
+    "graduationUsd": 11650.042325984125,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": false
+  },
+  {
+   "symbol": "WYFI",
+   "name": "WhiteFiber, Inc.",
+   "address": "0x9e7ABD3C9139D14E4c86DcE0e455AAB7A0C2FB3E",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x9e7abd3c9139d14e4c86dce0e455aab7a0c2fb3e.png",
+   "kind": "equity",
+   "market": {
+    "usd": 20.21,
+    "liquidity": 98703.16,
+    "vol24": 125502.02,
+    "venue": "uniswap v3",
+    "pairAddress": "0x2a3063e34C60253ABB23C2442F4CDFBC5cbd02c2"
+   },
+   "launch": {
+    "phantomQuote": 231.39744,
+    "graduationThreshold": 578.4936,
+    "openingUsd": 6547.028226795464,
+    "graduationUsd": 11691.355656000002,
+    "derived": null
+   },
+   "demand": {
+    "launches": 0,
+    "perDay": 0
+   },
+   "tradeable": true,
+   "thin": true
+  },
+  {
+   "symbol": "UPS",
+   "name": "UPS",
+   "address": "0xf23250dac154D05Bb671CB0d0eBEf3c635c79CE2",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0xf23250dac154d05bb671cb0d0ebef3c635c79ce2.png",
+   "kind": "equity",
+   "market": {
+    "usd": 101.72,
+    "liquidity": 95271.96,
+    "vol24": 36032.64,
+    "venue": "uniswap v3",
+    "pairAddress": "0x3Ab74C45DceCC6A62898204Dd42143a816B44CB1"
+   },
+   "launch": {
+    "phantomQuote": 40.12341813944455,
+    "graduationThreshold": 100.30854534861137,
+    "openingUsd": 5713.781454772924,
+    "graduationUsd": 10203.385232860748,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": true
+  },
+  {
+   "symbol": "PFE",
+   "name": "Pfizer",
+   "address": "0x7066A64c24e4206CD62E83bf198c1E7EB361F51e",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x7066a64c24e4206cd62e83bf198c1e7eb361f51e.png",
+   "kind": "equity",
+   "market": {
+    "usd": 27.9,
+    "liquidity": 81169.45,
+    "vol24": 95770.85,
+    "venue": "uniswap v4",
+    "pairAddress": "0xd250bed35cb53a2242120ad41fa43c160044418f9b75968b2a7edae4b2fca24e"
+   },
+   "launch": {
+    "phantomQuote": 138.55079255685735,
+    "graduationThreshold": 346.37698139214336,
+    "openingUsd": 5411.685723556377,
+    "graduationUsd": 9663.917780840799,
+    "derived": null
+   },
+   "demand": {
+    "launches": 2,
+    "perDay": 17.120776775983355
+   },
+   "tradeable": true,
+   "thin": true
+  },
+  {
+   "symbol": "BB",
+   "name": "Blackberry",
+   "address": "0x48E39E56aCdbA37b09020C0b734A613C9a2f100A",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x48e39e56acdba37b09020c0b734a613c9a2f100a.png",
+   "kind": "equity",
+   "market": {
+    "usd": 7.8,
+    "liquidity": 76272.93,
+    "vol24": 75097.34,
+    "venue": "uniswap v4",
+    "pairAddress": "0xc250650901b49785b18443a0b1bfee10b98f5c20f11988635252030e5283a288"
+   },
+   "launch": {
+    "phantomQuote": 503.8245700245701,
+    "graduationThreshold": 1259.5614250614256,
+    "openingUsd": 5501.654271582874,
+    "graduationUsd": 9824.579115479119,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": true
+  },
+  {
+   "symbol": "NU",
+   "name": "Nu",
+   "address": "0x408c14038a04f7bD235329E26d2bf569ee20e250",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x408c14038a04f7bd235329e26d2bf569ee20e250.png",
+   "kind": "equity",
+   "market": {
+    "usd": 15.46,
+    "liquidity": 72747,
+    "vol24": 15921.14,
+    "venue": "uniswap v3",
+    "pairAddress": "0xb6d047637151f6De1d02028acdd187Aa9cb7AFE3"
+   },
+   "launch": {
+    "phantomQuote": 267.0054668820679,
+    "graduationThreshold": 667.5136672051697,
+    "openingUsd": 5778.950746180553,
+    "graduationUsd": 10319.761294991924,
+    "derived": null
+   },
+   "demand": {
+    "launches": 1,
+    "perDay": 8.560388387991678
+   },
+   "tradeable": true,
+   "thin": true
+  },
+  {
+   "symbol": "F",
+   "name": "Ford Motor",
+   "address": "0x25C288E6D899b9BC30160965aD9644c67e73bE0C",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x25c288e6d899b9bc30160965ad9644c67e73be0c.png",
+   "kind": "equity",
+   "market": {
+    "usd": 14.081,
+    "liquidity": 49358.85,
+    "vol24": 68104.39,
+    "venue": "uniswap v3",
+    "pairAddress": "0x4dbAC19E895322ac5b93abad9008691632bFFC05"
+   },
+   "launch": {
+    "phantomQuote": 284.56677685950416,
+    "graduationThreshold": 711.4169421487604,
+    "openingUsd": 5609.666505612036,
+    "graduationUsd": 10017.461962396696,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": true
+  },
+  {
+   "symbol": "MRVL",
+   "name": "Marvell Technology",
+   "address": "0x62fd0668e10D8B72339BE2DCF7643001688ff13B",
+   "decimals": 18,
+   "logoUrl": "https://cdn.robinhood.com/ncw_assets/logos/0x62fd0668e10d8b72339be2dcf7643001688ff13b.png",
+   "kind": "equity",
+   "market": {
+    "usd": 229.5,
+    "liquidity": 48624.93,
+    "vol24": 97588.96,
+    "venue": "uniswap v3",
+    "pairAddress": "0xb5E892F0fC6dAAdDA5b927266FE7907e623e4843"
+   },
+   "launch": {
+    "phantomQuote": 19.472801239829526,
+    "graduationThreshold": 48.682003099573805,
+    "openingUsd": 6256.485908639054,
+    "graduationUsd": 11172.519711352188,
+    "derived": null
+   },
+   "demand": {
+    "launches": 4,
+    "perDay": 34.24155355196671
+   },
+   "tradeable": true,
+   "thin": true
+  }
+ ]
+}
