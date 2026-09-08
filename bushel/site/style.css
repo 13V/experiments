@@ -58,6 +58,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 h1, h2, h3, h4, p { margin: 0; }
+
+/* Paper has tooth. Without it #FBF7F0 is just a light grey and the whole conceit of a printed page
+   falls flat at large sizes. This is one inline SVG turbulence tile at 3.5% — enough to break the
+   flatness, far too faint to read as noise, and it costs no request. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#masthead, #view, #site-footer, #toasts { position: relative; z-index: 1; }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -107,14 +116,32 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 
 /* The strip's standing label is drawn here rather than written into the markup, so app.js can
    replace every child of #ticker on each read without stepping over it. */
+/* A strip that says what people actually picked, and actually moves — a static row of six labelled
+   "ticker" is a screenshot of one. It drifts rather than races, pauses on hover so a number can be
+   read, and holds still entirely for a reader who has asked for less motion. */
 #ticker {
   width: var(--wrap); margin-inline: auto;
   display: flex; gap: 18px; align-items: center; height: 36px;
-  overflow-x: auto; scrollbar-width: none;
+  overflow: hidden; scrollbar-width: none;
+  /* Only the trailing edge fades. Fading the leading edge too washed out the standing label,
+     which is not part of the moving set. */
+  -webkit-mask-image: linear-gradient(90deg, #000 0 90%, transparent);
+          mask-image: linear-gradient(90deg, #000 0 90%, transparent);
 }
+/* The rail clips. Without it the track's leftward transform carries items out of the rail's box and
+   over the standing label, which no amount of z-index on the label reliably fixes — the items are
+   simply drawn outside the area they belong to. Clipping here also means #ticker's own mask only
+   has to soften the trailing edge. */
+.tk-rail { display: flex; flex: 1; min-width: 0; overflow: hidden; }
+.tk-track { display: flex; gap: 18px; padding-right: 18px; flex: none; animation: drift 60s linear infinite; }
+.tk-rail:hover .tk-track { animation-play-state: paused; }
+@keyframes drift { from { transform: none; } to { transform: translateX(-100%); } }
 #ticker::-webkit-scrollbar { display: none; }
+/* Opaque, and above the track: the items drift leftwards past it, and without a ground of its own
+   the label had coin avatars sliding through its letters. */
 #ticker::before {
-  content: 'WHAT PEOPLE ACTUALLY PICKED'; flex: none;
+  content: 'WHAT PEOPLE ACTUALLY PICKED'; flex: none; position: relative; z-index: 2;
+  background: var(--paper); padding-right: 14px;
   font: 500 10px/1 var(--font-mono); letter-spacing: .14em; color: var(--muted);
 }
 .tk-item { display: inline-flex; align-items: center; gap: 7px; flex: none; }
@@ -148,8 +175,8 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    makes it read as a second voice rather than as decoration. */
 .hero {
   position: relative;
-  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
-  gap: 56px; align-items: center; padding: 64px 0 72px;
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr);
+  gap: 48px; align-items: center; padding: 60px 0 68px;
 }
 /* Ruled paper, not a dot grid. Their move is radial dots at 22px; this is the same family of idea
    in our register, and it fades out at the bottom so what follows starts on clean ground. */
@@ -158,9 +185,53 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 28px);
 }
 .hero-field::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--paper) 0%, transparent 42%); }
-.hero-copy, .spread-card { position: relative; z-index: 1; }
+.hero-copy, .hero-stage { position: relative; z-index: 1; }
 
-.hero h1 { font: 700 clamp(40px, 7.6vw, 92px)/0.94 var(--font-sans); letter-spacing: -.035em; }
+/* Three layers, not one plane. The card sits square — that part was right — but the mascot leans
+   over its top-left corner and the aside runs down its side, so the eye has somewhere to go and
+   the block stops reading as a spreadsheet dropped onto a page. */
+.hero-stage { position: relative; padding: 40px 34px 26px 30px; }
+.hero-stage .spread-card { position: relative; z-index: 1; }
+
+/* Leaning on the card's top-left corner from outside it. It overlapped the first two rows before,
+   which put a cartoon on top of the one table the page is arguing with. */
+.mascot {
+  position: absolute; z-index: 3; left: -46px; top: -24px; width: 132px; height: auto;
+  transform: rotate(-8deg); transform-origin: 70% 90%;
+  animation: lean 7s ease-in-out infinite;
+}
+@keyframes lean { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(-3deg) translateY(-4px); } }
+.m-shadow { fill: var(--ink); }
+.m-body { fill: var(--accent); stroke: var(--ink); stroke-width: 4; }
+.m-line { stroke: var(--ink); stroke-width: 4; fill: none; stroke-linecap: round; }
+.m-dot { fill: var(--ink); }
+.m-eye { fill: var(--ink); }
+.m-card { fill: var(--white); stroke: var(--ink); stroke-width: 3.5; }
+.m-word {
+  fill: var(--ink); font: 600 21px/1 var(--font-sans); letter-spacing: -.02em;
+  paint-order: stroke; stroke: none;
+}
+
+/* A margin note in the printed register: set in mono, run vertically down the outside of the card.
+   The competitor pins tilted sticky notes; this is the same instinct as a page's running head. */
+.hero-aside {
+  position: absolute; z-index: 0; right: 2px; top: 46px;
+  writing-mode: vertical-rl;                 /* reads downward; rotating it 180 read it bottom-up */
+  color: var(--muted); letter-spacing: .2em; font-size: 10px; white-space: nowrap; margin: 0;
+}
+
+/* The one word on the page that moves, because it is the one claim the product makes. */
+.cycle { position: relative; display: inline-block; color: var(--accent-dark); }
+.cycle::after { content: ''; position: absolute; left: 0; right: 0; bottom: .06em; height: .07em; background: var(--accent); border-radius: 2px; }
+.cycle.swap { animation: swap .34s cubic-bezier(.22, 1, .36, 1); }
+@keyframes swap {
+  from { opacity: 0; transform: translateY(.16em) rotate(-1.2deg); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Sized to land in three lines at 1440 — claim, cycling word, correction. At 92px it ran to five,
+   which is a poster you read rather than a sentence you catch. */
+.hero h1 { font: 700 clamp(38px, 5.6vw, 74px)/0.98 var(--font-sans); letter-spacing: -.033em; }
 .hero h1 em {
   display: block;
   font: italic 400 1em/0.98 var(--font-serif);
@@ -181,7 +252,18 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .sp-row { display: grid; grid-template-columns: 62px 1fr 74px; gap: 10px; align-items: center; height: 26px; }
 .sp-sym { font: 500 12px/1 var(--font-mono); letter-spacing: .04em; color: var(--ink); }
 .sp-bar { height: 8px; background: var(--tint); border: 1px solid var(--line); }
-.sp-bar i { display: block; height: 100%; background: var(--accent); width: calc(var(--w, 0) * 100%); }
+/* The bars draw in rather than arriving finished — the card is an argument about a spread, and a
+   spread is easier to see happening than to see. One pass on load, no loop. */
+.sp-bar i {
+  display: block; height: 100%; background: var(--accent);
+  width: calc(var(--w, 0) * 100%); transform-origin: left center;
+  animation: draw .7s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.sp-row:nth-child(2) i { animation-delay: .04s } .sp-row:nth-child(3) i { animation-delay: .08s }
+.sp-row:nth-child(4) i { animation-delay: .12s } .sp-row:nth-child(5) i { animation-delay: .16s }
+.sp-row:nth-child(6) i { animation-delay: .2s }  .sp-row:nth-child(7) i { animation-delay: .24s }
+.sp-row:nth-child(8) i { animation-delay: .28s } .sp-row:nth-child(9) i { animation-delay: .32s }
 .sp-usd { font: 500 13px/1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
 .sp-note { font: italic 400 14px/1.35 var(--font-serif); color: var(--accent-dark); margin-top: 14px; }
 .sp-meta { font: 500 10.5px/1.4 var(--font-mono); letter-spacing: .03em; color: var(--muted); margin-top: 6px; }
@@ -198,11 +280,22 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    one orphan on the next at most desktop widths, and a stranded card reads as a mistake. Three and
    three, then two and two, then a single column. */
 .picks-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+/* A card carries the colour of the kind of thing it is. It is the only place besides the avatars
+   that the earthy half of the palette appears, and it is what stops six white rectangles reading
+   as a spreadsheet — the kinds are commodity, bond, index, equity, crypto, stable, regional. */
 .pick {
-  display: block; background: var(--white); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 14px 15px;
+  display: block; position: relative; background: var(--white); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 15px; overflow: hidden;
   transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
 }
+.pick::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--kind, var(--line)); }
+.pick[data-kind='commodity'] { --kind: #8A5A3C; }
+.pick[data-kind='bond']      { --kind: #4B5A3E; }
+.pick[data-kind='index']     { --kind: #4A5560; }
+.pick[data-kind='crypto']    { --kind: #5C4258; }
+.pick[data-kind='stable']    { --kind: #3C6058; }
+.pick[data-kind='regional']  { --kind: #6B6437; }
+.pick[data-kind='equity']    { --kind: #6B3A44; }
 .pick:hover { border-color: var(--ink); transform: translate(-1px, -1px); box-shadow: var(--drop); }
 .pick-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .pick-rows { display: flex; flex-direction: column; gap: 5px; }
@@ -367,6 +460,15 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 @media (max-width: 900px) {
   .picks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero { grid-template-columns: 1fr; gap: 32px; padding: 36px 0 44px; }
+  /* On one column the card runs to both edges, so a mascot hanging off the left is simply cut in
+     half by the viewport. It moves to the top-right corner, which has the room. */
+  .hero-stage { padding: 46px 0 20px; }
+  .mascot { left: auto; right: 6px; top: -18px; width: 108px; transform: rotate(7deg); transform-origin: 30% 90%; }
+  @keyframes lean { 0%, 100% { transform: rotate(7deg); } 50% { transform: rotate(3deg) translateY(-4px); } }
+  .hero-aside { display: none; }
+  /* The standing label is 330px of a 358px strip on a phone, which leaves the marquee a sliver.
+     The strip still says what it is by what it contains. */
+  #ticker::before { content: none; }
   .sp-row { grid-template-columns: 54px 1fr 66px; }
   .page-grid { grid-template-columns: 1fr; }
   .rail-col { position: static; }

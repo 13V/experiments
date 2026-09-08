@@ -284,13 +284,21 @@
     clear(el);
     if (!busiest.length) { el.appendChild(h('span', { class: 'tk-empty' }, 'nothing launched in the window')); return; }
     const u = UI();
-    for (const a of busiest) {
-      el.appendChild(h('span', { class: 'tk-item' },
-        u && u.coinAvatar ? u.coinAvatar(a.symbol, a.logo, 18) : null,
-        h('span', { class: 'tk-sym' }, a.symbol),
-        h('span', { class: 'tk-px' }, fmtNum(a.launchesPerDay) + '/day'),
-        h('span', { class: 'tk-chg dim' }, a.usd ? fmtUsd(a.usd) : '')));
-    }
+    const item = (a) => h('span', { class: 'tk-item' },
+      u && u.coinAvatar ? u.coinAvatar(a.symbol, a.logo, 18) : null,
+      h('span', { class: 'tk-sym' }, a.symbol),
+      h('span', { class: 'tk-px' }, fmtNum(a.launchesPerDay) + '/day'),
+      h('span', { class: 'tk-chg dim' }, a.usd ? fmtUsd(a.usd) : ''));
+
+    // The track carries the set twice and slides by exactly half its width, so the second copy is
+    // where the first was at the moment it resets and the loop has no seam. Animating the items
+    // themselves — the obvious thing — slides them all off and snaps them back, which reads as a
+    // fault. The copy is aria-hidden so a screen reader is not told the same twelve assets twice.
+    const track = h('div', { class: 'tk-track' });
+    for (const a of busiest) track.appendChild(item(a));
+    const echo = h('div', { class: 'tk-track', 'aria-hidden': 'true' });
+    for (const a of busiest) echo.appendChild(item(a));
+    el.appendChild(h('div', { class: 'tk-rail' }, track, echo));
   }
 
   function initSearch() {
@@ -666,19 +674,78 @@
    * CSS-only, drawn on .hero-field by style.css) with the spread card beside them as furniture,
    * not an illustration — the 2×-ish argument made out of divs while the copy makes it in words.
    */
+  /**
+   * The mascot. A blank with a face: a soft ink-drawn body whose whole front is a label, because
+   * the product's claim is that a coin can be priced in whatever you can name and the character is
+   * literally waiting to be told what. It is drawn flat — outline, one fill, a hard shadow — which
+   * is this identity's own register and is deliberately nothing like the airbrushed 3D blob the
+   * competitor uses. The label's word is swapped by the same timer that drives the headline.
+   */
+  function mascot() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 220 210');
+    svg.setAttribute('class', 'mascot');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = [
+      // the hard offset, drawn as a second body behind the first rather than as a filter
+      '<path class="m-shadow" d="M28 74c0-30 24-52 82-52s82 22 82 52v62c0 30-24 52-82 52s-82-22-82-52z" transform="translate(7 7)"/>',
+      '<path class="m-body" d="M28 74c0-30 24-52 82-52s82 22 82 52v62c0 30-24 52-82 52s-82-22-82-52z"/>',
+      // two antennae, because a face needs somewhere for the eyes to be surprised towards
+      '<path class="m-line" d="M74 24 62 4M146 24l12-20"/>',
+      '<circle class="m-dot" cx="61" cy="3" r="6"/><circle class="m-dot" cx="159" cy="3" r="6"/>',
+      // eyes
+      '<circle class="m-eye" cx="84" cy="66" r="9"/><circle class="m-eye" cx="136" cy="66" r="9"/>',
+      // the label: a blank card across the belly, which is where the cycling word lands
+      '<rect class="m-card" x="46" y="92" width="128" height="52" rx="6"/>',
+      '<text class="m-word" x="110" y="126" text-anchor="middle">whatever</text>',
+    ].join('');
+    return svg;
+  }
+
+  // What the headline and the mascot's label cycle through. Every one of these is a real pairing
+  // asset on this chain except the last, which is the point being made.
+  const CYCLE = ['oil', 'gold', 'treasuries', 'silver', 'SpaceX', 'whatever'];
+
+  /**
+   * Swaps one word in the headline, and the same word on the mascot's label, every few seconds.
+   * The word is the product's whole claim, so it is the one thing on the page that moves.
+   * A reader who has asked for less motion gets the last word in the list and no timer at all —
+   * "whatever", which is the name and reads correctly as a fixed headline.
+   */
+  function startCycle(slot, label) {
+    const quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (quiet) { slot.textContent = 'whatever'; if (label) label.textContent = 'whatever'; return; }
+    let i = 0;
+    const paint = () => {
+      const word = CYCLE[i % CYCLE.length];
+      slot.textContent = word;
+      if (label) label.textContent = word;
+      slot.classList.remove('swap');
+      void slot.offsetWidth;                       // restart the animation rather than queue it
+      slot.classList.add('swap');
+      i++;
+    };
+    paint();
+    const timer = setInterval(() => { if (STATE.route === 'home' && document.body.contains(slot)) paint(); else clearInterval(timer); }, 2200);
+  }
+
   function renderHome(view) {
+    const word = h('span', { class: 'cycle' }, 'oil');
+    const stage = h('div', { class: 'hero-stage' }, mascot(), heroSpreadCard(STATE.menu),
+      h('p', { class: 'hero-aside mono' }, 'gold \u00b7 crude \u00b7 treasuries \u00b7 whatever'));
     view.appendChild(h('div', { class: 'hero' },
       h('div', { class: 'hero-field', 'aria-hidden': 'true' }),
       h('div', { class: 'hero-copy' },
         h('div', { class: 'label' }, 'WHAT YOU CAN PRICE A COIN IN'),
-        h('h1', {}, 'You can price a coin in oil. ', h('em', {}, 'Almost nobody does.')),
+        h('h1', {}, 'Price a coin in ', word, '. ', h('em', {}, 'Almost nobody does.')),
         h('p', { class: 'page-lede' },
-          'Robinhood Chain lets a new coin be paired with gold, crude, treasuries or SpaceX. 57 assets are live. '
+          '57 assets on Robinhood Chain will take a new coin as a pair. '
           + '56% of launches pick NVIDIA anyway, 29% pick ether, and silver got none at all in the window we measured.'),
         h('div', { class: 'hero-actions' },
           h('a', { class: 'btn btn-primary', href: '#/menu' }, 'Open the menu'),
           h('a', { class: 'btn btn-ghost', href: '#/new?pair=GLD' }, 'Price one in gold'))),
-      heroSpreadCard(STATE.menu)));
+      stage));
+    startCycle(word, stage.querySelector('.m-word'));
     view.appendChild(homePicks(STATE.menu));
   }
 
@@ -704,7 +771,7 @@
     const u = UI();
     const grid = h('div', { class: 'picks-grid' });
     for (const a of deep) {
-      grid.appendChild(h('a', { class: 'pick', href: '#/new?pair=' + a.symbol },
+      grid.appendChild(h('a', { class: 'pick', 'data-kind': a.kind || '', href: '#/new?pair=' + a.symbol },
         h('div', { class: 'pick-top' },
           u && u.coinAvatar ? u.coinAvatar(a.symbol, a.logo, 28) : null,
           h('div', {},

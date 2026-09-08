@@ -38,8 +38,10 @@ test('#/ renders the hero as home, with the second line in the serif voice', asy
   await stubMenu(page);
 
   await page.goto('/index.html#/');
-  await expect(page.locator('#view h1')).toContainText('You can price a coin in oil.');
+  await expect(page.locator('#view h1')).toContainText('Price a coin in');
   await expect(page.locator('#view h1 em')).toHaveText('Almost nobody does.');
+  // The word between them is the product's claim and it is the one thing on the page that moves.
+  await expect(page.locator('#view h1 .cycle')).toHaveText(/^(oil|gold|treasuries|silver|SpaceX|whatever)$/);
   await expect(page).toHaveTitle('whatever.fun — price a coin in a real thing');
   expect(errors).toEqual([]);
 });
@@ -59,9 +61,9 @@ test('a hash with no route and an unknown route both land on home', async ({ pag
   stubNetwork(page);
   await stubMenu(page);
   await page.goto('/index.html#/nonsense');
-  await expect(page.locator('#view h1')).toContainText('You can price a coin in oil.');
+  await expect(page.locator('#view h1')).toContainText('Price a coin in');
   await page.goto('/index.html');
-  await expect(page.locator('#view h1')).toContainText('You can price a coin in oil.');
+  await expect(page.locator('#view h1')).toContainText('Price a coin in');
 });
 
 test('with no menu built, the page says so and names the command', async ({ page }) => {
@@ -84,7 +86,7 @@ test('with no menu built, home shows the notice rather than an invented spread',
 
   await page.goto('/index.html#/');
   // The headline is static copy and still renders; only the data-backed card is replaced.
-  await expect(page.locator('#view h1')).toContainText('You can price a coin in oil.');
+  await expect(page.locator('#view h1')).toContainText('Price a coin in');
   await expect(page.locator('.hero')).toContainText('scripts/menu.js');
   expect(errors).toEqual([]);
 });
@@ -96,4 +98,33 @@ test('the search box is only on the route it filters', async ({ page }) => {
   await expect(page.locator('#search-slot')).toBeVisible();
   await page.goto('/index.html#/about');
   await expect(page.locator('#search-slot')).toBeHidden();
+});
+
+test('the cycling word holds still, and says the name, for a reader who asked for less motion', async ({ browser }) => {
+  // prefers-reduced-motion is not a preference about decoration — a word that changes under you
+  // mid-sentence is exactly what it is asking not to happen. "whatever" is the last word in the
+  // cycle and the site's own name, so the headline still reads correctly frozen on it.
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  stubNetwork(page);
+  await stubMenu(page);
+  await page.goto('/index.html#/');
+  await expect(page.locator('#view h1 .cycle')).toHaveText('whatever');
+  await page.waitForTimeout(2600);                       // longer than one tick of the timer
+  await expect(page.locator('#view h1 .cycle')).toHaveText('whatever');
+  await ctx.close();
+});
+
+test('the ticker carries its set twice, so the marquee has no seam', async ({ page }) => {
+  stubNetwork(page);
+  await stubMenu(page);
+  await page.goto('/index.html#/menu');
+  const tracks = page.locator('#ticker .tk-track');
+  await expect(tracks).toHaveCount(2);
+  // The copy exists to make the loop seamless, not to be read out a second time.
+  await expect(tracks.nth(1)).toHaveAttribute('aria-hidden', 'true');
+  const a = await tracks.nth(0).locator('.tk-item').count();
+  const b = await tracks.nth(1).locator('.tk-item').count();
+  expect(a).toBe(b);
+  expect(a).toBeGreaterThan(0);
 });
