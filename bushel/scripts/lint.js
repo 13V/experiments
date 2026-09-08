@@ -18,14 +18,24 @@ const problems = [];
 const JS_DIRS = ['scripts', 'site', 'test/site', 'test/site/support'];
 const JSON_DIRS = ['config', 'site/config', 'site/data'];
 
+// site/model.js is loaded as <script type="module">. Node's syntax checker cannot infer the grammar
+// from a bare .js file the way a bundler would, so the one module in the tree is named here.
+// site/vendor/ is somebody else's minified build and is not this file's to have an opinion about.
+const MODULE_JS = new Set(['site/model.js']);
+
 for (const dir of JS_DIRS) {
   const full = path.join(root, dir);
   if (!fs.existsSync(full)) continue;
   for (const name of fs.readdirSync(full)) {
     if (!name.endsWith('.js')) continue;
+    const rel = `${dir}/${name}`;
     const file = path.join(full, name);
-    try { execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' }); checked++; }
-    catch (e) { problems.push(`${dir}/${name}: ${String(e.stderr || e).split('\n').slice(0, 2).join(' ')}`); }
+    const args = MODULE_JS.has(rel) ? ['--input-type=module', '--check'] : ['--check', file];
+    try {
+      if (MODULE_JS.has(rel)) execFileSync(process.execPath, args, { input: fs.readFileSync(file), stdio: 'pipe' });
+      else execFileSync(process.execPath, args, { stdio: 'pipe' });
+      checked++;
+    } catch (e) { problems.push(`${rel}: ${String(e.stderr || e).split('\n').slice(0, 2).join(' ')}`); }
   }
 }
 for (const dir of JSON_DIRS) {

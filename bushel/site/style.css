@@ -190,13 +190,23 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 /* Three layers, not one plane. The card sits square — that part was right — but the mascot leans
    over its top-left corner and the aside runs down its side, so the eye has somewhere to go and
    the block stops reading as a spreadsheet dropped onto a page. */
-.hero-stage { position: relative; padding: 40px 34px 26px 30px; }
+.hero-stage { position: relative; padding: 74px 34px 26px 30px; }
 .hero-stage .spread-card { position: relative; z-index: 1; }
 
-/* Leaning on the card's top-left corner from outside it. It overlapped the first two rows before,
-   which put a cartoon on top of the one table the page is arguing with. */
+/* The figure leans on the card's top-left corner from outside it. It overlapped the first two rows
+   before, which put a cartoon on top of the one table the page is arguing with.
+   The slot holds two things: the SVG mascot app.js always draws, and the animated model model.js
+   swaps in on top of it. Only ever one is shown — .has-model is the switch, set by model.js once
+   it has actually decoded the file, so a failure anywhere leaves the drawing in place. */
+.stage-figure {
+  position: absolute; z-index: 3; left: -86px; top: -70px; width: 220px; height: 220px;
+  pointer-events: none;
+}
+.stage-figure.has-model .mascot { display: none; }
+.model-canvas { width: 100%; height: 100%; display: block; }
+
 .mascot {
-  position: absolute; z-index: 3; left: -46px; top: -24px; width: 132px; height: auto;
+  position: absolute; left: 12px; top: 22px; width: 132px; height: auto;
   transform: rotate(-8deg); transform-origin: 70% 90%;
   animation: lean 7s ease-in-out infinite;
 }
@@ -221,6 +231,7 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 }
 
 /* The one word on the page that moves, because it is the one claim the product makes. */
+.cycle-wrap { white-space: nowrap; }
 .cycle { position: relative; display: inline-block; color: var(--accent-dark); }
 .cycle::after { content: ''; position: absolute; left: 0; right: 0; bottom: .06em; height: .07em; background: var(--accent); border-radius: 2px; }
 .cycle.swap { animation: swap .34s cubic-bezier(.22, 1, .36, 1); }
@@ -446,6 +457,10 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   margin: 18px 0 22px; user-select: none;
 }
 .disclaimer { color: var(--muted-tint); font-size: .76rem; line-height: 1.65; max-width: 74ch; }
+/* CC BY 4.0 requires the credit to be reasonably visible, so it sits in the footer at the same
+   size as the disclaimer rather than tucked into a comment nobody reads. */
+.foot-credit { margin-top: 10px; font-size: .72rem; line-height: 1.6; color: var(--muted-tint); }
+.foot-credit a { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; font-size: .76rem; color: var(--muted-tint); }
 .foot-links a { color: var(--accent-dark); }
 .foot-links a:hover { text-decoration: underline; }
@@ -462,8 +477,15 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   .hero { grid-template-columns: 1fr; gap: 32px; padding: 36px 0 44px; }
   /* On one column the card runs to both edges, so a mascot hanging off the left is simply cut in
      half by the viewport. It moves to the top-right corner, which has the room. */
-  .hero-stage { padding: 46px 0 20px; }
-  .mascot { left: auto; right: 6px; top: -18px; width: 108px; transform: rotate(7deg); transform-origin: 30% 90%; }
+  /* On one column the card runs edge to edge, so there is no corner left to hang the figure off:
+     anything overlapping it lands on the card's own label. It stops being absolute here and simply
+     sits above the card, pulled down far enough to still touch it. */
+  .hero-stage { padding: 0 0 20px; }
+  .stage-figure {
+    position: relative; left: auto; right: auto; top: auto;
+    width: 200px; height: 200px; margin: 0 -8px -22px auto;
+  }
+  .mascot { left: auto; right: 22px; top: 30px; width: 104px; transform: rotate(7deg); transform-origin: 30% 90%; }
   @keyframes lean { 0%, 100% { transform: rotate(7deg); } 50% { transform: rotate(3deg) translateY(-4px); } }
   .hero-aside { display: none; }
   /* The standing label is 330px of a 358px strip on a phone, which leaves the marquee a sliver.

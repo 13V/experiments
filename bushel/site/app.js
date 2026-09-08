@@ -731,13 +731,24 @@
 
   function renderHome(view) {
     const word = h('span', { class: 'cycle' }, 'oil');
-    const stage = h('div', { class: 'hero-stage' }, mascot(), heroSpreadCard(STATE.menu),
+    // The figure slot. app.js always draws the SVG mascot into it, and site/model.js swaps in the
+    // animated model on top once it has a working WebGL context and a decoded file — so the slot is
+    // never empty, on any machine, at any point in the load.
+    const figure = h('div', { class: 'stage-figure' }, mascot());
+    const stage = h('div', { class: 'hero-stage' }, figure, heroSpreadCard(STATE.menu),
       h('p', { class: 'hero-aside mono' }, 'gold \u00b7 crude \u00b7 treasuries \u00b7 whatever'));
     view.appendChild(h('div', { class: 'hero' },
       h('div', { class: 'hero-field', 'aria-hidden': 'true' }),
       h('div', { class: 'hero-copy' },
         h('div', { class: 'label' }, 'WHAT YOU CAN PRICE A COIN IN'),
-        h('h1', {}, 'Price a coin in ', word, '. ', h('em', {}, 'Almost nobody does.')),
+        // The word and its full stop are one unbreakable unit. Set apart they orphan: "treasuries"
+        // fills the line and the period wraps onto the next one on its own, which looks like a
+        // typo. It only shows up on the longer words in the cycle, so it is easy to miss.
+        h('h1', {},
+          'Price a coin in ',
+          h('span', { class: 'cycle-wrap' }, word, '.'),
+          ' ',
+          h('em', {}, 'Almost nobody does.')),
         h('p', { class: 'page-lede' },
           '57 assets on Robinhood Chain will take a new coin as a pair. '
           + '56% of launches pick NVIDIA anyway, 29% pick ether, and silver got none at all in the window we measured.'),

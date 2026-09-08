@@ -58,6 +58,11 @@
       is somebody else's contract, and it takes no fee of its own — the 0.0005 ETH launch fee is
       theirs. A memecoin can go to zero, and most do. Nothing here is financial advice.
     </p>
+    <p class="foot-credit">
+      Hero model <a href="https://sketchfab.com/3d-models/cloud-station-26f81b24d83441ba88c7e80a52adbaaf" target="_blank" rel="noopener">“Cloud Station”</a>
+      by <a href="https://sketchfab.com/AlexaKruckenberg" target="_blank" rel="noopener">Alexa Kruckenberg</a>,
+      licensed <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>.
+    </p>
     <p class="foot-links">
       <span class="foot-name">whatever.fun</span>
       <span aria-hidden="true">·</span>
@@ -73,5 +78,8 @@
 <script src="./ui.js"></script>
 <script src="./launch.js"></script>
 <script src="./app.js"></script>
+<!-- The hero's animated model. A module, and deferred by nature, so it never blocks the page; it
+     upgrades the SVG figure app.js has already drawn and does nothing at all if it cannot. -->
+<script type="module" src="./model.js"></script>
 </body>
 </html>

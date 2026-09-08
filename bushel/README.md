@@ -86,9 +86,12 @@ same style, MIT.
 
 | Path | What |
 |---|---|
-| `site/` | The front end: no build step, plain files, four routes |
+| `site/` | The front end: plain files, five routes, no build step of its own |
 | `site/app.js` | The shell — menu table, launch form, recent launches, live prices |
 | `site/launch.js` | Launch calldata: encode, validate, preflight, send. Verified byte-identical against real launches |
+| `site/model.js` | The hero's animated model — loaded late, off by default on a metered line, and never at the cost of a hole in the page |
+| `site/vendor/` | A pre-built, tree-shaken three.js + GLTFLoader. Somebody else's code; see below |
+| `site/models/` | The hero model, compressed. CC BY 4.0 — the credit is in the footer |
 | `scripts/menu.js` | Builds `site/data/menu.json`: identity, market, launch terms and demand per asset |
 | `scripts/pairs.js` | What a coin can be priced in on this chain, and what anyone actually chose |
 | `scripts/prices.js` | Each pairing asset's dollar price and the depth of its own market |
@@ -99,6 +102,36 @@ same style, MIT.
 | `config/addresses.json` | Chain id, RPC endpoints, USDG, WETH, the Pons factory and its friends |
 | `docs/pair-assets.md` | The pairing-asset research, with its numbers and how they were read |
 | `docs/competition.md` | anything.fun: what a live competitor on this chain has, and what it changes |
+
+## The one dependency, and the one credit
+
+The hero has an animated 3D scene in it, which needs a renderer, which is the only third-party code
+in this repository. `site/vendor/three-gltf.min.js` is [three.js](https://threejs.org) (MIT) with
+`GLTFLoader` and the meshopt decoder, tree-shaken to just what `site/model.js` imports — 640KB,
+about 166KB over the wire once a server gzips it. It is vendored rather than fetched from a CDN, for
+the same reason the two fonts are: a page that cannot draw itself when somebody else's host is slow
+is not a serious instrument. It was built with:
+
+```
+npm i three esbuild
+esbuild entry.js --bundle --format=esm --minify --outfile=site/vendor/three-gltf.min.js
+```
+
+where `entry.js` re-exports the dozen symbols `site/model.js` uses. That is a build step, but it is
+one that produced a checked-in artefact once — there is still nothing to run to serve this site.
+
+**The model is “Cloud Station” by [Alexa Kruckenberg](https://sketchfab.com/AlexaKruckenberg),
+licensed [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)**
+([source](https://sketchfab.com/3d-models/cloud-station-26f81b24d83441ba88c7e80a52adbaaf)). The
+licence requires attribution, so the credit is in the footer of every page, at the top of
+`site/model.js`, and here. If the model is ever swapped, the credit goes with it. A test asserts
+the footer credit is present, because a licence term that only survives while nobody edits the
+footer is not being honoured.
+
+It ships at 751KB, down from the original 4.4MB, via `gltf-transform`: dedupe, prune, resample the
+animation, WebP textures at quality 80, resize to 1024, then meshopt. The 147-channel animation and
+all four skins survive that intact — checked, because "the file got smaller" and "the file still
+animates" are different claims.
 
 ## What this does not do
 

@@ -50,7 +50,7 @@ async function main() {
       const seen = stubNetwork(page);
 
       await page.goto(`${base}#/${route}`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(route === "home" ? 4500 : 1200);
 
       const file = path.join(OUT, `${route}-${size.tag}.png`);
       await page.screenshot({ path: file, fullPage: true });
