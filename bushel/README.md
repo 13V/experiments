@@ -1,4 +1,4 @@
-# Bushel
+# whatever.fun
 
 A launchpad for coins priced in real things.
 
@@ -24,8 +24,13 @@ a place where it is the point.
 > **Status: Phase 0.** No contract of ours is deployed and none is written. `site/` is a front end
 > over the incumbent's factory: it launches through Pons V2, takes no fee, and adds the part that
 > is missing — a menu that prices every pairing asset in dollars, says how deep each one's own
-> market is, and shows what a launch against it actually opens at. The point of shipping it before
-> writing Solidity is to find out whether anyone wants this.
+> market is, and shows what a launch against it actually opens at.
+>
+> **We are not alone in this any more.** [anything.fun](https://anything.fun) is the same product on
+> the same chain, live since the small hours of 8 September 2026, and it runs its own factory rather
+> than the incumbent's. `docs/competition.md` has what they have, what we have, and what it changes.
+> The short version: Phase 0 was meant to answer whether to write the Solidity, and a competitor
+> deploying their own factory on day one is an argument for yes.
 
 ## What is established
 
@@ -93,6 +98,7 @@ same style, MIT.
 | `test/` | The browser suite, the launch seam test, and the screenshot pass |
 | `config/addresses.json` | Chain id, RPC endpoints, USDG, WETH, the Pons factory and its friends |
 | `docs/pair-assets.md` | The pairing-asset research, with its numbers and how they were read |
+| `docs/competition.md` | anything.fun: what a live competitor on this chain has, and what it changes |
 
 ## What this does not do
 
@@ -102,6 +108,9 @@ inconsistency described above. Nothing here can fix that, and nothing here prete
 
 ## The name
 
-A bushel is a unit of grain — eight gallons of it, which is how wheat and corn and oats have been
-sold for six hundred years. It is the oldest way of saying "priced in the thing itself". Working
-title; easily changed while nothing is deployed.
+whatever.fun, because that is the claim: whatever you can name and this chain can price, a coin can
+be paired with. The working title was Bushel — a unit of grain, eight gallons of it, which is how
+wheat and corn have been sold for six hundred years — and the directory is still called that.
+
+The site's own headline is the whole product in two lines: *You can price a coin in oil. Almost
+nobody does.*

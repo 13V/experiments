@@ -1,11 +1,11 @@
 'use strict';
 /**
- * Bushel — the front end.
+ * whatever.fun — the front end.
  *
  * A launchpad where the pairing asset is a real thing: gold, treasuries, an index, a single name.
- * In this first version Bushel does not deploy contracts of its own — it launches through Pons V2's
+ * In this first version whatever.fun does not deploy contracts of its own — it launches through Pons V2's
  * factory, which already accepts those assets and which nobody has built a front end for that treats
- * them as the point. What Bushel adds is the part that is missing: the menu, priced and ranked; the
+ * them as the point. What whatever.fun adds is the part that is missing: the menu, priced and ranked; the
  * opening valuation of a launch in dollars, so a launch against gold and a launch against a dollar
  * can be compared; and the honest labelling of assets whose market is too thin to price a coin
  * against at all.
@@ -54,7 +54,7 @@
   }
   const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); };
   const $ = (id) => document.getElementById(id);
-  const UI = () => window.MannaUI || null;         // the shared component kit, if it loaded
+  const UI = () => window.WhateverUI || null;         // the shared component kit, if it loaded
 
   // `compact` marks a SIZE — a valuation, a pool's depth — as opposed to a PRICE. The difference is
   // how many decimals are meaningful: USDG at $0.9991 needs four, and an opening valuation of
@@ -352,8 +352,17 @@
   }
 
   // ============================================================================ pages
-  const ROUTES = ['menu', 'new', 'recent', 'about'];
-  const TITLES = { menu: 'The menu', new: 'Launch a coin', recent: 'Recent launches', about: 'How this works' };
+  const ROUTES = ['home', 'menu', 'new', 'recent', 'about'];
+  // Full <title> strings, not just labels — the crumb used to say where you were, and now the
+  // title bar does instead. An empty or unknown hash falls back to 'home', so TITLES.home also
+  // stands in whenever STATE.route somehow lands on something this map does not name.
+  const TITLES = {
+    home: 'whatever.fun — price a coin in a real thing',
+    menu: 'The menu — whatever.fun',
+    new: 'Launch a coin — whatever.fun',
+    recent: 'Recent launches — whatever.fun',
+    about: 'How this works — whatever.fun',
+  };
 
   function tile(label, value, sub, icon) {
     const u = UI();
@@ -364,6 +373,7 @@
   function renderMenu(view) {
     const menu = STATE.menu;
     view.appendChild(h('div', { class: 'page-head' },
+      h('div', { class: 'label' }, '57 ASSETS · READ FROM THE CHAIN'),
       h('h1', {}, 'What you can price a coin in'),
       h('p', { class: 'page-lede' }, 'Every asset this chain will let a coin be paired against, what it costs, how deep its own market is, and what a launch against it opens at.')));
 
@@ -409,11 +419,12 @@
   function renderNew(view) {
     const menu = STATE.menu;
     view.appendChild(h('div', { class: 'page-head' },
+      h('div', { class: 'label' }, 'PICK WHAT IT IS PRICED IN'),
       h('h1', {}, 'Launch a coin'),
       h('p', { class: 'page-lede' }, 'Pick what it is priced in, name it, and launch. The coin is sold on a bonding curve denominated in that asset, and graduates to a pool when the curve is bought out.')));
 
     if (!menu) { view.appendChild(notice('The menu has not been built yet. Run node scripts/menu.js.')); return; }
-    if (!window.BushelLaunch) { view.appendChild(notice('The launch module has not loaded, so nothing here can be signed yet.', 'warn')); }
+    if (!window.WhateverLaunch) { view.appendChild(notice('The launch module has not loaded, so nothing here can be signed yet.', 'warn')); }
 
     const tradeable = menu.assets.filter((a) => a.tradeable);
     const wanted = (location.hash.split('?')[1] || '').replace('pair=', '').toUpperCase();
@@ -488,7 +499,7 @@
     paintPreview();
 
     async function doLaunch() {
-      const L = window.BushelLaunch;
+      const L = window.WhateverLaunch;
       if (!L) { toast('Not ready', 'The launch module has not loaded.', 'error'); return; }
       if (!STATE.account && !(await connect())) return;
       const form = {
@@ -519,6 +530,7 @@
 
   async function renderRecent(view) {
     view.appendChild(h('div', { class: 'page-head' },
+      h('div', { class: 'label' }, 'LAUNCHED IN THE LAST FIVE MINUTES'),
       h('h1', {}, 'Recent launches'),
       h('p', { class: 'page-lede' }, 'What has been launched on this chain lately, and what each coin is priced in.')));
     const body = h('div', {}, notice('Reading the chain…', 'plain'));
@@ -568,12 +580,14 @@
   }
 
   function renderAbout(view) {
-    view.appendChild(h('div', { class: 'page-head' }, h('h1', {}, 'How this works')));
+    view.appendChild(h('div', { class: 'page-head' },
+      h('div', { class: 'label' }, 'HOW THIS WORKS'),
+      h('h1', {}, 'How this works')));
     const card = (title, body) => h('div', { class: 'card' }, h('h3', { class: 'card-title' }, title), h('p', { class: 'small', style: 'margin-top:8px' }, body));
     view.appendChild(h('div', { class: 'stack' },
-      card('Bushel does not have contracts yet',
+      card('whatever.fun does not have contracts yet',
         'This version launches through Pons V2\'s factory, which is somebody else\'s code and which already accepts these '
-        + 'assets. Bushel takes no fee: the 0.0005 ETH launch fee is theirs, and so is the 1% curve fee. What this adds is '
+        + 'assets. whatever.fun takes no fee: the 0.0005 ETH launch fee is theirs, and so is the 1% curve fee. What this adds is '
         + 'the menu, the dollar comparison, and the labelling of assets whose market is too thin to price against.'),
       card('Why an opening valuation differs by asset',
         'The factory holds a per-asset number that sets where a launch opens. It was typed by hand and is not refreshed, so '
@@ -589,21 +603,137 @@
 
   const notice = (text, kind) => h('div', { class: 'notice ' + (kind ? kind : '') }, text);
 
-  const RENDERERS = { menu: renderMenu, new: renderNew, recent: renderRecent, about: renderAbout };
+  // A short date a stranger can read at a glance, from menu.json's ISO readAt. Returns null
+  // rather than "Invalid Date" if the menu is somehow malformed — the caller drops it rather
+  // than print a broken date.
+  function fmtReadDate(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // The mono line under the spread card's serif note — every figure in it comes from
+  // menu.openingSpread and menu.readAt, never typed, so it can only ever say what the last read
+  // of the chain actually found.
+  function spreadMetaText(spread, readAt) {
+    spread = spread || {};
+    const lo = spread.minSymbol && Number.isFinite(spread.min) ? spread.minSymbol + ' ' + fmtUsd(spread.min, true) : null;
+    const hi = spread.maxSymbol && Number.isFinite(spread.max) ? spread.maxSymbol + ' ' + fmtUsd(spread.max, true) : null;
+    const range = lo && hi ? lo + ' → ' + hi : (lo || hi);
+    const ratio = Number.isFinite(spread.ratio) ? spread.ratio.toFixed(2) + '×' : null;
+    const read = fmtReadDate(readAt);
+    const parts = [range, ratio, read ? 'read ' + read : null].filter(Boolean);
+    return parts.length ? parts.join('  ·  ') : '—';
+  }
+
+  /**
+   * The hero's spread card — the site's whole argument built out of divs. Every row comes from
+   * STATE.menu: the assets with an openingUsd, sorted, then the cheapest, the dearest, and six
+   * spread evenly between them (fewer than eight if the menu itself has fewer priced assets).
+   * With no menu built, or nothing on it priced yet, this is the same "not built yet" notice
+   * every other route falls back to — never an invented figure.
+   */
+  function heroSpreadCard(menu) {
+    const priced = menu && menu.assets ? menu.assets.filter((a) => Number.isFinite(a.openingUsd) && a.openingUsd > 0) : [];
+    if (!menu || !priced.length) return notice('The menu has not been built yet. Run node scripts/menu.js.');
+    priced.sort((a, b) => a.openingUsd - b.openingUsd);
+    const want = Math.min(8, priced.length);
+    const picks = [];
+    for (let i = 0; i < want; i++) {
+      const idx = want === 1 ? 0 : Math.round((i * (priced.length - 1)) / (want - 1));
+      if (!picks.includes(priced[idx])) picks.push(priced[idx]);
+    }
+    const max = picks[picks.length - 1].openingUsd;
+    const rows = picks.map((a) => {
+      const fill = h('i', {});
+      // --w is a fraction of the dearest pick's opening valuation, which is what .sp-bar's CSS
+      // turns into the bar's width — the same number the row's own $ figure states.
+      fill.style.setProperty('--w', max > 0 ? String(a.openingUsd / max) : '0');
+      return h('div', { class: 'sp-row' },
+        h('span', { class: 'sp-sym' }, a.symbol),
+        h('div', { class: 'sp-bar' }, fill),
+        h('span', { class: 'sp-usd' }, fmtUsd(a.openingUsd, true)));
+    });
+    return h('div', { class: 'spread-card' },
+      h('div', { class: 'label' }, 'THE SAME LAUNCH, PRICED 57 WAYS'),
+      rows,
+      h('p', { class: 'sp-note' }, 'Nothing about the assets explains this.'),
+      h('p', { class: 'sp-meta mono' }, spreadMetaText(menu.openingSpread, menu.readAt)));
+  }
+
+  /**
+   * The only route with a hero. Two voices stacked over a ruled paper ground (the ruling is
+   * CSS-only, drawn on .hero-field by style.css) with the spread card beside them as furniture,
+   * not an illustration — the 2×-ish argument made out of divs while the copy makes it in words.
+   */
+  function renderHome(view) {
+    view.appendChild(h('div', { class: 'hero' },
+      h('div', { class: 'hero-field', 'aria-hidden': 'true' }),
+      h('div', { class: 'hero-copy' },
+        h('div', { class: 'label' }, 'WHAT YOU CAN PRICE A COIN IN'),
+        h('h1', {}, 'You can price a coin in oil. ', h('em', {}, 'Almost nobody does.')),
+        h('p', { class: 'page-lede' },
+          'Robinhood Chain lets a new coin be paired with gold, crude, treasuries or SpaceX. 57 assets are live. '
+          + '56% of launches pick NVIDIA anyway, 29% pick ether, and silver got none at all in the window we measured.'),
+        h('div', { class: 'hero-actions' },
+          h('a', { class: 'btn btn-primary', href: '#/menu' }, 'Open the menu'),
+          h('a', { class: 'btn btn-ghost', href: '#/new?pair=GLD' }, 'Price one in gold'))),
+      heroSpreadCard(STATE.menu)));
+    view.appendChild(homePicks(STATE.menu));
+  }
+
+  /**
+   * The six deepest pairing assets, under the hero, so the landing page shows the actual menu
+   * rather than only arguing about it. Depth is the honest ranking here: an asset's own liquidity
+   * is what decides whether a coin priced in it can be traded at all, and it is the one number a
+   * launcher cannot get from the asset's name.
+   */
+  function homePicks(menu) {
+    const wrap = h('section', { class: 'picks' });
+    if (!menu || !menu.assets) return wrap;
+    const deep = menu.assets
+      .filter((a) => a.tradeable && a.openingUsd && a.liquidity)
+      .sort((x, y) => y.liquidity - x.liquidity)
+      .slice(0, 6);
+    if (!deep.length) return wrap;
+
+    wrap.appendChild(h('div', { class: 'picks-head' },
+      h('div', { class: 'label' }, 'DEEPEST MARKETS ON THE MENU'),
+      h('a', { class: 'picks-all', href: '#/menu' }, 'All ' + fmtNum(menu.assets.length) + ' \u2192')));
+
+    const u = UI();
+    const grid = h('div', { class: 'picks-grid' });
+    for (const a of deep) {
+      grid.appendChild(h('a', { class: 'pick', href: '#/new?pair=' + a.symbol },
+        h('div', { class: 'pick-top' },
+          u && u.coinAvatar ? u.coinAvatar(a.symbol, a.logo, 28) : null,
+          h('div', {},
+            h('span', { class: 'cc-sym' }, a.symbol),
+            h('span', { class: 'cc-name' }, a.name || ''))),
+        h('div', { class: 'pick-rows' },
+          h('div', { class: 'pick-row' }, h('span', {}, 'Opens at'), h('b', { class: 'num' }, fmtUsd(a.openingUsd, true))),
+          h('div', { class: 'pick-row' }, h('span', {}, 'Its own depth'), h('b', { class: 'num' }, fmtUsd(a.liquidity, true))))));
+    }
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  const RENDERERS = { home: renderHome, menu: renderMenu, new: renderNew, recent: renderRecent, about: renderAbout };
 
   function renderRoute() {
     const view = $('view');
     clear(view);
     view.scrollTop = 0;
-    (RENDERERS[STATE.route] || renderMenu)(view);
+    (RENDERERS[STATE.route] || renderHome)(view);
   }
 
   function navigate() {
     const raw = location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0];
-    STATE.route = ROUTES.includes(raw) ? raw : 'menu';
+    STATE.route = ROUTES.includes(raw) ? raw : 'home';
     document.querySelectorAll('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.route === STATE.route));
-    const crumb = $('crumb');
-    if (crumb) crumb.textContent = TITLES[STATE.route] || 'The menu';
+    // index.html no longer has a #crumb — the title bar names the route instead, which is where a
+    // reader would look for it anyway if they had ten tabs open.
+    document.title = TITLES[STATE.route] || TITLES.home;
     // The box filters the menu table and nothing else, so it belongs on the one route that has one.
     const search = $('search-slot');
     if (search) search.hidden = STATE.route !== 'menu';

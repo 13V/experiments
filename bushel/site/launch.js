@@ -1,10 +1,10 @@
 'use strict';
 /**
- * Bushel — launch.js
+ * whatever.fun — launch.js
  *
  * Turns a filled-in launch form into a transaction Pons V2's own factory
  * (0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e on Robinhood Chain, chain id 4663) will accept.
- * Bushel deploys nothing of its own in this phase — every coin launched through this page is a
+ * whatever.fun deploys nothing of its own in this phase — every coin launched through this page is a
  * plain Pons V2 token, minted by Pons's factory, on Pons's bonding curve. This file is the entire
  * boundary between a form and that factory: it builds calldata, reads the factory's own state to
  * say whether a launch would be accepted before anyone is asked to pay for it, and drives the
@@ -14,7 +14,7 @@
  * ../../manna, the same author's sibling project, whose house style this follows: an ABI codec and
  * a keccak256 written out by hand rather than pulled in, JSON-RPC as one injected `rpc(method,
  * params)` function so every read here is exactly as testable outside a browser as inside one, and
- * revert data turned into a sentence instead of a selector. It is exposed as `window.BushelLaunch`
+ * revert data turned into a sentence instead of a selector. It is exposed as `window.WhateverLaunch`
  * in a browser and as `module.exports` under Node (`require('./launch.js')`), which is how the
  * round-trip harness under scratchpad/launch verifies encodeLaunch against real transactions —
  * see that directory for the proof this file's calldata is byte-identical to what real launches
@@ -83,7 +83,7 @@
   // 0x01/0x80 padding: this is "raw" Keccak256 as Ethereum defines it, NOT NIST SHA3-256, which
   // pads differently and would silently produce wrong selectors and addresses). Copied rather
   // than loaded from lib.js because this file must not depend on another script's load order —
-  // Bushel is not Manna's page, and nothing here may assume lib.js is even on it. BigInt lanes:
+  // whatever.fun is not Manna's page, and nothing here may assume lib.js is even on it. BigInt lanes:
   // slower than a typed-array rewrite, and irrelevant for the few dozen hashes a launch needs.
   // ===========================================================================================
   const MASK64 = (1n << 64n) - 1n;
@@ -146,7 +146,7 @@
   // needs (int24 and uintN below 256 only show up in getLaunchConfig's return, not in TokenParams
   // itself), but a launch page needs to read the factory as much as it needs to call it, and one
   // codec that is provably correct both ways is simpler to trust than two narrower ones. Same
-  // algorithm as ../../bushel/scripts/chain.js's Node-side encoder, rewritten over Uint8Array so
+  // algorithm as ../scripts/chain.js's Node-side encoder, rewritten over Uint8Array so
   // it has no Buffer dependency and runs unmodified in a browser.
   // ===========================================================================================
   function splitTopLevel(s) {
@@ -882,6 +882,6 @@
     TOKEN_PARAMS_T, SOCIALS_T, TYPES_3, TYPES_4, SIG_3, SIG_4, SEL_3, SEL_4,
     TOKEN_LAUNCHED_SIG, TOPIC_TOKEN_LAUNCHED, DEFAULT_MAX_CREATOR_TAX_BPS,
   };
-  root.BushelLaunch = api;
+  root.WhateverLaunch = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

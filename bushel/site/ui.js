@@ -1,22 +1,25 @@
 'use strict';
 /**
- * Manna — visual components for the desk's trading pages: token badges, delta pills, the
- * featured area chart and its hover crosshair, sparklines, a range selector, a buy/sell
- * pressure bar, a debounced search box, a sortable table header, and the KPI stat tile. Every
- * export is a plain function that returns a real DOM node (SVG nodes via createElementNS); none
- * of them build markup out of strings, so there is nothing here an unsanitised value could break
- * out of.
+ * whatever.fun — shared visual components: token badges, delta pills, the featured area chart
+ * and its hover crosshair, sparklines, a range selector, a buy/sell pressure bar, a debounced
+ * search box, a sortable table header, and the KPI stat tile. This file began as a copy of
+ * ../../manna/site/ui.js (Manna's own dark trading terminal) and every export still keeps its
+ * original name and signature — app.js calls them by name and silently does without one that is
+ * missing — but the markup is repainted here for whatever.fun's warm paper identity instead of
+ * Manna's cold one. Every export is a plain function that returns a real DOM node (SVG nodes via
+ * createElementNS); none of them build markup out of strings, so there is nothing here an
+ * unsanitised value could break out of.
  *
- * This is a plain script, not a module — it is loaded with a bare <script src> ahead of app.js
- * and lib.js, and it does not require either of them. Where a formatted string would normally
- * come from window.MANNA (lib.js), a tiny local fallback stands in if that global is absent, so
- * the component still renders something sane when this file is opened on its own. When MANNA is
- * present its formatters are preferred, so numbers on the desk read exactly the way the rest of
- * the site already renders them.
+ * This is a plain script, not a module — it is loaded with a bare <script src> ahead of app.js,
+ * and it does not require app.js. Where a formatted string would normally come from
+ * window.MANNA (Manna's lib.js, not part of this repo), a tiny local fallback stands in when
+ * that global is absent, so a component still renders something sane if this file is ever opened
+ * on its own.
  *
- * Everything is namespaced under the "u-" class prefix in ui.css, which leans entirely on the
- * custom properties style.css already defines (panel colours, borders, the green/red/gold
- * accents, the mono font, the tiny label device) rather than inventing a second palette.
+ * Everything is namespaced under the "u-" class prefix in ui.css, which reads its colours
+ * straight off the tokens style.css defines on :root — paper, ink, the hairline border, Persimmon
+ * as the one accent, the positive/negative pair, the mono stack — rather than inventing a second
+ * palette. The export name is window.WhateverUI; app.js reads it by that name.
  */
 (function () {
   // ============================================================================ tiny fallbacks
@@ -57,12 +60,31 @@
   function hideFromAT(node) { node.setAttribute('aria-hidden', 'true'); return node; }
 
   // ============================================================================ 1. coinAvatar
-  /** A short, stable hash of `str` folded into a 0-359 hue, so a symbol always lands on the same
-   * badge colour without a lookup table. Not cryptographic — just deterministic. */
-  function hueFromString(str) {
+  /** A fixed set of ten muted, desaturated, mid-dark colours — chosen once by hand rather than
+   * spun from a live hue rotation, so a badge can never land on a saturated, near-persimmon hue
+   * and start competing with the one accent colour this identity spends. Every one of them holds
+   * at least 4.5:1 against white text (the tightest, "clay", is 5.82:1), so the monogram stays
+   * legible at the 26px this badge is normally drawn at without needing a per-colour text
+   * override. */
+  const AVATAR_PALETTE = [
+    '#4B5A3E', // moss
+    '#8A5A3C', // clay
+    '#5C4258', // plum
+    '#6B6437', // olive
+    '#4A5560', // slate
+    '#6B3A44', // wine
+    '#3C6058', // teal
+    '#5A4A3A', // bark
+    '#3F6647', // fern
+    '#523C50', // fig
+  ];
+  /** A short, stable hash of `str` picking one of the ten swatches above, so a symbol always
+   * lands on the same badge colour without a lookup table to keep in sync with the menu. Not
+   * cryptographic — just deterministic. */
+  function avatarColor(str) {
     let h = 0;
     for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-    return h % 360;
+    return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
   }
 
   /**
@@ -79,7 +101,7 @@
     wrap.style.width = px + 'px';
     wrap.style.height = px + 'px';
     wrap.style.fontSize = Math.max(9, Math.round(px * 0.4)) + 'px';
-    wrap.style.setProperty('--u-hue', String(hueFromString(sym)));
+    wrap.style.setProperty('--u-avatar-bg', avatarColor(sym));
     wrap.setAttribute('role', 'img');
     wrap.setAttribute('aria-label', symbol || 'token');
 
@@ -184,14 +206,15 @@
     return d;
   }
 
-  /** Green if the series rose (last >= first), red if it fell, gold when there is not enough
-   * signal to call a direction (0 or 1 point, or a flat line). */
+  /** Positive-tinted if the series rose (last >= first), negative-tinted if it fell, and the
+   * accent when there is not enough signal to call a direction (0 or 1 point, or a flat line) —
+   * the accent reads as "neutral, not yet a claim" here since it never doubles as a red/green. */
   function directionColor(points) {
     const vals = (points || []).filter(finite);
-    if (vals.length < 2) return 'var(--gold)';
+    if (vals.length < 2) return 'var(--accent)';
     const first = vals[0], last = vals[vals.length - 1];
-    if (last === first) return 'var(--gold)';
-    return last > first ? 'var(--green)' : 'var(--red)';
+    if (last === first) return 'var(--accent)';
+    return last > first ? 'var(--positive)' : 'var(--negative)';
   }
 
   let chartUid = 0;
@@ -678,7 +701,7 @@
   }
 
   // ============================================================================ export
-  window.MannaUI = {
+  window.WhateverUI = {
     coinAvatar,
     deltaPill,
     areaChart,

@@ -41,7 +41,7 @@ const encodable = (extra) => Object.assign(form(), { expectedEconomics: PIN, sal
 
 console.log('the API app.js calls is present');
 for (const fn of ['validate', 'preflight', 'encodeLaunch', 'launch']) {
-  checkThat(`BushelLaunch.${fn} is a function`, typeof L[fn] === 'function');
+  checkThat(`WhateverLaunch.${fn} is a function`, typeof L[fn] === 'function');
 }
 
 console.log('\nvalidate() accepts what the form produces and names what it rejects');

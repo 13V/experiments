@@ -1,458 +1,421 @@
-/* Manna — the desk. A terminal on the same cold ground the landing page stands on: #11151c blue-black,
-   Open Sans, hairline panels, tabular numerals, and one gold accent kept for the things that are
-   actually Manna's. The landing page's grammar carries through in the type - tiny uppercase
-   letterspaced labels, links that glow instead of underlining - and in the still of the glass scene
-   that sits behind the rail. */
+/* whatever.fun — warm paper, straight numbers, one joke.
+ *
+ * Everything else in this category is either a dark terminal or a cartoon. This is the third thing.
+ * The ground is unbleached paper, the accent is Persimmon, and the only shadow in the whole site is
+ * a hard ink offset — no glows, no soft double-drops, nothing that looks like glass. A launchpad's
+ * main screen is a column of prices, so the design's job is to stay out of their way and point,
+ * exactly once, at the number the product exists to argue about.
+ *
+ * That pointing happens in one place: the fifth column of the menu table is tinted for its whole
+ * height. #FFEDE4 on #FBF7F0 is a 1.06 contrast ratio — deliberately faint. We are pointing, not
+ * shouting, and the joke only works deadpan.
+ *
+ * The palette is named after things you can grow — Persimmon, Bone, Husk, Rhubarb — and not one of
+ * them can be priced on this chain. See docs/pair-assets.md: Robinhood has tokenized 194 assets and
+ * none is a soft commodity. That is the joke, and it is also true.
+ */
 
 :root {
-  --bg: #0d1016;
-  --bg-alt: #11151c;
-  --panel: #141922;
-  --panel-2: #1a2029;
-  --border: rgba(255, 255, 255, 0.075);
-  --border-soft: rgba(255, 255, 255, 0.045);
-  --text: rgba(255, 255, 255, 0.93);
-  --text-dim: rgba(255, 255, 255, 0.62);
-  --text-faint: rgba(255, 255, 255, 0.38);
-  --gold: #e8b84a;
-  --gold-dim: rgba(232, 184, 74, 0.5);
-  --gold-bg: rgba(232, 184, 74, 0.12);
-  --green: #3fd48a;
-  --green-bg: rgba(63, 212, 138, 0.13);
-  --red: #ff6f6f;
-  --red-bg: rgba(255, 111, 111, 0.13);
-  --radius: 14px;
-  --radius-sm: 9px;
-  --shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
-  --rail: 236px;
-  --font-sans: 'Open Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-  /* the landing page's label: 0.5rem, uppercase, wide. It is the only heading device the desk uses. */
-  --label: .62rem;
-  --track: .16em;
+  color-scheme: light;
+
+  --paper: #FBF7F0;
+  --white: #FFFFFF;
+  --ink: #171514;
+  --muted: #6E6A62;
+  --muted-tint: #5A554C;
+  --line: #E2DCD0;
+  --accent: #FF4A1C;
+  --accent-dark: #BE2C0A;
+  --tint: #FFEDE4;
+  --tint-deep: #FFD9C7;
+  --positive: #1F7A4D;
+  --positive-tint: #E4EFE7;
+  --negative: #C0243F;
+  --negative-tint: #FBE6E9;
+  --selection: #FFD9C7;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --wrap: min(1180px, calc(100% - 64px));
+  --radius: 6px;
+  --radius-sm: 4px;
+  --drop: 3px 3px 0 var(--ink);
+  --chrome: 93px;                    /* 56px masthead + 36px ticker + its 1px rule: what a sticky
+                                        table header has to clear to sit flush beneath them */
 }
 
+/* ============================================================ reset and base */
 * { box-sizing: border-box; }
-html { color-scheme: dark; background: var(--bg); }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.55;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  -moz-osx-font-smoothing: grayscale;
 }
-h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
-p { margin: 0 0 10px; }
-a { color: var(--gold); text-decoration: none; transition: color .2s ease, filter .5s ease-in-out; }
-a:hover { text-decoration: none; filter: drop-shadow(0 0 9px rgba(255, 255, 255, .35)); }
-button { font-family: inherit; }
-.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.pos { color: var(--green) !important; }
-.neg { color: var(--red) !important; }
-.dim { color: var(--text-faint); }
-::selection { background: rgba(232, 184, 74, .22); }
-:focus-visible { outline: 2px solid rgba(255, 255, 255, .8); outline-offset: 2px; border-radius: 4px; }
-
-.skip-link {
-  position: absolute; left: 8px; top: -48px; z-index: 300;
-  background: var(--gold); color: #171208; padding: 8px 14px; border-radius: 6px;
-  font-size: .85rem; font-weight: 600; transition: top .15s ease;
-}
-.skip-link:focus { top: 8px; }
-
-/* the label device, lifted straight off the landing page's h1 */
-.label, .rail-group, .crumb, .field label, thead th, .st-label, .bs-label, .badge, .table-note-h {
-  font-size: var(--label); text-transform: uppercase; letter-spacing: var(--track); font-weight: 600;
-  color: var(--text-faint);
-}
-
-/* ============================================================ shell: rail + main */
-#app { display: grid; grid-template-columns: var(--rail) 1fr; min-height: 100vh; align-items: start; }
-/* A column, not a block, so the footer is pushed to the bottom of a short page instead of
-   floating halfway up it with the rail still running past it. */
-#main { min-width: 0; min-height: 100vh; display: flex; flex-direction: column; }
-
-
-#rail {
-  position: sticky; top: 0; height: 100vh; z-index: 120;
-  display: flex; flex-direction: column; gap: 4px;
-  padding: 18px 12px 14px;
-  border-right: 1px solid var(--border);
-  background: rgba(17, 21, 28, .72);
-  backdrop-filter: blur(14px);
-}
-.brand { display: inline-flex; align-items: center; gap: 9px; color: var(--text); padding: 4px 8px 16px; }
-.brand:hover { filter: drop-shadow(0 0 10px rgba(255, 255, 255, .6)); }
-.brand-mark { width: 20px; height: 20px; color: var(--gold); flex: none; }
-.brand-name { font-size: .78rem; text-transform: uppercase; letter-spacing: .28em; font-weight: 600; }
-
-#nav { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; }
-.rail-group { margin: 14px 0 4px; padding: 0 10px; }
-.rail-group:first-child { margin-top: 0; }
-#nav a {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; border-radius: var(--radius-sm);
-  color: var(--text-dim); font-size: .84rem; font-weight: 400;
-  transition: background .2s ease, color .2s ease, filter .5s ease-in-out;
-}
-#nav a svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
-#nav a[data-route="storehouses"] svg, #nav a[data-route="manna"] svg { stroke-width: 1.5; }
-#nav a:hover { background: rgba(255, 255, 255, .045); color: var(--text); filter: none; }
-#nav a.active { background: var(--panel-2); color: var(--text); box-shadow: inset 2px 0 0 var(--gold); }
-#nav a.active svg { color: var(--gold); opacity: 1; }
-
-.rail-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 8px; }
-.rail-back { display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--text-faint); font-size: .78rem; }
-.rail-back svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.rail-back:hover { color: var(--text); }
-.rail-meta { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0 10px; font-size: .68rem; color: var(--text-faint); }
-.rail-meta .mono { font-size: .66rem; }
-
-/* ============================================================ masthead */
-#masthead {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(13, 16, 22, .82);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-}
-.mh-top {
-  display: flex; align-items: center; gap: 14px;
-  padding: 12px 22px;
-}
-.crumb { display: flex; align-items: center; gap: 8px; margin: 0; }
-.crumb .crumb-root { color: rgba(255, 255, 255, .3); }
-.mh-brand { display: none; color: var(--gold); flex: none; }
-.mh-brand .brand-mark { width: 20px; height: 20px; }
-.crumb b { color: var(--text-dim); font-weight: 600; }
-.mh-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-.nav-toggle {
-  display: none; flex-direction: column; justify-content: center; gap: 4px;
-  width: 34px; height: 34px; background: transparent; border: 1px solid var(--border);
-  border-radius: 8px; cursor: pointer; flex: none;
-}
-.nav-toggle span { display: block; height: 1.5px; background: var(--text-dim); border-radius: 2px; }
-
-.chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip {
-  background: rgba(255, 255, 255, .04); border: 1px solid var(--border); color: var(--text-dim);
-  padding: 4px 10px; border-radius: 999px; font-size: .72rem; white-space: nowrap;
-}
-.chip.warn { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-bg); }
-/* the desk saying it cannot read the chain, rather than showing dashes and letting you guess */
-.chip-stale { color: var(--red); border-color: rgba(255, 111, 111, .5); background: var(--red-bg); animation: stale-pulse 2.2s ease-in-out infinite; }
-@keyframes stale-pulse { 50% { opacity: .55; } }
-.wallet-slot { display: flex; align-items: center; gap: 10px; }
-.wallet-addr { font-family: var(--font-mono); font-size: .78rem; color: var(--text); }
-.wallet-bal { font-size: .74rem; color: var(--text-faint); }
-
-/* the ticker under the masthead: what people are launching against right now */
-.ticker {
-  display: flex; align-items: center; gap: 0;
-  padding: 0 22px; height: 34px;
-  border-top: 1px solid var(--border-soft);
-  overflow-x: auto; scrollbar-width: none;
-  font-size: .74rem; white-space: nowrap;
-}
-.ticker::-webkit-scrollbar { display: none; }
-.tk-item { display: inline-flex; align-items: center; gap: 7px; padding: 0 16px; border-right: 1px solid var(--border-soft); flex: none; }
-.tk-item:first-child { padding-left: 0; }
-.tk-sym { color: var(--text-dim); letter-spacing: .06em; font-weight: 600; font-size: .7rem; text-transform: uppercase; }
-.tk-px { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text); }
-.tk-chg { font-family: var(--font-mono); font-size: .7rem; }
-.tk-empty { color: var(--text-faint); font-size: .72rem; }
-.spark { display: block; width: 46px; height: 15px; overflow: visible; }
-.spark path { fill: none; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
-
-/* ============================================================ layout */
-#view { flex: 1 0 auto; width: 100%; max-width: 1240px; margin: 0 auto; padding: 26px 22px 72px; }
-.page-head { margin-bottom: 22px; }
-.page-head h1 { font-size: 1.45rem; font-weight: 300; margin: 0 0 6px; letter-spacing: 0; }
-.page-lede { color: var(--text-dim); font-size: .88rem; max-width: 70ch; margin: 0; }
-
-/* ============================================================ buttons */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid transparent;
-  font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-  transition: background .2s ease, border-color .2s ease, color .2s ease, filter .3s ease, transform .1s ease;
-  background: rgba(255, 255, 255, .06); color: var(--text);
-}
-.btn:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
-.btn:active:not(:disabled) { transform: translateY(1px); }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
-.btn-primary { background: var(--gold); border-color: var(--gold); color: #171208; }
-.btn-primary:hover:not(:disabled) { background: #f2c962; filter: drop-shadow(0 0 14px rgba(232, 184, 74, .35)); }
-.btn-ghost { background: transparent; border-color: var(--border); color: var(--text-dim); }
-.btn-ghost:hover:not(:disabled) { background: rgba(255, 255, 255, .05); border-color: rgba(255, 255, 255, .16); color: var(--text); }
-.btn-danger { background: transparent; border-color: rgba(255, 111, 111, .5); color: var(--red); }
-.btn-danger:hover:not(:disabled) { background: var(--red-bg); }
-.btn-sm { padding: 6px 11px; font-size: .74rem; }
-.btn-block { width: 100%; }
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.spinner {
-  width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor;
-  border-right-color: transparent; animation: spin .7s linear infinite; flex: none;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ============================================================ cards & panels */
-.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-.card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 18px;
-}
-.card + .card { margin-top: 14px; }
-.cards-grid .card + .card { margin-top: 0; }   /* the grid does the spacing */
-.stack { display: flex; flex-direction: column; gap: 14px; }
-.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-.card-title { font-size: .98rem; font-weight: 500; margin: 0; display: flex; align-items: center; gap: 8px; }
-.card-sub { color: var(--text-faint); font-size: .74rem; }
-.card-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-soft); color: var(--text-faint); font-size: .74rem; }
-.divider { border: none; border-top: 1px solid var(--border-soft); margin: 14px 0; }
-
-.badge {
-  display: inline-block; padding: 2px 8px; border-radius: 999px;
-  border: 1px solid var(--border); color: var(--text-faint); font-weight: 600;
-}
-.badge-hold { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-bg); }
-.badge-off { color: var(--text-faint); }
-.badge-live { color: var(--green); border-color: rgba(63, 212, 138, .5); background: var(--green-bg); }
-
-/* a delta, the way a terminal shows one */
-.pill {
-  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
-  font-family: var(--font-mono); font-size: .72rem; font-variant-numeric: tabular-nums;
-  background: rgba(255, 255, 255, .05); color: var(--text-dim);
-}
-.pill.pos { background: var(--green-bg); color: var(--green) !important; }
-.pill.neg { background: var(--red-bg); color: var(--red) !important; }
-
-/* term rows: label ... value */
-.rows { display: flex; flex-direction: column; gap: 8px; }
-.row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: .84rem; }
-.row .k { color: var(--text-faint); }
-.row .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--text); }
-.row .v small { color: var(--text-faint); font-family: var(--font-sans); }
-
-/* ============================================================ forms */
-.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-input[type="text"], input[type="number"], select {
-  background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 11px 12px; color: var(--text); font-family: var(--font-mono); font-size: .92rem; width: 100%;
-  transition: border-color .2s ease, background .2s ease;
-}
-input[type="text"]::placeholder, input[type="number"]::placeholder { color: var(--text-faint); font-family: var(--font-sans); }
-input:focus, select:focus { border-color: rgba(255, 255, 255, .3); background: #0f131a; }
-.input-row { display: flex; gap: 8px; }
-.input-row input { flex: 1; min-width: 0; }
-.hint { font-size: .74rem; color: var(--text-faint); margin-top: 2px; }
-.hint.err { color: var(--red); }
-select { appearance: none; cursor: pointer; }
-
-
-
-/* ============================================================ tables */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
-table { width: 100%; border-collapse: collapse; min-width: 680px; }
-.table-wide table { min-width: 1040px; }
-thead th {
-  position: sticky; top: 0; background: var(--panel); text-align: left;
-  padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
-}
-tbody td { padding: 12px 14px; font-size: .83rem; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: rgba(255, 255, 255, .028); }
-td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-td.sym { font-weight: 600; letter-spacing: .02em; }
-.table-note { padding: 11px 14px; font-size: .74rem; color: var(--text-faint); border-top: 1px solid var(--border-soft); }
-
-/* ============================================================ notices / placeholders */
-.notice {
-  padding: 14px 15px; border: 1px solid var(--border-soft); border-radius: var(--radius);
-  color: var(--text-faint); font-size: .83rem; background: rgba(255, 255, 255, .02); line-height: 1.6;
-}
-.notice strong { color: var(--text-dim); }
-.notice.warn { border-color: var(--gold-dim); color: var(--gold); background: var(--gold-bg); }
-.notice.error { border-color: rgba(255, 111, 111, .5); color: var(--red); background: var(--red-bg); }
-.notice.plain { border: none; background: none; padding: 4px 0; }
-
-/* skeleton shimmer while data loads */
-.skel {
-  display: inline-block; min-width: 3.5em; height: .9em; border-radius: 4px;
-  background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.11) 37%, rgba(255,255,255,.05) 63%);
-  background-size: 400% 100%; animation: shimmer 1.4s ease infinite; vertical-align: middle;
-}
-@keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
-
-/* ============================================================ countdown / stat blocks */
-.big-stat { text-align: center; padding: 26px 10px; }
-.big-stat .bs-label { margin-bottom: 10px; }
-.big-stat .bs-value { font-family: var(--font-mono); font-size: clamp(1.9rem, 6vw, 3rem); color: var(--gold); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.big-stat .bs-sub { color: var(--text-faint); font-size: .8rem; margin-top: 10px; }
-
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; }
-.stat-tile { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-.stat-tile .st-label { margin-bottom: 8px; }
-.stat-tile .st-value { font-family: var(--font-mono); font-size: 1.2rem; color: var(--text); font-variant-numeric: tabular-nums; }
-.stat-tile .st-sub { margin-top: 5px; font-size: .7rem; color: var(--text-faint); }
-.page-tiles { margin-bottom: 18px; }
-
-/* ============================================================ toasts */
-#toasts {
-  position: fixed; right: 16px; bottom: 16px; z-index: 400; display: flex; flex-direction: column;
-  gap: 8px; max-width: min(380px, 92vw); pointer-events: none;
-}
-.toast {
-  pointer-events: auto; background: rgba(20, 25, 34, .92); backdrop-filter: blur(12px);
-  border: 1px solid var(--border); border-left: 2px solid var(--gold);
-  border-radius: var(--radius-sm); padding: 12px 14px; font-size: .8rem; box-shadow: var(--shadow); animation: toast-in .18s ease;
-}
-.toast .t-title { font-weight: 600; margin-bottom: 3px; }
-.toast.success { border-left-color: var(--green); }
-.toast.error { border-left-color: var(--red); }
-.toast.pending { border-left-color: var(--gold-dim); }
-.toast a { font-size: .76rem; }
-@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-/* ============================================================ footer */
-#site-footer { border-top: 1px solid var(--border-soft); padding: 22px 22px 28px; }
-.footer-inner { max-width: 1240px; margin: 0 auto; }
-.disclaimer { color: var(--text-faint); font-size: .74rem; line-height: 1.65; max-width: 860px; margin: 0 0 10px; }
-.foot-links { font-size: .74rem; color: var(--text-faint); display: flex; gap: 8px; align-items: center; margin: 0; }
-.foot-links a { color: var(--text-dim); }
-
-/* ============================================================ misc utility */
-.mt-0 { margin-top: 0; }
-.mb-0 { margin-bottom: 0; }
-.center { text-align: center; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.small { font-size: .76rem; color: var(--text-faint); }
-.grow { flex: 1; min-width: 0; }
+h1, h2, h3, h4, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { border: 0; background: none; cursor: pointer; }
+svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+::selection { background: var(--selection); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 [hidden] { display: none !important; }
 
-/* ============================================================ responsive */
-@media (max-width: 900px) {
-  #app { grid-template-columns: 1fr; }
-  #rail {
-    position: fixed; left: 0; top: 0; bottom: 0; width: 254px; height: 100dvh;
-    transform: translateX(-102%); transition: transform .3s ease;
-    background: rgba(15, 19, 26, .97);
-  }
-  #rail:has(#nav.open) { transform: none; box-shadow: 0 0 60px rgba(0, 0, 0, .6); }
-  /* a scrim so the page reads as behind the drawer; a tap on it closes the drawer (app.js) */
-  #rail::after { content: ''; position: fixed; inset: 0 0 0 254px; background: rgba(6, 8, 12, .55); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
-  #rail:has(#nav.open)::after { opacity: 1; pointer-events: auto; }
-  .nav-toggle { display: flex; }
-  /* the rail carries the wordmark, and on this width the rail is a closed drawer */
-  .mh-brand { display: inline-flex; }
-  .mh-top { padding: 10px 14px; }
-  .ticker { padding: 0 14px; }
-  #view { padding: 20px 14px 56px; }
-  #site-footer { padding: 20px 14px 26px; }
-  .cards-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 560px) {
-  /* Not room for "Bushel / The menu" beside a toggle and a wallet button, but dropping the whole
-     crumb leaves a phone with no page title at all — so only the root and its slash go. */
-  .crumb-root, .crumb-sep { display: none; }
-  .wallet-bal { display: none; }
-  .mh-top { gap: 8px; }
-  .mh-right { gap: 8px; margin-left: auto; min-width: 0; }
-    .wallet-slot .btn { padding: 7px 10px; font-size: .72rem; }
-  .wallet-addr { font-size: .72rem; }
-  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stat-tile { padding: 12px 13px; }
-  .stat-tile .st-value { font-size: 1.05rem; }
+.mono { font: 500 12px/1 var(--font-mono); letter-spacing: .04em; }
+.dim, .small { color: var(--muted); }
+.small { font-size: .78rem; }
+.num {
+  text-align: right;
+  font: 500 13.5px/1.3 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 1000; background: var(--white); border: 1.5px solid var(--ink); padding: 10px 14px; border-radius: var(--radius-sm); }
+.skip-link:focus { top: 12px; }
+
+/* ============================================================ the masthead
+   A top bar, not a left rail. The rail belonged to the terminal; a launchpad is a page you read
+   down, and four nav items are not worth 236px of width. */
+#masthead {
+  position: sticky; top: 0; z-index: 100;
+  /* Solid, not translucent. A blurred bar is the glass idiom and this identity has already said it
+     is not that — and at .92 alpha the table rows ghosted through it as the page scrolled, which
+     looked like a rendering fault rather than an effect. */
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
 }
+.mh-top { width: var(--wrap); margin-inline: auto; height: 56px; display: flex; align-items: center; gap: 24px; }
+.brand { font: 700 17px/1 var(--font-sans); letter-spacing: -.01em; color: var(--ink); flex: none; }
+.brand .dot-fun { color: var(--accent); }
+#nav { display: flex; gap: 20px; margin-left: 8px; }
+#nav a { font: 500 13.5px/1 var(--font-sans); color: var(--muted); padding: 8px 2px; transition: color .15s ease; }
+#nav a:hover { color: var(--ink); }
+#nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+.mh-right { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.search-slot { flex: 0 1 260px; min-width: 0; }
+.nav-toggle { display: none; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--white); }
+.nav-toggle span { display: block; width: 16px; height: 1.5px; background: var(--ink); }
 
-/* ============================================================ the dashboard
-   The desk laid out the way a terminal is: a wide column of market panels with a sticky ticket
-   rail beside it, one Giant featured at the top with its chart, and tables whose rows carry the
-   coin itself. The small parts - avatars, pills, charts, chips - are in ui.css. */
-.search-slot { flex: 0 1 340px; min-width: 0; }
-@media (max-width: 980px) { .search-slot { display: none; } }
-
-.page-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
-.page-grid > * { min-width: 0; }
-@media (max-width: 1180px) { .page-grid { grid-template-columns: 1fr; } }
-.rail-col { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 92px; }
-@media (max-width: 1180px) { .rail-col { position: static; } }
-.col { display: flex; flex-direction: column; gap: 14px; }
-
-/* the featured pairing asset: what it is, what it costs, what a launch against it opens at */
-.featured { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-.featured-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.featured-id { display: flex; align-items: center; gap: 11px; }
-.featured-name { font-size: .95rem; font-weight: 500; line-height: 1.25; }
-.featured-name small { display: block; color: var(--text-faint); font-size: .72rem; font-weight: 400; }
-.featured-px { font-family: var(--font-mono); font-size: clamp(1.5rem, 3.4vw, 2.1rem); letter-spacing: -.02em; line-height: 1.15; margin-top: 10px; }
-.featured-move { display: flex; align-items: center; gap: 9px; margin-top: 7px; font-size: .78rem; color: var(--text-faint); }
-.featured-chart { margin-top: 16px; }
-/* DexScreener's own chart for the pair, when it loads */
-.featured-chart.is-embed { height: 430px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-alt); }
-.featured-chart.is-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
-@media (max-width: 900px) { .featured-chart.is-embed { height: 320px; } }
-.featured-chips:empty { display: none; }
-.featured-foot { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border-soft); }
-.featured-foot > div { min-width: 84px; }
-.featured-foot .ff-k { font-size: var(--label); text-transform: uppercase; letter-spacing: var(--track); color: var(--text-faint); }
-.featured-foot .ff-v { font-family: var(--font-mono); font-size: .92rem; margin-top: 4px; }
-.featured-empty { color: var(--text-faint); font-size: .82rem; padding: 26px 0 10px; }
-@media (max-width: 700px) {
-  .featured-move .dim { display: none; }   /* the caveat is desktop-sized; the chart still says "24h" */
-  .featured-foot { gap: 14px; }
+/* The strip's standing label is drawn here rather than written into the markup, so app.js can
+   replace every child of #ticker on each read without stepping over it. */
+#ticker {
+  width: var(--wrap); margin-inline: auto;
+  display: flex; gap: 18px; align-items: center; height: 36px;
+  overflow-x: auto; scrollbar-width: none;
 }
+#ticker::-webkit-scrollbar { display: none; }
+#ticker::before {
+  content: 'WHAT PEOPLE ACTUALLY PICKED'; flex: none;
+  font: 500 10px/1 var(--font-mono); letter-spacing: .14em; color: var(--muted);
+}
+.tk-item { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+.tk-item + .tk-item::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: var(--accent); margin-right: 12px; flex: none; }
+.tk-sym { font: 600 12px/1 var(--font-sans); color: var(--ink); }
+.tk-px { font: 500 12px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--muted); }
+.tk-chg { font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.tk-empty { font: 500 10px/1 var(--font-mono); letter-spacing: .1em; color: var(--muted); }
 
-/* an asset, as a table row: the thing itself, then its name under its symbol */
-.coin-cell { display: flex; align-items: center; gap: 10px; }
-.coin-cell .cc-sym { font-weight: 600; letter-spacing: .02em; }
-.coin-cell .cc-name { display: block; color: var(--text-faint); font-size: .7rem; font-weight: 400; letter-spacing: 0; }
-tbody tr.is-active { background: rgba(232, 184, 74, .05); }
-tbody tr.clickable { cursor: pointer; }
+/* ============================================================ the page */
+#view { width: var(--wrap); margin-inline: auto; padding: 32px 0 64px; min-height: 55vh; }
 
-/* the ticket rail: the launch form, in the position a terminal puts its order ticket */
+.page-head { margin-bottom: 22px; }
+.page-head h1 { font: 700 clamp(26px, 3.2vw, 34px)/1.15 var(--font-sans); letter-spacing: -.022em; }
+.page-lede { color: var(--muted); font: 400 clamp(15px, 1.4vw, 17px)/1.6 var(--font-sans); max-width: 52ch; margin-top: 8px; }
+
+/* The eyebrow: a Persimmon tick, the words, then a hairline out to the column edge. The competitor
+   floats a glyph in front of loose muted text; ours is anchored to a rule, which is the ledger
+   register and is instantly not theirs. */
+.label {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
+  font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .14em; color: var(--muted);
+}
+.label::before { content: ''; flex: none; width: 18px; height: 2px; background: var(--accent); }
+.label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.label--accent { color: var(--accent-dark); }
+
+/* ============================================================ the hero
+   Two voices: the claim in Inter, the correction in Instrument Serif italic on its own line. The
+   serif appears here and in the footer quote and nowhere else on the site — that restraint is what
+   makes it read as a second voice rather than as decoration. */
+.hero {
+  position: relative;
+  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
+  gap: 56px; align-items: center; padding: 64px 0 72px;
+}
+/* Ruled paper, not a dot grid. Their move is radial dots at 22px; this is the same family of idea
+   in our register, and it fades out at the bottom so what follows starts on clean ground. */
+.hero-field {
+  position: absolute; inset: -20px -40px 0; z-index: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 28px);
+}
+.hero-field::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--paper) 0%, transparent 42%); }
+.hero-copy, .spread-card { position: relative; z-index: 1; }
+
+.hero h1 { font: 700 clamp(40px, 7.6vw, 92px)/0.94 var(--font-sans); letter-spacing: -.035em; }
+.hero h1 em {
+  display: block;
+  font: italic 400 1em/0.98 var(--font-serif);
+  letter-spacing: -.012em; color: var(--accent-dark);
+}
+.hero .page-lede { margin-top: 24px; }
+.hero-actions { display: flex; align-items: center; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+
+/* The card beside the copy is not an illustration and not a mascot: it is the spread argument built
+   out of divs, sitting dead square while the competitor tilts theirs and pins sticky notes to it.
+   The squareness is the deadpan. Its rows are read from menu.json at runtime, never typed. */
+.spread-card {
+  background: var(--white);
+  border: 1.5px solid var(--ink); border-top: 5px solid var(--accent);
+  border-radius: var(--radius); box-shadow: 6px 6px 0 var(--ink); padding: 20px;
+}
+.spread-card .label { margin-bottom: 14px; }
+.sp-row { display: grid; grid-template-columns: 62px 1fr 74px; gap: 10px; align-items: center; height: 26px; }
+.sp-sym { font: 500 12px/1 var(--font-mono); letter-spacing: .04em; color: var(--ink); }
+.sp-bar { height: 8px; background: var(--tint); border: 1px solid var(--line); }
+.sp-bar i { display: block; height: 100%; background: var(--accent); width: calc(var(--w, 0) * 100%); }
+.sp-usd { font: 500 13px/1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
+.sp-note { font: italic 400 14px/1.35 var(--font-serif); color: var(--accent-dark); margin-top: 14px; }
+.sp-meta { font: 500 10.5px/1.4 var(--font-mono); letter-spacing: .03em; color: var(--muted); margin-top: 6px; }
+
+/* The landing's second screen: the menu itself, six cards deep. A hero that argues about prices and
+   then hands the reader straight to a footer is a poster, not a launchpad — these are the assets a
+   coin can actually be priced in, ranked by the one number that decides whether it can be traded. */
+.picks { margin-top: 8px; padding-bottom: 8px; }
+.picks-head { display: flex; align-items: center; gap: 16px; }
+.picks-head .label { flex: 1; margin-bottom: 0; }
+.picks-all { font: 500 12.5px/1 var(--font-sans); color: var(--accent-dark); white-space: nowrap; }
+.picks-all:hover { text-decoration: underline; }
+/* Explicit counts rather than auto-fit: six cards into an auto-fit track lands five on one row and
+   one orphan on the next at most desktop widths, and a stranded card reads as a mistake. Three and
+   three, then two and two, then a single column. */
+.picks-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.pick {
+  display: block; background: var(--white); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 15px;
+  transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
+}
+.pick:hover { border-color: var(--ink); transform: translate(-1px, -1px); box-shadow: var(--drop); }
+.pick-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.pick-rows { display: flex; flex-direction: column; gap: 5px; }
+.pick-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: .76rem; color: var(--muted); }
+.pick-row b { font-weight: 600; }
+
+/* ============================================================ buttons
+   Flat, near-square, hard ink offset. The competitor's button is a pressable gel pill; this one is
+   a printed sticker with a black drop, and it moves exactly the 3px it is offset by when pressed. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 600 14px/1 var(--font-sans); letter-spacing: .005em;
+  padding: 12px 18px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--ink); background: var(--white); color: var(--ink);
+  box-shadow: var(--drop); cursor: pointer;
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+.btn-primary { background: var(--accent); color: var(--ink); }   /* ink on Persimmon is 5.42:1 */
+.btn-ghost { box-shadow: none; border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--ink); transform: none; box-shadow: none; }
+.btn-sm { padding: 8px 13px; font-size: 13px; box-shadow: 2px 2px 0 var(--ink); }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: .5; box-shadow: none; transform: none; cursor: not-allowed; }
+.btn svg { width: 16px; height: 16px; }
+
+/* ============================================================ surfaces */
+.card { background: var(--white); border: 1.5px solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); padding: 20px; }
+.card-quiet { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: none; padding: 20px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.card-title { font: 600 20px/1.25 var(--font-sans); letter-spacing: -.012em; }
+.divider { height: 1px; background: var(--line); margin: 16px 0; }
+
+.notice {
+  border: 1px solid var(--line); background: var(--white); border-radius: var(--radius);
+  padding: 16px 18px; color: var(--muted); font-size: .9rem;
+}
+.notice.warn { border-color: var(--accent); background: var(--tint); color: var(--ink); }
+.notice.error { border-color: var(--negative); background: var(--negative-tint); color: var(--ink); }
+
+.chip {
+  font: 500 12.5px/1 var(--font-sans); padding: 8px 13px; border-radius: 100px;
+  border: 1px solid var(--line); background: var(--white); color: var(--muted);
+}
+.chip.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+/* Square, mono, no icons — a badge here is a stamp, not a sticker. */
+.badge { display: inline-block; font: 500 9.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .1em; padding: 4px 6px; border-radius: 3px; border: 1px solid; vertical-align: 1px; }
+.badge-hold { border-color: var(--ink); background: var(--tint); color: var(--ink); }
+.badge-off { border-color: var(--accent-dark); color: var(--accent-dark); background: var(--white); }
+
+/* Never a bare coloured numeral: a tinted chip and an arrow, so colour is never the only channel
+   carrying the sign. That is also what stops Rhubarb being mistaken for Persimmon. */
+.pos, .neg { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font: 500 12px/1.4 var(--font-sans); font-variant-numeric: tabular-nums; }
+.pos { background: var(--positive-tint); color: var(--positive); }
+.neg { background: var(--negative-tint); color: var(--negative); }
+.pos::before { content: '\2191'; }
+.neg::before { content: '\2193'; }
+
+/* ============================================================ forms */
+.field { margin-bottom: 16px; }
+.field label, .st-label { display: block; margin-bottom: 7px; font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+.field input, .field select, .field textarea, .search-slot input {
+  width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--white); color: var(--ink); font: 400 14px/1.4 var(--font-sans);
+}
+.field input::placeholder, .search-slot input::placeholder { color: var(--muted); opacity: .8; }
+.field input:focus, .field select:focus, .search-slot input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.hint { font-size: .78rem; color: var(--muted); min-height: 1.2em; }
+.hint.err { color: var(--negative); }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.page-tiles { margin-bottom: 26px; }
+.stat-tile { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 16px; }
+.st-value { font: 600 22px/1.1 var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-top: 6px; }
+.st-sub { font-size: .74rem; color: var(--muted); margin-top: 5px; }
+
+/* the launch form: a wide column and a sticky ticket beside it */
+.page-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 28px; align-items: start; }
+.rail-col { position: sticky; top: calc(var(--chrome) + 16px); }
+.ticket { background: var(--white); border: 1.5px solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); padding: 20px; }
 .ticket-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-.ticket-title { font-size: .92rem; font-weight: 500; margin: 0; }
-.ticket .field { margin-bottom: 10px; }
-.ticket .btn-block + .btn-block { margin-top: 8px; }
-.ticket-note { font-size: .72rem; color: var(--text-faint); margin: 10px 0 0; line-height: 1.5; }
-.ticket-rows { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.ticket-title { font: 600 17px/1.2 var(--font-sans); letter-spacing: -.012em; }
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.row .k { font-size: .82rem; color: var(--muted); }
+.row .v { font: 500 13.5px/1.3 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
+.ticket-note { font-size: .76rem; line-height: 1.55; color: var(--muted); margin: 14px 0; }
+.ticket-note.dim { color: var(--muted-tint); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.col { min-width: 0; }
 
-/* the market table: volume and liquidity are in the feature above, so they give way first */
-.mkt-table { min-width: 620px; }
-.mkt-table th, .mkt-table td { padding-left: 11px; padding-right: 11px; }
-/* Columns drop in order of how little the launcher needs them. "A launch opens at" is the column
-   this whole site exists to show, so it is the last thing to go, not — as this rule said when it
-   was carried over from a table with different columns — the first.
+/* ============================================================ the table
+   Sits directly on paper, no card around it. No zebra striping — hairlines and 46px rows are enough
+   structure, and stripes on warm paper turn to mud at 57 rows. Two rule weights: 1.5px of ink under
+   the header so the eye finds it on a long scroll, 1px of --line between rows. */
+/* No overflow container here, deliberately. An `overflow-x: auto` ancestor becomes the scroll box
+   for any `position: sticky` descendant, which silently stops the header sticking to the viewport —
+   and a sticky header is worth more on a 57-row table than a horizontal scrollbar the responsive
+   rules below make sure is never needed. The table's min-width is kept under the narrowest wrap at
+   every breakpoint; test/site/menu.spec.js asserts the body never scrolls sideways. */
+.table-wrap { margin-top: 8px; }
+.mkt-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.mkt-table thead th {
+  position: sticky; top: var(--chrome); z-index: 5; background: var(--paper);
+  font: 500 10.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted);
+  text-align: left; padding: 0 12px 8px; border-bottom: 1.5px solid var(--ink);
+}
+.mkt-table thead th.num { text-align: right; }
+.mkt-table tbody td { padding: 0 12px; height: 46px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.mkt-table tbody tr:hover { background: var(--tint); box-shadow: inset 3px 0 0 var(--accent); }
+.mkt-table tbody tr.clickable { cursor: pointer; }
+.coin-cell { display: flex; align-items: center; gap: 10px; }
+.cc-sym { display: block; font: 600 14px/1.25 var(--font-sans); color: var(--ink); }
+.cc-name { display: block; font: 400 11.5px/1.25 var(--font-sans); color: var(--muted); }
+.derived { border-bottom: 1px dotted var(--muted); cursor: help; }
 
-   Each breakpoint also relaxes the table's min-width. Dropping a column and keeping a floor wide
-   enough for all six only moves the columns behind a horizontal scroll, which looks exactly like
-   hiding them and is worse — the reader cannot tell there is anything to scroll to. */
-@media (max-width: 1180px) {                 /* Kind: a label, inferable from the name */
+/* The one piece of colour in the table, and the whole reason the site exists: the column that says
+   what a launch actually opens at, tinted for its full height and fenced with hairlines. The tint
+   is a 1.06 ratio against the paper on purpose. Pointing, not shouting.
+   Column 5 is "A launch opens at" — see renderMenu in app.js. If that order ever changes this
+   selector silently tints the wrong number, so check it after any change to the header row. */
+.mkt-table td:nth-child(5), .mkt-table th:nth-child(5) {
+  background: var(--tint); border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+}
+.mkt-table th:nth-child(5) { color: var(--accent-dark); }
+.mkt-table td:nth-child(5) { font-weight: 600; }
+
+/* ============================================================ toasts */
+#toasts { position: fixed; right: 16px; bottom: 16px; z-index: 300; display: flex; flex-direction: column; gap: 8px; max-width: min(360px, calc(100% - 32px)); }
+.toast { background: var(--white); border: 1.5px solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); padding: 12px 14px; font-size: .84rem; }
+.toast .t-title { font-weight: 600; margin-bottom: 3px; }
+.toast.success { border-color: var(--positive); }
+.toast.error { border-color: var(--negative); }
+.toast.pending { border-color: var(--accent); }
+
+/* ============================================================ the footer
+   A tinted band, a 4px Persimmon rule, and the wordmark set as furniture. It is stroked rather than
+   faded: a 10%-opacity fill disappears on a warm ground, and an outline reads as a printed mark. */
+#site-footer { background: var(--tint-deep); border-top: 4px solid var(--accent); margin-top: 88px; }
+.footer-inner { width: var(--wrap); margin-inline: auto; padding: 44px 0 36px; }
+.foot-quote { font: italic 400 clamp(20px, 2.6vw, 26px)/1.3 var(--font-serif); color: var(--accent-dark); }
+.foot-mark {
+  font: 700 clamp(56px, 11vw, 132px)/0.85 var(--font-sans); letter-spacing: -.035em;
+  color: #FFE7DA; -webkit-text-stroke: 1.5px var(--accent-dark);
+  margin: 18px 0 22px; user-select: none;
+}
+.disclaimer { color: var(--muted-tint); font-size: .76rem; line-height: 1.65; max-width: 74ch; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; font-size: .76rem; color: var(--muted-tint); }
+.foot-links a { color: var(--accent-dark); }
+.foot-links a:hover { text-decoration: underline; }
+.foot-name { font-weight: 600; color: var(--ink); }
+
+/* ============================================================ responsive
+   Columns drop in order of how little a launcher needs them, and "A launch opens at" is the last
+   thing to go because it is the column this site exists to show. Each breakpoint also relaxes the
+   table's min-width: dropping a column while keeping a floor wide enough for all six only pushes
+   the rest behind a horizontal scroll, which looks identical to hiding them and is worse, because
+   nothing tells the reader there is more to the right. */
+@media (max-width: 900px) {
+  .picks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero { grid-template-columns: 1fr; gap: 32px; padding: 36px 0 44px; }
+  .sp-row { grid-template-columns: 54px 1fr 66px; }
+  .page-grid { grid-template-columns: 1fr; }
+  .rail-col { position: static; }
+}
+
+@media (max-width: 860px) {
+  :root { --wrap: calc(100% - 32px); }
+  .nav-toggle { display: flex; }
+  #nav {
+    display: none;
+    position: absolute; top: 56px; left: 0; right: 0;
+    flex-direction: column; gap: 0;
+    background: var(--white); border-bottom: 1.5px solid var(--ink); padding: 8px 0;
+  }
+  #nav.open { display: flex; }
+  #nav a { padding: 12px 16px; font-size: 15px; }
+  #nav a.active { box-shadow: inset 3px 0 0 var(--accent); }
+  .search-slot { display: none; }
+}
+
+/* Columns give way one at a time, always in this order, and always with display:none rather than by
+   dropping the cells — nth-child counts markup, so removing a cell would slide the tinted column
+   onto the wrong number. "A launch opens at" is never hidden at any width. */
+@media (max-width: 1180px) {                 /* Kind: already implied by the asset's own name */
   .mkt-table th:nth-child(2), .mkt-table td:nth-child(2) { display: none; }
   .mkt-table { min-width: 540px; }
 }
 @media (max-width: 940px) {                  /* the asset's own depth: the "thin" badge still says it */
   .mkt-table th:nth-child(4), .mkt-table td:nth-child(4) { display: none; }
   .mkt-table { min-width: 0; }
-  .mkt-table th, .mkt-table td { padding-left: 8px; padding-right: 8px; }
-  /* "SPDR S&P 500 ETF Trust" under the ticker is what actually sets this table's width. The ticker
-     identifies the asset on its own, and the row is still tappable through to the launch form. */
-  .mkt-table .cc-name { display: none; }
+  .mkt-table thead th { padding: 0 8px 8px; }
+  .mkt-table tbody td { padding: 0 8px; }
 }
 @media (max-width: 680px) {                  /* launches a day: context, not a decision */
+  :root { --chrome: 85px; }
+  #view { padding: 24px 0 48px; }
   .mkt-table th:nth-child(6), .mkt-table td:nth-child(6) { display: none; }
+  .mkt-table tbody td { height: 42px; }
+  .num { font-size: 12.5px; }
 }
 
-/* the tape strip gets the coins too */
-.tk-item .u-avatar { flex: none; }
+@media (max-width: 460px) {
+  .picks-grid { grid-template-columns: 1fr; }
+  /* Only in the table, where the column is genuinely tight. The cards below the hero and the
+     recent-launches rows have the width for a name and are worse without one. */
+  .mkt-table .cc-name { display: none; }
+  .foot-mark { -webkit-text-stroke-width: 1px; }
+}
 
-/* a figure read from what the factory did rather than from a row it wrote */
-.derived { border-bottom: 1px dotted var(--text-faint); cursor: help; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}

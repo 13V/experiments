@@ -19,7 +19,7 @@ const { serve, DEFAULT_PORT } = require('./support/server.js');
 const { stubNetwork } = require('./support/network.js');
 
 const OUT = path.join(__dirname, '..', 'shots');
-const ROUTES = ['menu', 'new', 'recent', 'about'];
+const ROUTES = ['home', 'menu', 'new', 'recent', 'about'];
 const SIZES = [{ tag: 'desktop', width: 1440, height: 960 }, { tag: 'phone', width: 390, height: 844 }];
 
 const want = process.argv.slice(2).filter((a) => !a.startsWith('-'));
