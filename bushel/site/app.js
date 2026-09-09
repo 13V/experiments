@@ -662,8 +662,9 @@
         h('div', { class: 'sp-bar' }, fill),
         h('span', { class: 'sp-usd' }, fmtUsd(a.openingUsd, true)));
     });
+    // No label inside the card: homeSpread() already puts that exact line above the whole band, and
+    // printing it twice in one screen reads as a mistake rather than as emphasis.
     return h('div', { class: 'spread-card' },
-      h('div', { class: 'label' }, 'THE SAME LAUNCH, PRICED 57 WAYS'),
       rows,
       h('p', { class: 'sp-note' }, 'Nothing about the assets explains this.'),
       h('p', { class: 'sp-meta mono' }, spreadMetaText(menu.openingSpread, menu.readAt)));
@@ -735,7 +736,7 @@
     // animated model on top once it has a working WebGL context and a decoded file — so the slot is
     // never empty, on any machine, at any point in the load.
     const figure = h('div', { class: 'stage-figure' }, mascot());
-    const stage = h('div', { class: 'hero-stage' }, figure, heroSpreadCard(STATE.menu),
+    const stage = h('div', { class: 'hero-stage' }, figure,
       h('p', { class: 'hero-aside mono' }, 'gold \u00b7 crude \u00b7 treasuries \u00b7 whatever'));
     view.appendChild(h('div', { class: 'hero' },
       h('div', { class: 'hero-field', 'aria-hidden': 'true' }),
@@ -757,7 +758,32 @@
           h('a', { class: 'btn btn-ghost', href: '#/new?pair=GLD' }, 'Price one in gold'))),
       stage));
     startCycle(word, stage.querySelector('.m-word'));
+    view.appendChild(homeSpread(STATE.menu));
     view.appendChild(homePicks(STATE.menu));
+  }
+
+  /**
+   * The spread argument, as its own band under the hero rather than as a card wedged beside it.
+   * It used to be the hero's sidecar and it was always the wrong shape for that: eight rows of
+   * numbers and a footnote is something you read, not something you glance at over a headline.
+   * Given the width it gets to state the case in a sentence beside the bars.
+   */
+  function homeSpread(menu) {
+    const section = h('section', { class: 'spread-band' });
+    section.appendChild(h('div', { class: 'label label--accent' }, 'THE SAME LAUNCH, PRICED 57 WAYS'));
+    const spread = (menu && menu.openingSpread) || {};
+    section.appendChild(h('div', { class: 'spread-grid' },
+      h('div', { class: 'spread-say' },
+        h('h2', {}, 'Pick a different asset and the same launch opens at a different price.'),
+        h('p', { class: 'page-lede' },
+          'Same supply, same curve, same fee. The opening price is set by a per-asset number somebody '
+          + 'typed by hand and has not revisited since, so what you get depends on which row of a table '
+          + 'was last thought about\u2014not on what the asset is worth.'),
+        spread.ratio ? h('p', { class: 'spread-figure' },
+          h('b', {}, spread.ratio.toFixed(2) + '\u00d7'),
+          h('span', {}, ' between the cheapest and the dearest')) : null),
+      heroSpreadCard(menu)));
+    return section;
   }
 
   /**

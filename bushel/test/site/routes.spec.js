@@ -85,9 +85,12 @@ test('with no menu built, home shows the notice rather than an invented spread',
   await stubMenu(page, null);
 
   await page.goto('/index.html#/');
-  // The headline is static copy and still renders; only the data-backed card is replaced.
+  // The headline is static copy and still renders; only the data-backed card is replaced. The card
+  // lives in its own band below the hero now, not beside the headline, so that is where the notice
+  // turns up.
   await expect(page.locator('#view h1')).toContainText('Price a coin in');
-  await expect(page.locator('.hero')).toContainText('scripts/menu.js');
+  await expect(page.locator('.spread-band')).toContainText('scripts/menu.js');
+  await expect(page.locator('.spread-band .sp-row')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

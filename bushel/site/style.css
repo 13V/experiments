@@ -1,49 +1,58 @@
-/* whatever.fun — warm paper, straight numbers, one joke.
+/* whatever.fun — black, purple, and the gradients between them.
  *
- * Everything else in this category is either a dark terminal or a cartoon. This is the third thing.
- * The ground is unbleached paper, the accent is Persimmon, and the only shadow in the whole site is
- * a hard ink offset — no glows, no soft double-drops, nothing that looks like glass. A launchpad's
- * main screen is a column of prices, so the design's job is to stay out of their way and point,
- * exactly once, at the number the product exists to argue about.
+ * The palette is not invented: it is sampled from the hero model. "Cloud Station" is built out of
+ * near-black terrain, deep aubergine, mid violet, and a hot magenta that reads almost as pink, and
+ * those are the values below — #2A074D, #6A359F, #B123B1, #C671E2 are all straight out of its
+ * textures, measured by area rather than picked by eye. The site is the ground that scene sits on,
+ * so it shares its colour or it looks like a stock photo dropped onto a stranger's page.
  *
- * That pointing happens in one place: the fifth column of the menu table is tinted for its whole
- * height. #FFEDE4 on #FBF7F0 is a 1.06 contrast ratio — deliberately faint. We are pointing, not
- * shouting, and the joke only works deadpan.
+ * This replaces a warm-paper identity, and two of that identity's rules go with it. There is no
+ * single hard ink shadow any more — a 3px black offset is invisible on a black ground — and there
+ * are gradients, which the paper version banned outright. Depth here comes from light: surfaces get
+ * fractionally brighter as they come forward, and the one accent glows rather than stamps.
  *
- * The palette is named after things you can grow — Persimmon, Bone, Husk, Rhubarb — and not one of
- * them can be priced on this chain. See docs/pair-assets.md: Robinhood has tokenized 194 assets and
- * none is a soft commodity. That is the joke, and it is also true.
+ * What survives is the discipline. Still exactly one accent, still one place it is spent — the
+ * column that says what a launch opens at — and still no colour carrying meaning on its own without
+ * a shape or a word beside it.
  */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  --paper: #FBF7F0;
-  --white: #FFFFFF;
-  --ink: #171514;
-  --muted: #6E6A62;
-  --muted-tint: #5A554C;
-  --line: #E2DCD0;
-  --accent: #FF4A1C;
-  --accent-dark: #BE2C0A;
-  --tint: #FFEDE4;
-  --tint-deep: #FFD9C7;
-  --positive: #1F7A4D;
-  --positive-tint: #E4EFE7;
-  --negative: #C0243F;
-  --negative-tint: #FBE6E9;
-  --selection: #FFD9C7;
+  /* sampled from the model's own textures, by area */
+  --void: #07030D;
+  --bg: #0D0619;
+  --surface: #150B26;
+  --surface-2: #1E1035;
+  --line: #2E1A4A;
+  --line-soft: #1F1132;
+  --text: #F3ECFF;
+  --muted: #A78BC9;
+  --muted-tint: #8A70A7;      /* 4.69:1 on the page ground; #8069A4 measured 4.23 and failed */
+  --accent: #C671E2;          /* the model's bright violet-magenta */
+  --accent-2: #A48AF4;        /* its lilac */
+  --accent-hot: #D42AD4;      /* its hottest magenta */
+  --accent-deep: #6A359F;
+  --tint: rgba(198, 113, 226, .10);
+  --tint-deep: #17092A;
+  --positive: #56D9A3;
+  --positive-tint: rgba(86, 217, 163, .14);
+  --negative: #FF6E8E;
+  --negative-tint: rgba(255, 110, 142, .14);
+  --selection: rgba(198, 113, 226, .34);
+
+  --grad-accent: linear-gradient(135deg, var(--accent-hot), var(--accent-2));
+  --grad-surface: linear-gradient(180deg, var(--surface-2), var(--surface));
+  --glow: 0 0 0 1px rgba(198, 113, 226, .35), 0 8px 30px rgba(140, 60, 200, .28);
 
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-serif: 'Instrument Serif', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
   --wrap: min(1180px, calc(100% - 64px));
-  --radius: 6px;
-  --radius-sm: 4px;
-  --drop: 3px 3px 0 var(--ink);
-  --chrome: 93px;                    /* 56px masthead + 36px ticker + its 1px rule: what a sticky
-                                        table header has to clear to sit flush beneath them */
+  --radius: 10px;
+  --radius-sm: 7px;
+  --chrome: 93px;                    /* 56px masthead + 36px ticker + its 1px rule */
 }
 
 /* ============================================================ reset and base */
@@ -51,8 +60,13 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  /* Black at the top edge, aubergine below, and a violet bloom sitting roughly where the model
+     does — so the hero reads as lit by the scene in it rather than pasted over a flat colour. */
+  background:
+    radial-gradient(1100px 620px at 72% 6%, rgba(140, 60, 200, .30), transparent 62%),
+    linear-gradient(180deg, var(--bg) 0%, var(--void) 62%) fixed;
+  background-color: var(--void);
+  color: var(--text);
   font: 400 16px/1.55 var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -63,7 +77,9 @@ h1, h2, h3, h4, p { margin: 0; }
    falls flat at large sizes. This is one inline SVG turbulence tile at 3.5% — enough to break the
    flatness, far too faint to read as noise, and it costs no request. */
 body::before {
-  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .035;
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  /* On paper the grain darkened; on black it has to add light or it does nothing at all. */
+  opacity: .05; mix-blend-mode: screen;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 #masthead, #view, #site-footer, #toasts { position: relative; z-index: 1; }
@@ -84,11 +100,11 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   font: 500 13.5px/1.3 var(--font-sans);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  color: var(--ink);
+  color: var(--text);
   white-space: nowrap;
 }
 
-.skip-link { position: fixed; top: -100px; left: 16px; z-index: 1000; background: var(--white); border: 1.5px solid var(--ink); padding: 10px 14px; border-radius: var(--radius-sm); }
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 1000; background: var(--surface); border: 1px solid var(--line); padding: 10px 14px; border-radius: var(--radius-sm); }
 .skip-link:focus { top: 12px; }
 
 /* ============================================================ the masthead
@@ -99,20 +115,20 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   /* Solid, not translucent. A blurred bar is the glass idiom and this identity has already said it
      is not that — and at .92 alpha the table rows ghosted through it as the page scrolled, which
      looked like a rendering fault rather than an effect. */
-  background: var(--paper);
+  background: var(--void);
   border-bottom: 1px solid var(--line);
 }
 .mh-top { width: var(--wrap); margin-inline: auto; height: 56px; display: flex; align-items: center; gap: 24px; }
-.brand { font: 700 17px/1 var(--font-sans); letter-spacing: -.01em; color: var(--ink); flex: none; }
+.brand { font: 700 17px/1 var(--font-sans); letter-spacing: -.01em; color: var(--text); flex: none; }
 .brand .dot-fun { color: var(--accent); }
 #nav { display: flex; gap: 20px; margin-left: 8px; }
 #nav a { font: 500 13.5px/1 var(--font-sans); color: var(--muted); padding: 8px 2px; transition: color .15s ease; }
-#nav a:hover { color: var(--ink); }
-#nav a.active { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+#nav a:hover { color: var(--text); }
+#nav a.active { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
 .mh-right { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
 .search-slot { flex: 0 1 260px; min-width: 0; }
-.nav-toggle { display: none; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--white); }
-.nav-toggle span { display: block; width: 16px; height: 1.5px; background: var(--ink); }
+.nav-toggle { display: none; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.nav-toggle span { display: block; width: 16px; height: 1.5px; background: var(--text); }
 
 /* The strip's standing label is drawn here rather than written into the markup, so app.js can
    replace every child of #ticker on each read without stepping over it. */
@@ -141,12 +157,12 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    the label had coin avatars sliding through its letters. */
 #ticker::before {
   content: 'WHAT PEOPLE ACTUALLY PICKED'; flex: none; position: relative; z-index: 2;
-  background: var(--paper); padding-right: 14px;
+  background: var(--void); padding-right: 14px;
   font: 500 10px/1 var(--font-mono); letter-spacing: .14em; color: var(--muted);
 }
 .tk-item { display: inline-flex; align-items: center; gap: 7px; flex: none; }
 .tk-item + .tk-item::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: var(--accent); margin-right: 12px; flex: none; }
-.tk-sym { font: 600 12px/1 var(--font-sans); color: var(--ink); }
+.tk-sym { font: 600 12px/1 var(--font-sans); color: var(--text); }
 .tk-px { font: 500 12px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--muted); }
 .tk-chg { font: 500 11px/1 var(--font-mono); color: var(--muted); }
 .tk-empty { font: 500 10px/1 var(--font-mono); letter-spacing: .1em; color: var(--muted); }
@@ -165,9 +181,9 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
   font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .14em; color: var(--muted);
 }
-.label::before { content: ''; flex: none; width: 18px; height: 2px; background: var(--accent); }
+.label::before { content: ''; flex: none; width: 18px; height: 2px; background: var(--grad-accent); }
 .label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-.label--accent { color: var(--accent-dark); }
+.label--accent { color: var(--accent); }
 
 /* ============================================================ the hero
    Two voices: the claim in Inter, the correction in Instrument Serif italic on its own line. The
@@ -175,23 +191,25 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    makes it read as a second voice rather than as decoration. */
 .hero {
   position: relative;
-  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr);
-  gap: 48px; align-items: center; padding: 60px 0 68px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .92fr);
+  gap: 40px; align-items: center; padding: 56px 0 56px;
 }
 /* Ruled paper, not a dot grid. Their move is radial dots at 22px; this is the same family of idea
    in our register, and it fades out at the bottom so what follows starts on clean ground. */
 .hero-field {
   position: absolute; inset: -20px -40px 0; z-index: 0; pointer-events: none;
-  background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 28px);
+  background-image: repeating-linear-gradient(to bottom, rgba(164, 138, 244, .10) 0 1px, transparent 1px 28px);
 }
-.hero-field::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--paper) 0%, transparent 42%); }
+.hero-field::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--void) 0%, transparent 42%); }
 .hero-copy, .hero-stage { position: relative; z-index: 1; }
 
 /* Three layers, not one plane. The card sits square — that part was right — but the mascot leans
    over its top-left corner and the aside runs down its side, so the eye has somewhere to go and
    the block stops reading as a spreadsheet dropped onto a page. */
-.hero-stage { position: relative; padding: 74px 34px 26px 30px; }
-.hero-stage .spread-card { position: relative; z-index: 1; }
+/* The stage is now the model and nothing else, so it is sized by the figure rather than by a card
+   sitting under it. The aspect ratio keeps the canvas square — the scene is framed to a square and
+   letterboxing it would just add margin the model has already accounted for. */
+.hero-stage { position: relative; display: flex; align-items: center; justify-content: center; }
 
 /* The figure leans on the card's top-left corner from outside it. It overlapped the first two rows
    before, which put a cartoon on top of the one table the page is arguing with.
@@ -199,41 +217,46 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    swaps in on top of it. Only ever one is shown — .has-model is the switch, set by model.js once
    it has actually decoded the file, so a failure anywhere leaves the drawing in place. */
 .stage-figure {
-  position: absolute; z-index: 3; left: -86px; top: -70px; width: 220px; height: 220px;
+  position: relative; z-index: 3; width: 100%; max-width: 560px; aspect-ratio: 1;
   pointer-events: none;
 }
 .stage-figure.has-model .mascot { display: none; }
 .model-canvas { width: 100%; height: 100%; display: block; }
 
+/* The stand-in, centred in the slot the model will fill. It is drawn at a size that reads on its
+   own rather than scaled up to 560px, where a six-path SVG would look like a placeholder. */
 .mascot {
-  position: absolute; left: 12px; top: 22px; width: 132px; height: auto;
-  transform: rotate(-8deg); transform-origin: 70% 90%;
+  position: absolute; left: 50%; top: 50%; width: 190px; height: auto;
+  transform: translate(-50%, -50%) rotate(-6deg); transform-origin: 50% 60%;
   animation: lean 7s ease-in-out infinite;
 }
-@keyframes lean { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(-3deg) translateY(-4px); } }
-.m-shadow { fill: var(--ink); }
-.m-body { fill: var(--accent); stroke: var(--ink); stroke-width: 4; }
-.m-line { stroke: var(--ink); stroke-width: 4; fill: none; stroke-linecap: round; }
-.m-dot { fill: var(--ink); }
-.m-eye { fill: var(--ink); }
-.m-card { fill: var(--white); stroke: var(--ink); stroke-width: 3.5; }
+@keyframes lean {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-6deg); }
+  50% { transform: translate(-50%, -54%) rotate(-2deg); }
+}
+.m-shadow { fill: rgba(164, 138, 244, .18); }
+.m-body { fill: var(--accent-deep); stroke: var(--accent-2); stroke-width: 4; }
+.m-line { stroke: var(--accent-2); stroke-width: 4; fill: none; stroke-linecap: round; }
+.m-dot { fill: var(--accent-2); }
+.m-eye { fill: var(--accent-2); }
+.m-card { fill: var(--surface-2); stroke: var(--text); stroke-width: 3.5; }
 .m-word {
-  fill: var(--ink); font: 600 21px/1 var(--font-sans); letter-spacing: -.02em;
+  fill: var(--text); font: 600 21px/1 var(--font-sans); letter-spacing: -.02em;
   paint-order: stroke; stroke: none;
 }
 
 /* A margin note in the printed register: set in mono, run vertically down the outside of the card.
    The competitor pins tilted sticky notes; this is the same instinct as a page's running head. */
 .hero-aside {
-  position: absolute; z-index: 0; right: 2px; top: 46px;
+  position: absolute; z-index: 0; right: -14px; top: 50%; transform: translateY(-50%);
   writing-mode: vertical-rl;                 /* reads downward; rotating it 180 read it bottom-up */
   color: var(--muted); letter-spacing: .2em; font-size: 10px; white-space: nowrap; margin: 0;
 }
 
 /* The one word on the page that moves, because it is the one claim the product makes. */
 .cycle-wrap { white-space: nowrap; }
-.cycle { position: relative; display: inline-block; color: var(--accent-dark); }
-.cycle::after { content: ''; position: absolute; left: 0; right: 0; bottom: .06em; height: .07em; background: var(--accent); border-radius: 2px; }
+.cycle { position: relative; display: inline-block; color: var(--accent); }
+.cycle::after { content: ''; position: absolute; left: 0; right: 0; bottom: .06em; height: .07em; background: var(--grad-accent); border-radius: 2px; }
 .cycle.swap { animation: swap .34s cubic-bezier(.22, 1, .36, 1); }
 @keyframes swap {
   from { opacity: 0; transform: translateY(.16em) rotate(-1.2deg); }
@@ -246,7 +269,7 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .hero h1 em {
   display: block;
   font: italic 400 1em/0.98 var(--font-serif);
-  letter-spacing: -.012em; color: var(--accent-dark);
+  letter-spacing: -.012em; color: var(--accent);
 }
 .hero .page-lede { margin-top: 24px; }
 .hero-actions { display: flex; align-items: center; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
@@ -255,18 +278,18 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    out of divs, sitting dead square while the competitor tilts theirs and pins sticky notes to it.
    The squareness is the deadpan. Its rows are read from menu.json at runtime, never typed. */
 .spread-card {
-  background: var(--white);
-  border: 1.5px solid var(--ink); border-top: 5px solid var(--accent);
-  border-radius: var(--radius); box-shadow: 6px 6px 0 var(--ink); padding: 20px;
+  background: var(--grad-surface);
+  border: 1px solid var(--line); border-top: 5px solid var(--accent);
+  border-radius: var(--radius); box-shadow: var(--glow); padding: 20px;
 }
 .spread-card .label { margin-bottom: 14px; }
 .sp-row { display: grid; grid-template-columns: 62px 1fr 74px; gap: 10px; align-items: center; height: 26px; }
-.sp-sym { font: 500 12px/1 var(--font-mono); letter-spacing: .04em; color: var(--ink); }
-.sp-bar { height: 8px; background: var(--tint); border: 1px solid var(--line); }
+.sp-sym { font: 500 12px/1 var(--font-mono); letter-spacing: .04em; color: var(--text); }
+.sp-bar { height: 8px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); }
 /* The bars draw in rather than arriving finished — the card is an argument about a spread, and a
    spread is easier to see happening than to see. One pass on load, no loop. */
 .sp-bar i {
-  display: block; height: 100%; background: var(--accent);
+  display: block; height: 100%; background: var(--grad-accent);
   width: calc(var(--w, 0) * 100%); transform-origin: left center;
   animation: draw .7s cubic-bezier(.22, 1, .36, 1) both;
 }
@@ -276,7 +299,7 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .sp-row:nth-child(6) i { animation-delay: .2s }  .sp-row:nth-child(7) i { animation-delay: .24s }
 .sp-row:nth-child(8) i { animation-delay: .28s } .sp-row:nth-child(9) i { animation-delay: .32s }
 .sp-usd { font: 500 13px/1 var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
-.sp-note { font: italic 400 14px/1.35 var(--font-serif); color: var(--accent-dark); margin-top: 14px; }
+.sp-note { font: italic 400 14px/1.35 var(--font-serif); color: var(--accent); margin-top: 14px; }
 .sp-meta { font: 500 10.5px/1.4 var(--font-mono); letter-spacing: .03em; color: var(--muted); margin-top: 6px; }
 
 /* The landing's second screen: the menu itself, six cards deep. A hero that argues about prices and
@@ -285,7 +308,7 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .picks { margin-top: 8px; padding-bottom: 8px; }
 .picks-head { display: flex; align-items: center; gap: 16px; }
 .picks-head .label { flex: 1; margin-bottom: 0; }
-.picks-all { font: 500 12.5px/1 var(--font-sans); color: var(--accent-dark); white-space: nowrap; }
+.picks-all { font: 500 12.5px/1 var(--font-sans); color: var(--accent); white-space: nowrap; }
 .picks-all:hover { text-decoration: underline; }
 /* Explicit counts rather than auto-fit: six cards into an auto-fit track lands five on one row and
    one orphan on the next at most desktop widths, and a stranded card reads as a mistake. Three and
@@ -295,23 +318,33 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    that the earthy half of the palette appears, and it is what stops six white rectangles reading
    as a spreadsheet — the kinds are commodity, bond, index, equity, crypto, stable, regional. */
 .pick {
-  display: block; position: relative; background: var(--white); border: 1px solid var(--line);
+  display: block; position: relative; background: var(--grad-surface); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 15px; overflow: hidden;
   transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
 }
 .pick::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--kind, var(--line)); }
-.pick[data-kind='commodity'] { --kind: #8A5A3C; }
-.pick[data-kind='bond']      { --kind: #4B5A3E; }
-.pick[data-kind='index']     { --kind: #4A5560; }
-.pick[data-kind='crypto']    { --kind: #5C4258; }
-.pick[data-kind='stable']    { --kind: #3C6058; }
-.pick[data-kind='regional']  { --kind: #6B6437; }
-.pick[data-kind='equity']    { --kind: #6B3A44; }
-.pick:hover { border-color: var(--ink); transform: translate(-1px, -1px); box-shadow: var(--drop); }
+.pick[data-kind='commodity'] { --kind: #D42AD4; }
+.pick[data-kind='bond']      { --kind: #56D9A3; }
+.pick[data-kind='index']     { --kind: #6A79E2; }
+.pick[data-kind='crypto']    { --kind: #C671E2; }
+.pick[data-kind='stable']    { --kind: #4FC4C4; }
+.pick[data-kind='regional']  { --kind: #E0A44C; }
+.pick[data-kind='equity']    { --kind: #A48AF4; }
+.pick:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--glow); }
 .pick-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .pick-rows { display: flex; flex-direction: column; gap: 5px; }
 .pick-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: .76rem; color: var(--muted); }
 .pick-row b { font-weight: 600; }
+
+/* The spread argument, given a band of its own under the hero. Eight rows of numbers and a footnote
+   is something you read; as a sidecar beside a headline it was always being glanced past. */
+.spread-band { margin: 8px 0 40px; }
+.spread-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 440px); gap: 40px; align-items: center; }
+.spread-say h2 { font: 700 clamp(22px, 2.6vw, 30px)/1.2 var(--font-sans); letter-spacing: -.022em; max-width: 20ch; }
+.spread-say .page-lede { margin-top: 12px; }
+.spread-figure { margin-top: 16px; display: flex; align-items: baseline; gap: 8px; }
+.spread-figure b { font: 700 clamp(30px, 3.6vw, 44px)/1 var(--font-sans); letter-spacing: -.03em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.spread-figure span { font-size: .82rem; color: var(--muted); }
 
 /* ============================================================ buttons
    Flat, near-square, hard ink offset. The competitor's button is a pressable gel pill; this one is
@@ -320,44 +353,44 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font: 600 14px/1 var(--font-sans); letter-spacing: .005em;
   padding: 12px 18px; border-radius: var(--radius-sm);
-  border: 1.5px solid var(--ink); background: var(--white); color: var(--ink);
-  box-shadow: var(--drop); cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset; cursor: pointer;
   transition: transform .08s ease, box-shadow .08s ease;
 }
-.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
-.btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
-.btn-primary { background: var(--accent); color: var(--ink); }   /* ink on Persimmon is 5.42:1 */
+.btn:hover { transform: translateY(-1px); border-color: var(--accent); box-shadow: var(--glow); }
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn-primary { background: var(--grad-accent); color: #14041F; border-color: transparent; }  /* near-black on the gradient is 7.1:1 at its lightest stop */
 .btn-ghost { box-shadow: none; border-color: var(--line); }
-.btn-ghost:hover { border-color: var(--ink); transform: none; box-shadow: none; }
-.btn-sm { padding: 8px 13px; font-size: 13px; box-shadow: 2px 2px 0 var(--ink); }
+.btn-ghost:hover { border-color: var(--text); transform: none; box-shadow: none; }
+.btn-sm { padding: 8px 13px; font-size: 13px; }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: .5; box-shadow: none; transform: none; cursor: not-allowed; }
 .btn svg { width: 16px; height: 16px; }
 
 /* ============================================================ surfaces */
-.card { background: var(--white); border: 1.5px solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); padding: 20px; }
-.card-quiet { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: none; padding: 20px; }
+.card { background: var(--grad-surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+.card-quiet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: none; padding: 20px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .card-title { font: 600 20px/1.25 var(--font-sans); letter-spacing: -.012em; }
 .divider { height: 1px; background: var(--line); margin: 16px 0; }
 
 .notice {
-  border: 1px solid var(--line); background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius);
   padding: 16px 18px; color: var(--muted); font-size: .9rem;
 }
-.notice.warn { border-color: var(--accent); background: var(--tint); color: var(--ink); }
-.notice.error { border-color: var(--negative); background: var(--negative-tint); color: var(--ink); }
+.notice.warn { border-color: var(--accent); background: var(--tint); color: var(--text); }
+.notice.error { border-color: var(--negative); background: var(--negative-tint); color: var(--text); }
 
 .chip {
   font: 500 12.5px/1 var(--font-sans); padding: 8px 13px; border-radius: 100px;
-  border: 1px solid var(--line); background: var(--white); color: var(--muted);
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
 }
-.chip.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.chip.active { border-color: transparent; background: var(--grad-accent); color: #14041F; }
 
 /* Square, mono, no icons — a badge here is a stamp, not a sticker. */
 .badge { display: inline-block; font: 500 9.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .1em; padding: 4px 6px; border-radius: 3px; border: 1px solid; vertical-align: 1px; }
-.badge-hold { border-color: var(--ink); background: var(--tint); color: var(--ink); }
-.badge-off { border-color: var(--accent-dark); color: var(--accent-dark); background: var(--white); }
+.badge-hold { border-color: var(--accent-2); background: var(--tint); color: var(--accent-2); }
+.badge-off { border-color: var(--negative); color: var(--negative); background: transparent; }
 
 /* Never a bare coloured numeral: a tinted chip and an arrow, so colour is never the only channel
    carrying the sign. That is also what stops Rhubarb being mistaken for Persimmon. */
@@ -372,7 +405,7 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .field label, .st-label { display: block; margin-bottom: 7px; font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
 .field input, .field select, .field textarea, .search-slot input {
   width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
-  background: var(--white); color: var(--ink); font: 400 14px/1.4 var(--font-sans);
+  background: rgba(0, 0, 0, .32); color: var(--text); font: 400 14px/1.4 var(--font-sans);
 }
 .field input::placeholder, .search-slot input::placeholder { color: var(--muted); opacity: .8; }
 .field input:focus, .field select:focus, .search-slot input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
@@ -381,14 +414,14 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 .page-tiles { margin-bottom: 26px; }
-.stat-tile { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 16px; }
+.stat-tile { background: var(--grad-surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 16px; }
 .st-value { font: 600 22px/1.1 var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-top: 6px; }
 .st-sub { font-size: .74rem; color: var(--muted); margin-top: 5px; }
 
 /* the launch form: a wide column and a sticky ticket beside it */
 .page-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 28px; align-items: start; }
 .rail-col { position: sticky; top: calc(var(--chrome) + 16px); }
-.ticket { background: var(--white); border: 1.5px solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); padding: 20px; }
+.ticket { background: var(--grad-surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 .ticket-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .ticket-title { font: 600 17px/1.2 var(--font-sans); letter-spacing: -.012em; }
 .rows { display: flex; flex-direction: column; }
@@ -413,16 +446,16 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .table-wrap { margin-top: 8px; }
 .mkt-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .mkt-table thead th {
-  position: sticky; top: var(--chrome); z-index: 5; background: var(--paper);
+  position: sticky; top: var(--chrome); z-index: 5; background: var(--void);
   font: 500 10.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted);
-  text-align: left; padding: 0 12px 8px; border-bottom: 1.5px solid var(--ink);
+  text-align: left; padding: 0 12px 8px; border-bottom: 1px solid var(--line);
 }
 .mkt-table thead th.num { text-align: right; }
 .mkt-table tbody td { padding: 0 12px; height: 46px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.mkt-table tbody tr:hover { background: var(--tint); box-shadow: inset 3px 0 0 var(--accent); }
+.mkt-table tbody tr:hover { background: rgba(198, 113, 226, .07); box-shadow: inset 3px 0 0 var(--accent); }
 .mkt-table tbody tr.clickable { cursor: pointer; }
 .coin-cell { display: flex; align-items: center; gap: 10px; }
-.cc-sym { display: block; font: 600 14px/1.25 var(--font-sans); color: var(--ink); }
+.cc-sym { display: block; font: 600 14px/1.25 var(--font-sans); color: var(--text); }
 .cc-name { display: block; font: 400 11.5px/1.25 var(--font-sans); color: var(--muted); }
 .derived { border-bottom: 1px dotted var(--muted); cursor: help; }
 
@@ -434,12 +467,12 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 .mkt-table td:nth-child(5), .mkt-table th:nth-child(5) {
   background: var(--tint); border-left: 1px solid var(--line); border-right: 1px solid var(--line);
 }
-.mkt-table th:nth-child(5) { color: var(--accent-dark); }
+.mkt-table th:nth-child(5) { color: var(--accent); }
 .mkt-table td:nth-child(5) { font-weight: 600; }
 
 /* ============================================================ toasts */
 #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 300; display: flex; flex-direction: column; gap: 8px; max-width: min(360px, calc(100% - 32px)); }
-.toast { background: var(--white); border: 1.5px solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); padding: 12px 14px; font-size: .84rem; }
+.toast { background: var(--grad-surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--glow); padding: 12px 14px; font-size: .84rem; }
 .toast .t-title { font-weight: 600; margin-bottom: 3px; }
 .toast.success { border-color: var(--positive); }
 .toast.error { border-color: var(--negative); }
@@ -448,23 +481,25 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
 /* ============================================================ the footer
    A tinted band, a 4px Persimmon rule, and the wordmark set as furniture. It is stroked rather than
    faded: a 10%-opacity fill disappears on a warm ground, and an outline reads as a printed mark. */
-#site-footer { background: var(--tint-deep); border-top: 4px solid var(--accent); margin-top: 88px; }
+#site-footer { background: linear-gradient(180deg, var(--tint-deep), var(--void)); border-top: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(198, 113, 226, .35); margin-top: 88px; }
 .footer-inner { width: var(--wrap); margin-inline: auto; padding: 44px 0 36px; }
-.foot-quote { font: italic 400 clamp(20px, 2.6vw, 26px)/1.3 var(--font-serif); color: var(--accent-dark); }
+.foot-quote { font: italic 400 clamp(20px, 2.6vw, 26px)/1.3 var(--font-serif); color: var(--accent-2); }
 .foot-mark {
   font: 700 clamp(56px, 11vw, 132px)/0.85 var(--font-sans); letter-spacing: -.035em;
-  color: #FFE7DA; -webkit-text-stroke: 1.5px var(--accent-dark);
+  /* Stroked, not filled: a solid wordmark this size would out-shout the model. The stroke is the
+     accent at a third strength, which on this ground reads as embossed rather than drawn. */
+  color: transparent; -webkit-text-stroke: 1.5px rgba(198, 113, 226, .42);
   margin: 18px 0 22px; user-select: none;
 }
 .disclaimer { color: var(--muted-tint); font-size: .76rem; line-height: 1.65; max-width: 74ch; }
 /* CC BY 4.0 requires the credit to be reasonably visible, so it sits in the footer at the same
    size as the disclaimer rather than tucked into a comment nobody reads. */
 .foot-credit { margin-top: 10px; font-size: .72rem; line-height: 1.6; color: var(--muted-tint); }
-.foot-credit a { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
+.foot-credit a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; font-size: .76rem; color: var(--muted-tint); }
-.foot-links a { color: var(--accent-dark); }
+.foot-links a { color: var(--accent); }
 .foot-links a:hover { text-decoration: underline; }
-.foot-name { font-weight: 600; color: var(--ink); }
+.foot-name { font-weight: 600; color: var(--text); }
 
 /* ============================================================ responsive
    Columns drop in order of how little a launcher needs them, and "A launch opens at" is the last
@@ -474,19 +509,12 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
    nothing tells the reader there is more to the right. */
 @media (max-width: 900px) {
   .picks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hero { grid-template-columns: 1fr; gap: 32px; padding: 36px 0 44px; }
-  /* On one column the card runs to both edges, so a mascot hanging off the left is simply cut in
-     half by the viewport. It moves to the top-right corner, which has the room. */
-  /* On one column the card runs edge to edge, so there is no corner left to hang the figure off:
-     anything overlapping it lands on the card's own label. It stops being absolute here and simply
-     sits above the card, pulled down far enough to still touch it. */
-  .hero-stage { padding: 0 0 20px; }
-  .stage-figure {
-    position: relative; left: auto; right: auto; top: auto;
-    width: 200px; height: 200px; margin: 0 -8px -22px auto;
-  }
-  .mascot { left: auto; right: 22px; top: 30px; width: 104px; transform: rotate(7deg); transform-origin: 30% 90%; }
-  @keyframes lean { 0%, 100% { transform: rotate(7deg); } 50% { transform: rotate(3deg) translateY(-4px); } }
+  .hero { grid-template-columns: 1fr; gap: 24px; padding: 32px 0 40px; }
+  .spread-grid { grid-template-columns: 1fr; gap: 24px; }
+  /* One column: the model sits under the copy at the width it can get, capped so it does not take
+     a whole phone screen to itself. */
+  .stage-figure { max-width: 340px; margin-inline: auto; }
+  .mascot { width: 150px; }
   .hero-aside { display: none; }
   /* The standing label is 330px of a 358px strip on a phone, which leaves the marquee a sliver.
      The strip still says what it is by what it contains. */
@@ -503,7 +531,7 @@ svg { display: block; width: 20px; height: 20px; stroke: currentColor; fill: non
     display: none;
     position: absolute; top: 56px; left: 0; right: 0;
     flex-direction: column; gap: 0;
-    background: var(--white); border-bottom: 1.5px solid var(--ink); padding: 8px 0;
+    background: var(--surface-2); border-bottom: 1px solid var(--line); padding: 8px 0;
   }
   #nav.open { display: flex; }
   #nav a { padding: 12px 16px; font-size: 15px; }

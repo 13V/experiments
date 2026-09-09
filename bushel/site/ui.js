@@ -60,23 +60,25 @@
   function hideFromAT(node) { node.setAttribute('aria-hidden', 'true'); return node; }
 
   // ============================================================================ 1. coinAvatar
-  /** A fixed set of ten muted, desaturated, mid-dark colours — chosen once by hand rather than
-   * spun from a live hue rotation, so a badge can never land on a saturated, near-persimmon hue
-   * and start competing with the one accent colour this identity spends. Every one of them holds
-   * at least 4.5:1 against white text (the tightest, "clay", is 5.82:1), so the monogram stays
-   * legible at the 26px this badge is normally drawn at without needing a per-colour text
-   * override. */
+  /** Ten swatches inside the hero model's own hue range — 240 to 330 degrees, violet through
+   * magenta — so a coin badge never introduces a colour the rest of the page does not already have.
+   * The earlier set was earthy and mid-dark, chosen to sit on white paper; on a near-black ground
+   * every one of them disappeared. Each of these holds at least 4.5:1 against the white monogram it
+   * carries AND at least 3.5:1 against the page behind it, which is the pair of constraints that
+   * actually matters: legible text on a chip you can still see. Fixed rather than spun from a live
+   * hue rotation, so nothing can land on a near-accent hue and start competing with it.
+   */
   const AVATAR_PALETTE = [
-    '#4B5A3E', // moss
-    '#8A5A3C', // clay
-    '#5C4258', // plum
-    '#6B6437', // olive
-    '#4A5560', // slate
-    '#6B3A44', // wine
-    '#3C6058', // teal
-    '#5A4A3A', // bark
-    '#3F6647', // fern
-    '#523C50', // fig
+    '#8B5BC2', // iris
+    '#A453BF', // orchid
+    '#BA44BA', // fuchsia
+    '#BB489E', // plum
+    '#745BC2', // periwinkle
+    '#BC4C84', // rose
+    '#5B5BC2', // indigo
+    '#AD4CBC', // amethyst
+    '#995BC2', // violet
+    '#BB48AC', // magenta
   ];
   /** A short, stable hash of `str` picking one of the ten swatches above, so a symbol always
    * lands on the same badge colour without a lookup table to keep in sync with the menu. Not

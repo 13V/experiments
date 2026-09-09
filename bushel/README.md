@@ -120,6 +120,11 @@ esbuild entry.js --bundle --format=esm --minify --outfile=site/vendor/three-gltf
 where `entry.js` re-exports the dozen symbols `site/model.js` uses. That is a build step, but it is
 one that produced a checked-in artefact once — there is still nothing to run to serve this site.
 
+The model is also where the site's colours come from. Its textures are near-black terrain, deep
+aubergine, mid violet and a hot magenta, and those are sampled by area rather than picked by eye —
+`#2A074D`, `#6A359F`, `#B123B1`, `#C671E2` are all straight out of it. The page is the ground that
+scene sits on, so it shares its palette or the model looks like a stock image on a stranger's site.
+
 **The model is “Cloud Station” by [Alexa Kruckenberg](https://sketchfab.com/AlexaKruckenberg),
 licensed [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)**
 ([source](https://sketchfab.com/3d-models/cloud-station-26f81b24d83441ba88c7e80a52adbaaf)). The
