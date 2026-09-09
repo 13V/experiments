@@ -378,3 +378,33 @@ so `usd / feedPrice` is the right number of tokens without touching `uiMultiplie
   Morpho sources, zero-dependency deployment scripts, and a trading-desk site. Start with
   `locate/SPEC.md`.
 - **Stonk Packs** moved to its own repository, [13V/stonk-pack](https://github.com/13V/stonk-pack).
+- **Manna** moved to its own repository, [13V/manna](https://github.com/13V/manna): the short desk for memecoins as a
+  product (the two-hop TWAP oracle, the Manna contract, adapters for the Pons curve and the v4 pool, tests against
+  the real Morpho Blue, deploy and launch scripts, the site). The design notes stay here in `docs/`.
+- **[Manna](docs/manna.md)**: the product under its chosen name (Storehouses, slings, the Tape, the morning drop,
+  Jubilee), how the fee recipient buys the coin each dawn and rains it on lenders and stakers, and where a 10%
+  cut belongs (the tithe on interest, never the Pons creator tax), with the fee streams sized.
+- **[A Christian theme for the short desk](docs/christian-theme.md)**: what faith coins have done (twenty JESUS
+  launches on Pons at zero, one survivor anywhere), why the desk fits anyway (its 10% fee is a tithe), the
+  vocabulary for every mechanic, the usury objection answered, the lines not to cross, and the fee split and
+  cadence that change against the BOW-shaped plan.
+- **[Pons graduates with real tech](docs/pons-tech.md)**: the Pons launches above $1M that have a product (Delta,
+  Touch Grass, ORBIO, PARE, Voxelithic, Arbitrage Ape), what they are built on and how their tokens earn, next to
+  BOW and OTER; the pattern they share, what none of them do, and what to build if BOW is the model.
+- **[Products and tools](docs/tools.md)**: eight tools ranked against the needs and the incumbents, led by the
+  short desk, with Gas Pass for 29 September, the tape bot, a viral report card, graduation odds, a weekend
+  router, a holder's portfolio, and launch templates for other creators.
+- **[What people need, under the Pons V2 constraint](docs/needs.md)**: the chain's needs ranked by evidence
+  (63% of wallets down, gas at twenty times the floor with the subsidy ending 29 September, no way to short, no
+  yield layer, weekend quotes), and which of them a Pons launch can actually own.
+- **[A memecoin on Pons V2, with a job](docs/pons-launch.md)**: the coin is a plain Pons token, so the utility
+  lives in the contract that receives its fees. The V2 rules verified on chain, what is already table stakes,
+  and five designs the templates cannot do, led by a vault that rips Stonk Packs for stakers every Friday.
+- **[Borrow the meme](docs/borrow-the-meme.md)**: Locate's contracts pointed at memecoins. The three biggest
+  memes on the chain have v3 pools with 20,000-observation buffers, so a two-hop TWAP oracle works today;
+  `scripts/meme-pools.js` checks any pool. Caps, failure modes, rates, and the build delta.
+- **[The dividend leak](docs/dividend-leak.md)**: Robinhood stock tokens pay dividends to whoever holds them on
+  the day of the multiplier update, split across that day's supply, after ~30% withholding. Ford holders got 2%
+  of theirs, UPS holders 20%. `scripts/dividend-leak.js` reproduces it from the public RPC with no dependencies.
+- **[Ideas](docs/robinhood-chain-ideas.md)**: thirty-six things to build on Robinhood Chain: seven that fill gaps in the DeFi map, nine that start from
+  what the tokens and the audience actually are, and three read from the issuer's own plumbing on chain.
